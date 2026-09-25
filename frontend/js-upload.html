@@ -1,0 +1,126 @@
+<script>
+/* js-upload.html — resumable chunk upload (design/Feedback: Resumable Chunk Upload) and a document's attachments.
+ *   UploadJob   one file: upload.init → upload.append 2 MB slices → done. A dropped slice is retried 3 times after
+ *               asking upload.status how much Drive already holds; after that the row pauses with a ทำต่อ button.
+ *               The upload id is remembered in this browser (file name + size + date, 6 h) so picking the same
+ *               file again, even after a reload, continues from the last slice instead of starting over.
+ *   UI.attachments(host, {docNo, entity, files, canEdit}) — the list + drop zone used by the income / expense forms.
+ *               Saved document: each finished file is attached at once (the server finalizes the last slice).
+ *               New document: files upload while the form is filled in; commit(docNo) attaches them after the save,
+ *               discard() bins them when the form closes without saving. */
+const UPL_CHUNK=2*1024*1024,UPL_MAX=50*1024*1024,UPL_KEY='hotel-upl:'+BOOT.shop;
+const UPL_ACCEPT='.jpg,.jpeg,.png,.gif,.webp,.heic,.heif,.pdf,.xls,.xlsx,.doc,.docx,.csv,.txt,.zip,.mp4,.mov';
+const UPL_MIME={pdf:'application/pdf',jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',gif:'image/gif',webp:'image/webp',heic:'image/heic',heif:'image/heif',
+  csv:'text/csv',txt:'text/plain',zip:'application/zip',mp4:'video/mp4',mov:'video/quicktime',doc:'application/msword',xls:'application/vnd.ms-excel',
+  docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'};
+const mimeOf_=f=>f.type||UPL_MIME[String(f.name).split('.').pop().toLowerCase()]||'application/octet-stream';
+const fmtSize=n=>n>=1048576?(n/1048576).toFixed(1)+' MB':Math.max(1,Math.round(n/1024))+' KB';
+
+/* resume memory, per viewer: fingerprint → upload id; the server keeps an upload for 6 h too */
+const uplMemo={
+  all(){const m=store.get(UPL_KEY)||{},now=Date.now();Object.keys(m).forEach(k=>{if(now-m[k].t>6*3600e3)delete m[k]});return m},
+  get(k){return this.all()[k]},
+  set(k,id){const m=this.all();m[k]={id,t:Date.now()};store.set(UPL_KEY,m)},
+  del(k){const m=this.all();delete m[k];store.set(UPL_KEY,m)}};
+
+function b64Slice_(blob){return new Promise((res,rej)=>{const r=new FileReader();
+  r.onload=()=>res(String(r.result).split(',')[1]||'');r.onerror=()=>rej(new Error('อ่านไฟล์ไม่ได้ กรุณาเลือกไฟล์ใหม่'));r.readAsDataURL(blob)})}
+
+class UploadJob{
+  constructor(file,{entity,docNo='',onChange}){Object.assign(this,{file,entity,docNo,onChange,id:'',offset:0,state:'wait',err:'',fileId:'',running:false});
+    this.key=[file.name,file.size,file.lastModified,docNo].join('|')}
+  get parts(){return Math.max(1,Math.ceil(this.file.size/UPL_CHUNK))}
+  get part(){return this.state==='done'?this.parts:Math.min(this.parts,Math.floor(this.offset/UPL_CHUNK)+1)}
+  get pct(){return Math.floor(this.offset/this.file.size*100)}
+  emit(){this.onChange&&this.onChange(this)}
+  /* start or resume; a second call while a slice is in flight just lets that loop carry on */
+  async start(){if(this.state==='done')return;this.state='up';this.err='';this.emit();if(this.running)return;
+    this.running=true;try{await this.run_()}finally{this.running=false}}
+  pause(){if(this.state==='up'){this.state='paused';this.err='';this.emit()}}
+  async status_(){const s=await api('upload.status',{uploadId:this.id},{loading:false,retry:1});if(s.done){this.finish_(s.fileId);return true}this.offset=s.offset;return false}
+  async run_(){
+    try{
+      if(!this.id){const old=uplMemo.get(this.key);
+        if(old){this.id=old.id;try{if(await this.status_())return}catch(e){this.id='';this.offset=0;uplMemo.del(this.key)}}
+        if(!this.id){const r=await api('upload.init',{meta:{fileName:this.file.name,size:this.file.size,mime:mimeOf_(this.file),entity:this.entity,docNo:this.docNo}},{loading:false});
+          this.id=r.uploadId;this.offset=0;uplMemo.set(this.key,this.id)}
+        this.emit()}
+      let fails=0;
+      while(this.offset<this.file.size){
+        if(this.state!=='up')return;   /* paused: the slice in flight has landed, the row shows where it stopped */
+        const end=Math.min(this.file.size,this.offset+UPL_CHUNK);let r;
+        try{const data=await b64Slice_(this.file.slice(this.offset,end));r=await api('upload.append',{uploadId:this.id,offset:this.offset,data},{loading:false,retry:0})}
+        catch(e){if((e.code==='NETWORK'||e.code==='UPLOAD_RETRY')&&++fails<=3){await sleep(1500*fails);try{if(await this.status_())return}catch(x){}this.emit();continue}throw e}
+        fails=0;if(r.done){this.finish_(r.fileId);return}this.offset=r.offset;this.emit()}
+    }catch(e){const fatal=['UPLOAD_EXPIRED','VALIDATION','FORBIDDEN','DEMO_READONLY','NOT_FOUND'].includes(e.code);
+      this.state=fatal?'fail':'paused';this.err=e.message;if(fatal){uplMemo.del(this.key);this.id='';this.offset=0}this.emit()}}
+  finish_(fileId){this.fileId=fileId;this.offset=this.file.size;this.state='done';uplMemo.del(this.key);this.emit()}
+}
+
+/* attachment download: small files come through the server (the Drive file stays private), large ones open in Drive */
+async function attachmentOpen_(a){
+  try{const d=await api('attachment.download',{fileId:a.fileId},{loading:'กำลังเตรียมไฟล์ '+a.fileName});
+    const bin=atob(d.data),buf=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)buf[i]=bin.charCodeAt(i);
+    const url=URL.createObjectURL(new Blob([buf],{type:d.mime||'application/octet-stream'})),link=document.createElement('a');
+    link.href=url;link.download=d.fileName;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),4000)}
+  catch(e){if(e.code==='DEMO_READONLY')UI.swalInfo('ไฟล์ตัวอย่าง',e.message);else if(e.code==='TOO_LARGE'&&a.driveUrl)window.open(a.driveUrl,'_blank','noopener');else UI.swalError('เปิดไฟล์ไม่สำเร็จ',e.message)}}
+
+UI.attachments=function(host,{docNo='',entity,files=[],canEdit=false}){
+  const jobs=[],ctl={docNo,closed:false},demo=App.demo,upOk=canEdit&&can('upload.create')&&feat('upload');
+  const fileIcon=m=>String(m).indexOf('image')===0?'eye':'file';
+  const draw=()=>{if(!host.isConnected)return;
+    const saved=files.map((a,i)=>`<div class="att-item"><span class="chip success">${icon(fileIcon(a.mime),'s16')}</span>
+        <div class="grow"><b>${esc(a.fileName)}</b><span class="cap">${fmtSize(a.size)} · ${esc(a.uploadedBy)} · ${fmtDT(a.uploadedAt)}</span></div>
+        <button type="button" class="btn plain icon sm" data-open="${i}" aria-label="ดาวน์โหลด ${esc(a.fileName)}">${icon('download','s16')}</button>
+        ${canEdit&&!demo?`<button type="button" class="btn plain icon sm" data-del="${i}" aria-label="ลบ ${esc(a.fileName)}">${icon('trash','s16')}</button>`:''}</div>`).join('');
+    const pend=jobs.map((j,i)=>{const tone=j.state==='done'?'success':j.state==='fail'?'danger':j.state==='paused'?'warning':'info';
+      const txt=j.state==='done'?(ctl.docNo?'แนบแล้ว':`${fmtSize(j.file.size)} · อัปโหลดแล้ว จะแนบเมื่อบันทึก`):j.state==='fail'?j.err:j.state==='paused'?`หยุดที่ส่วน ${j.part}/${j.parts}`:j.state==='wait'?'รอคิว':`ส่วนที่ ${j.part}/${j.parts} · ${j.pct}%`;
+      return`<div class="att-item ${tone==='info'?'':tone}"><span class="chip ${tone}">${icon(j.state==='done'?'check':j.state==='fail'?'alert':'upload','s16')}</span>
+        <div class="grow"><div class="att-top"><b>${esc(j.file.name)}</b><span class="cap">${esc(txt)}</span></div>
+          ${j.state==='done'||j.state==='fail'?'':`<div class="att-bar" role="progressbar" aria-label="อัปโหลด ${esc(j.file.name)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${j.pct}"><i style="width:${j.pct}%"></i></div>`}
+          ${j.state==='paused'&&j.err?`<span class="cap">${esc(j.err)}</span>`:''}</div>
+        ${j.state==='up'?`<button type="button" class="btn plain icon sm" data-pause="${i}" aria-label="หยุดชั่วคราว">${icon('ban','s16')}</button>`:''}
+        ${j.state==='paused'?`<button type="button" class="btn sm" data-resume="${i}">${icon('refresh','s16')}ทำต่อ</button>`:''}
+        ${j.state!=='up'&&!(j.state==='done'&&ctl.docNo)?`<button type="button" class="btn plain icon sm" data-rm="${i}" aria-label="เอาออก ${esc(j.file.name)}">${icon('x','s16')}</button>`:''}</div>`}).join('');
+    host.innerHTML=`<div class="att">${saved||pend?`<div class="att-list">${saved}${pend}</div>`:(upOk?'':'<p class="cap" style="margin:0">ไม่มีเอกสารแนบ</p>')}
+      ${upOk?(demo?`<div class="att-drop off">${icon('lock')}<span><b>โหมดทดลองไม่บันทึกไฟล์ลง Google Drive</b><span class="cap">ทดลองแนบไฟล์ได้เมื่อติดตั้งระบบจริง</span></span></div>`
+        :`<label class="att-drop">${icon('upload')}<span><b>ลากไฟล์มาวาง หรือคลิกเพื่อเลือกไฟล์</b><span class="cap">รูปภาพ PDF Excel Word · สูงสุด 50 MB ต่อไฟล์ · ส่งทีละ 2 MB หลุดแล้วอัปโหลดต่อได้</span></span><input type="file" multiple accept="${UPL_ACCEPT}" class="sr-only"></label>`):''}</div>`;
+    $$('[data-open]',host).forEach(b=>b.onclick=()=>attachmentOpen_(files[+b.dataset.open]));
+    $$('[data-del]',host).forEach(b=>b.onclick=async()=>{const a=files[+b.dataset.del];
+      if(!await UI.swalConfirm('ลบไฟล์แนบนี้?',`${a.fileName} จะถูกย้ายไปถังขยะของ Google Drive`,'ลบไฟล์'))return;
+      try{await api('attachment.delete',{fileId:a.fileId},{loading:'กำลังลบไฟล์'});files=files.filter(x=>x!==a);UI.toast('ลบไฟล์แนบแล้ว','success',a.fileName);draw();ctl.onChange&&ctl.onChange()}
+      catch(e){UI.swalError('ลบไฟล์ไม่สำเร็จ',e.message)}});
+    $$('[data-pause]',host).forEach(b=>b.onclick=()=>jobs[+b.dataset.pause].pause());
+    $$('[data-resume]',host).forEach(b=>b.onclick=()=>jobs[+b.dataset.resume].start());
+    $$('[data-rm]',host).forEach(b=>b.onclick=()=>{const j=jobs[+b.dataset.rm];jobs.splice(jobs.indexOf(j),1);
+      if(j.state==='done'&&!ctl.docNo)api('upload.discard',{uploadIds:[j.id]},{loading:false}).catch(()=>{});draw()});
+    const drop=$('label.att-drop',host);if(!drop)return;
+    $('input',drop).onchange=e=>{add([...e.target.files]);e.target.value=''};
+    drop.ondragover=e=>{e.preventDefault();drop.classList.add('over')};drop.ondragleave=()=>drop.classList.remove('over');
+    drop.ondrop=e=>{e.preventDefault();drop.classList.remove('over');add([...e.dataTransfer.files])}};
+  const changed=async j=>{
+    if(j.state==='done'&&ctl.closed&&!ctl.docNo){api('upload.discard',{uploadIds:[j.id]},{loading:false}).catch(()=>{});return}
+    if(j.state==='done'&&ctl.docNo&&!j.listed){j.listed=true;   /* saved document: the server attached it with the last slice */
+      try{files=await api('attachment.list',{docNo:ctl.docNo},{loading:false});jobs.splice(jobs.indexOf(j),1)}catch(e){}
+      UI.toast('แนบไฟล์แล้ว','success',`${j.file.name} · ${ctl.docNo}`);ctl.onChange&&ctl.onChange()}
+    draw()};
+  const add=list=>{list.forEach(file=>{
+      if(file.size>UPL_MAX)return UI.toast('ไฟล์ใหญ่เกิน 50 MB','danger',`${file.name} — ย่อขนาดหรือแบ่งไฟล์ก่อนแนบ`);
+      if(!file.size)return UI.toast('ไฟล์ว่างเปล่า','danger',file.name);
+      if(jobs.some(j=>j.key.indexOf([file.name,file.size,file.lastModified].join('|'))===0&&j.state!=='fail'))return UI.toast('เลือกไฟล์นี้ไว้แล้ว','info',file.name);
+      jobs.push(new UploadJob(file,{entity,docNo:ctl.docNo,onChange:changed}))});
+    draw();pump()};
+  /* two files at a time */
+  const pump=()=>{const busy=jobs.filter(j=>j.state==='up').length;jobs.filter(j=>j.state==='wait').slice(0,Math.max(0,2-busy)).forEach(j=>j.start().then(pump))};
+  draw();
+  return Object.assign(ctl,{
+    busy:()=>jobs.some(j=>j.state==='up'||j.state==='wait'),
+    count:()=>files.length+jobs.filter(j=>j.state==='done').length,
+    /* after a new document is saved */
+    async commit(no){const ids=jobs.filter(j=>j.state==='done').map(j=>j.id);ctl.docNo=no;if(!ids.length)return 0;
+      const r=await api('upload.finalize',{uploadIds:ids,docNo:no},{loading:'กำลังแนบไฟล์'});return r.attached},
+    /* the form closed: an unsaved document's finished uploads go to the bin and the rest stop (picking the same file
+       again resumes it); a saved document's running files finish and attach by themselves */
+    discard(){if(ctl.closed)return;ctl.closed=true;if(ctl.docNo)return;jobs.forEach(j=>j.pause());
+      const ids=jobs.filter(j=>j.state==='done').map(j=>j.id);if(ids.length)api('upload.discard',{uploadIds:ids},{loading:false}).catch(()=>{})}})};
+</script>

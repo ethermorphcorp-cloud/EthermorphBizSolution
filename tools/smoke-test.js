@@ -597,5 +597,118 @@ check('request state cleared', G('SHOP === null && SANDBOX === null && CURRENT_U
   check('an earlier month', r.ok && r.data.kpi.revenue === 352000 && r.data.series[0].month === '2025-11' && r.data.series[0].revenue === 0 && r.data.series[0].margin === null, r.ok ? r.data.series[0] : r);
 }
 
+/* ---------- step 5: other income, expenses, chunked upload ---------- */
+{
+  const D = api('DEMO-HOTEL', 'auth.login', null, {username: 'maneerat', password: '1234'}).data.token;
+  const desk = api('DEMO-HOTEL', 'auth.login', null, {username: 'frontdesk1', password: '1234'}).data.token;
+  const T = api('HT001', 'auth.login', null, {username: 'owner', password: 'n3w-pass'}).data.token;
+  const dcall = (tok, action, payload) => api('DEMO-HOTEL', action, tok, payload || {});
+  const hcall = (action, payload) => api('HT001', action, T, payload || {});
+
+  // expenses
+  let r = dcall(D, 'expense.list', {month: '2026-09', pageSize: 8});
+  const E = r.data;
+  check('expense KPIs (Expenses.dc.html)', r.ok && E.kpi.amount === 172840 && E.kpi.count === 58 && E.kpi.top.label === 'เงินเดือนพนักงาน' &&
+    E.kpi.top.amount === 78000 && E.kpi.noFile === 7 && E.rows[0].docNo === 'EX-202609-0058' && E.rows[0].createdByName === 'ธนพล สุขใจ', r.ok ? E.kpi : r);
+  check('expense chips: categories with counts', E.chips.length === 8 && E.chips.find(c => c.value === 'FNB').count === 22 && E.chipsAll === 58, E.chips);
+  check('demo attachments: 0056 has two files, 0051 and 0053 none', E.rows.find(e => e.docNo === 'EX-202609-0056').files === 2 && E.rows.find(e => e.docNo === 'EX-202609-0053').files === 0, E.rows.map(e => e.docNo + ':' + e.files));
+  r = dcall(D, 'expense.list', {month: '2026-09', filters: {attach: 'no'}, pageSize: 50});
+  check('filter: not attached', r.ok && r.data.total === 7 && r.data.rows.every(e => !e.files), r.ok ? r.data.total : r);
+  r = dcall(D, 'attachment.download', {fileId: 'DEMO-EX-202609-0058-1'});
+  check('demo attachment download explains itself', !r.ok && r.code === 'DEMO_READONLY', r);
+  r = dcall(D, 'expense.list', {month: '2026-09', filters: {category: 'FNB'}, pageSize: 50});
+  check('filter by category', r.ok && r.data.total === 22 && r.data.rows.every(e => e.category === 'FNB') && r.data.chips.length === 8, r.ok ? r.data.total : r);
+  r = dcall(D, 'expense.list', {month: '2026-09', q: 'booking.com'});
+  check('search vendor', r.ok && r.data.rows.some(e => e.docNo === 'EX-202609-0057'), r.ok ? r.data.rows.map(e => e.docNo) : r);
+  r = dcall(desk, 'expense.list', {});
+  check('FrontDesk cannot see expenses', !r.ok && r.code === 'FORBIDDEN', r);
+  r = dcall(D, 'expense.save', {data: {date: '2026-09-25', category: 'MAINT', description: 'ซ่อมท่อน้ำ', payMethod: 'CASH', amount: '1,250'}});
+  check('expense save', r.ok && /^EX-\d{6}-\d{4}$/.test(r.data.docNo) && r.data.amount === 1250 && r.data.createdBy === 'maneerat', r);
+  const ex1 = r.data.docNo;
+  r = dcall(D, 'expense.save', {data: {date: '2026-09-25', category: 'NOPE', description: 'x', payMethod: 'CASH', amount: 10}});
+  check('expense: unknown category', !r.ok && r.field === 'category', r);
+  r = dcall(D, 'expense.delete', {docNo: ex1});
+  check('expense delete', r.ok, r);
+  r = dcall(D, 'expense.export', {month: '2026-09'});
+  check('expense export: every row', r.ok && r.data.rows.length === 58, r.ok ? r.data.rows.length : r);
+
+  // other income
+  r = dcall(D, 'otherIncome.list', {month: '2026-09', pageSize: 8});
+  const O = r.data;
+  check('other income KPIs and categories (Income-Other.dc.html)', r.ok && O.kpi.amount === 83600 && O.kpi.count === 117 &&
+    O.categories.find(c => c.code === 'MINIBAR').amount === 18960 && O.categories.find(c => c.code === 'FOOD').count === 36 &&
+    O.categories.find(c => c.code === 'EXTRABED').count === 0 && O.rows[0].docNo === 'OI-202609-0117' && O.counts.rooms === 71, r.ok ? O.categories : r);
+  check('pay filter includes "with the receipt"', O.options.payMethod.some(o => o.value === '-' && o.count > 0), O.options.payMethod);
+  r = dcall(D, 'otherIncome.list', {month: '2026-09', filters: {category: 'SHUTTLE'}, pageSize: 50});
+  check('filter by category', r.ok && r.data.total === 9, r.ok ? r.data.total : r);
+  r = dcall(D, 'otherIncome.bookings');
+  check('bookings to link', r.ok && r.data.some(b => b[0] === 'BK-202609-0064' && b[1] === '201'), r.ok ? r.data.length : r);
+  r = dcall(desk, 'otherIncome.save', {data: {date: '2026-09-25', category: 'MINIBAR', description: 'น้ำดื่ม', bookingNo: 'BK-202609-0064', roomNo: '999', qty: 2, unitPrice: 20, payMethod: ''}});
+  check('FrontDesk adds other income; the stay decides the room', r.ok && r.data.roomNo === '201' && r.data.amount === 40, r);
+  const oi1 = r.data.docNo;
+  r = dcall(D, 'otherIncome.save', {data: {date: '2026-09-25', category: 'FOOD', bookingNo: 'BK-202609-0060', qty: 1, unitPrice: 100}});
+  check('cannot link a cancelled stay', !r.ok && r.field === 'bookingNo', r);
+  r = dcall(desk, 'otherIncome.delete', {docNo: oi1});
+  check('FrontDesk cannot delete other income', !r.ok && r.code === 'FORBIDDEN', r);
+  const oi2 = dcall(D, 'otherIncome.save', {data: {date: '2026-09-25', category: 'LAUNDRY', roomNo: '203', qty: 1, unitPrice: 120, payMethod: 'CASH'}}).data;
+  r = dcall(D, 'otherIncome.delete', {docNo: oi2.docNo});
+  check('other income delete (room only, no stay)', r.ok && oi2.roomNo === '203' && oi2.bookingNo === '', r);
+
+  // upload
+  r = dcall(D, 'upload.init', {meta: {fileName: 'a.pdf', mime: 'application/pdf', size: 10, entity: 'Expenses'}});
+  check('upload refused in demo', !r.ok && r.code === 'DEMO_READONLY', r);
+  const exp = hcall('expense.save', {data: {date: '2026-09-25', category: 'UTIL', description: 'ค่าไฟ ส.ค.', payMethod: 'TRANSFER', amount: 26380}}).data;
+  r = hcall('upload.init', {meta: {fileName: 'big.pdf', mime: 'application/pdf', size: 51 * 1024 * 1024, entity: 'Expenses'}});
+  check('over 50 MB refused', !r.ok && r.field === 'file', r);
+  r = hcall('upload.init', {meta: {fileName: 'run.exe', mime: 'application/x-msdownload', size: 100, entity: 'Expenses'}});
+  check('file type refused', !r.ok && r.field === 'file', r);
+  const MB = 1024 * 1024, size = 5 * MB + 10;
+  const file = Buffer.alloc(size, 0).map((_, i) => (i * 7) % 251);
+  const slice = (a, b) => file.subarray(a, b).toString('base64');
+  r = hcall('upload.init', {meta: {fileName: 'invoice_aircon.pdf', mime: 'application/pdf', size, entity: 'Expenses'}});
+  const up = r.data;
+  check('upload.init: 2 MB slices', r.ok && up.chunkSize === 2 * MB && up.offset === 0, r);
+  r = hcall('upload.append', {uploadId: up.uploadId, offset: 0, data: slice(0, 2 * MB)});
+  check('slice 1 → offset 2 MB', r.ok && r.data.offset === 2 * MB, r);
+  r = hcall('upload.append', {uploadId: up.uploadId, offset: 2 * MB, data: slice(2 * MB, 2 * MB + 1000)});
+  check('a middle slice must be whole 256 KB blocks', !r.ok, r);
+  gas.uploads.dropNext = true;
+  r = hcall('upload.append', {uploadId: up.uploadId, offset: 2 * MB, data: slice(2 * MB, 4 * MB)});
+  check('dropped answer → retry error', !r.ok && r.code === 'UPLOAD_RETRY', r);
+  r = hcall('upload.status', {uploadId: up.uploadId});
+  check('status asks Drive: resume at 4 MB', r.ok && r.data.offset === 4 * MB, r);
+  r = hcall('upload.append', {uploadId: up.uploadId, offset: 2 * MB, data: slice(2 * MB, 4 * MB)});
+  check('a stale offset gets the server offset back', r.ok && r.data.resync && r.data.offset === 4 * MB, r);
+  hcall('user.save', {data: {username: 'acc01', fullName: 'บัญชี หนึ่ง', role: 'Accounting', status: 'active'}});
+  const other = api('HT001', 'auth.login', null, {username: 'acc01', password: '1234'});
+  r = hcall('upload.append', {uploadId: up.uploadId, offset: 4 * MB, data: slice(4 * MB, size)});
+  check('last slice → Drive file', r.ok && r.data.done && r.data.fileId, r);
+  const fileId = r.data.fileId;
+  check('Drive holds the exact bytes', Buffer.from(gas.files[fileId].blob.bytes).equals(file) && gas.files[fileId].blob.name === 'invoice_aircon.pdf');
+  r = hcall('upload.finalize', {uploadIds: [up.uploadId], docNo: exp.docNo});
+  check('finalize attaches to the expense', r.ok && r.data.attached === 1, r);
+  r = hcall('expense.list', {month: '2026-09'});
+  check('expense list counts the attachment', r.ok && r.data.rows.find(e => e.docNo === exp.docNo).files === 1 && r.data.kpi.noFile === 0, r.ok ? r.data.kpi : r);
+  r = hcall('attachment.download', {fileId});
+  check('download returns the file', r.ok && Buffer.from(r.data.data, 'base64').equals(file), r.ok ? r.data.fileName : r);
+  // an upload for a saved document attaches itself; one never saved can be discarded
+  const small = Buffer.from('hello receipt');
+  r = hcall('upload.init', {meta: {fileName: 'slip.jpg', mime: 'image/jpeg', size: small.length, entity: 'Expenses', docNo: exp.docNo}});
+  r = hcall('upload.append', {uploadId: r.data.uploadId, offset: 0, data: small.toString('base64')});
+  check('upload for an existing document attaches on completion', r.ok && r.data.done && hcall('attachment.list', {docNo: exp.docNo}).data.length === 2, r);
+  r = hcall('upload.init', {meta: {fileName: 'draft.png', mime: 'image/png', size: small.length, entity: 'Expenses'}});
+  const draft = r.data.uploadId;
+  const done = hcall('upload.append', {uploadId: draft, offset: 0, data: small.toString('base64')}).data;
+  r = hcall('upload.discard', {uploadIds: [draft]});
+  check('discard bins an unsaved upload', r.ok && r.data.discarded === 1 && gas.files[done.fileId].trashed, r);
+  r = hcall('attachment.delete', {fileId});
+  check('attachment delete bins the file', r.ok && gas.files[fileId].trashed && hcall('attachment.list', {docNo: exp.docNo}).data.length === 1, r);
+  r = hcall('expense.delete', {docNo: exp.docNo});
+  check('deleting the expense takes its attachments', r.ok && hcall('attachment.list', {docNo: exp.docNo}).data.length === 0, r);
+  check('attachment rows are text', dataRows('HT001', 'Attachments').every(x => x.every(c => typeof c === 'string')));
+  r = api('HT001', 'upload.status', other.data.token, {uploadId: up.uploadId});
+  check("another user cannot touch someone's upload", !r.ok && r.code === 'FORBIDDEN', r);
+}
+
 console.log(`${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

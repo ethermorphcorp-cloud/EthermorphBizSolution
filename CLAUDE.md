@@ -80,10 +80,10 @@ Web app บริหารรายได้-รายจ่ายโรงแ�
 │  ├─ DocNumber.gs       ✓  nextDocNo(prefix) → PREFIX-yyyyMM-#### จากชีต Sequences
 │  ├─ Validator.gs       ✓  appError_/fieldError_, RULES ต่อ entity (validation ชั้นที่ 2)
 │  ├─ Audit.gs           ✓  audit(action, entity, docNo, detail)
-│  ├─ Drive.gs           ✓  โฟลเดอร์ของโรงแรม (Upload.gs มาในขั้นที่ 5)
+│  ├─ Drive.gs           ✓  โฟลเดอร์ของโรงแรม (Attachments/RoomIncome | OtherIncome | Expenses)
 │  ├─ Setup.gs           ✓  setup(), setupShop(id), createSchema(), resetAllData()
 │  ├─ Demo.gs            ✓  DemoData: master + ทุกแถวที่ดีไซน์แสดงเลขเอกสาร + ยอดรวมที่หน้าจอแสดง
-│  ├─ DemoSeed.gs        ✓  seedDemoHotel(): ลูกค้า 214 ราย + ธุรกรรม เม.ย.–ก.ย. 2026 ให้ยอดตรงหน้าจอ (seed คงที่)
+│  ├─ DemoSeed.gs        ✓  seedDemoHotel(): ลูกค้า 214 ราย + ธุรกรรม เม.ย.–ก.ย. 2026 ให้ยอดตรงหน้าจอ (seed คงที่) + เอกสารแนบตัวอย่างของรายจ่าย (setup() เติมให้ demo ที่ยังไม่มี)
 │  ├─ Filter.gs          ✓  filterOptions_ (ค่าที่มีข้อมูล + จำนวน), filter.options, pageOf_ (server-side paging)
 │  ├─ Setting.gs         ✓  Dropdown (list พร้อมจำนวนที่ถูกใช้ / save / delete = ปิดใช้งานถ้าถูกใช้ / reorder), บริษัท, โลโก้
 │  ├─ User.gs            ✓  list / save / resetPassword — ไม่ลบ (ระงับแทน), ห้ามแก้บทบาทตัวเอง, ต้องเหลือ Owner ≥ 1
@@ -94,7 +94,13 @@ Web app บริหารรายได้-รายจ่ายโรงแ�
 │  ├─ Booking.gs         ✓  grid(from, days, typeCode) → rooms × days + bars (clip ซ้าย/ขวา) + ปิดปรับปรุง + สรุปห้องว่าง · audit.client
 │  ├─ Dashboard.gs       ✓  summary(month): KPI (เทียบเดือนก่อน), 6 เดือน รายได้/ค่าใช้จ่าย/อัตรากำไร, รายได้รายหมวด,
 │  │                        รายได้รายประเภทห้อง, ค่าใช้จ่ายรายหมวด
-│  └─ <Service>.gs          ขั้นที่ 5+: OtherIncome, Expense, Receipt, Report, Upload
+│  ├─ OtherIncome.gs     ✓  list (การ์ดรายหมวด + สัดส่วน, ตัวกรอง, แถวรวม) / get / bookings (การจอง 60 วันย้อนหลัง–30 วันหน้า) /
+│  │                        save (ผูกการจอง → ห้องตามการเข้าพัก, amount = qty × unitPrice, payMethod ว่าง = รวมในใบเสร็จ) / delete / export
+│  ├─ Expense.gs         ✓  list (KPI: รวม, จำนวน, หมวดสูงสุด, ยังไม่แนบเอกสาร · chip หมวดนับตามตัวกรองอื่น · ตัวกรองเอกสาร) / get / save / delete / export
+│  ├─ Upload.gs          ✓  Drive resumable upload: init → append (ทีละ 2 MB, offset ไม่ตรง = resync) → status (ถาม Drive ว่าได้ถึงไหน)
+│  │                        → finalize(ids, docNo) / discard(ids) · เอกสารที่บันทึกแล้วแนบเองเมื่อส่วนสุดท้ายเสร็จ · สูงสุด 50 MB
+│  │                        AttachmentService list / remove / download (≤ 10 MB ผ่าน server) · ไฟล์ตามสิทธิ์ของเอกสาร (attachmentNeed_)
+│  └─ <Service>.gs          ขั้นที่ 6+: Receipt, Report
 │                           — เพิ่ม route ใน ROUTES ของ Api.gs
 └─ frontend/                 *.html — index.html include ส่วนอื่นตามลำดับ (ทุกไฟล์ต้องถูก include — smoke-test ตรวจ)
    ├─ index.html         ✓  BOOT จาก doGet + SweetAlert2 + include ทั้งหมด แล้วเรียก Shell.boot()
@@ -103,6 +109,9 @@ Web app บริหารรายได้-รายจ่ายโรงแ�
    │                        combobox, openModal, pageSize, pager)
    ├─ js-validate.html   ✓  V.field / V.form / V.setErr — validation ชั้นที่ 1 (กฎเดียวกับ Validator.gs)
    ├─ js-api.html        ✓  api(action, payload, {loading, retry}) · App / Session (idle timeout) · Master (cache ตาม version)
+   ├─ js-upload.html     ✓  UploadJob (2 MB, retry 3 ครั้งผ่าน upload.status, หยุด/ทำต่อ, จำ uploadId ในเบราว์เซอร์ 6 ชม.
+   │                        → เลือกไฟล์เดิมซ้ำ = อัปโหลดต่อ) · UI.attachments(host, {docNo, entity, files, canEdit}) →
+   │                        commit(docNo) หลังบันทึกเอกสารใหม่ / discard() เมื่อปิดฟอร์ม (openModal onClose) · demo แสดงว่าแนบไม่ได้
    ├─ js-app.html        ✓  Shell: boot (app.boot), Login + Demo, sidebar ย่อได้ / drawer, topbar, bottom nav + FAB,
    │                        router go(view) + google.script.history, เปลี่ยนรหัสผ่าน, ธีม — เมนูอยู่ใน NAV
    ├─ page-stub.html     ✓  Pages._stub (เมนูที่ยังไม่ทำ)
@@ -112,8 +121,11 @@ Web app บริหารรายได้-รายจ่ายโรงแ�
    ├─ page-customers.html ✓ ตาราง server-side + ตัวกรองจากข้อมูล + เมนูแถว (portal) + นำเข้า/ส่งออก Excel (SheetJS)
    ├─ page-roomtypes.html ✓ การ์ดประเภทห้อง + ตารางห้อง + เปลี่ยนสถานะห้อง (FrontDesk ทำได้)
    ├─ page-rooms.html    ✓  บันทึกการจองห้องพัก: view table / calendar / grid (params.view) + bookingModal_ (ค้นหาลูกค้า,
-   │                        ห้องว่างตามวัน, ราคาศุกร์–เสาร์, มัดจำ, สรุป VAT) — go('rooms',{add:true | docNo})
-   └─ page-*.html           ขั้นที่ 5+: Pages.<key> = {render(el, params)} ต่อเมนู + js-upload.html (ขั้นที่ 5)
+   │                        ห้องว่างตามวัน, ราคาศุกร์–เสาร์, มัดจำ, สรุป VAT, เอกสารแนบ) — go('rooms',{add:true | docNo})
+   ├─ page-other.html    ✓  รายได้อื่นๆ ในแท็บรายได้: การ์ดรายหมวด (คลิก = กรอง), chip หมวด, otherModal_ (ค้นหาการจอง, ห้อง, qty × ราคา,
+   │                        เอกสารแนบ) — go('other',{add, bookingNo, docNo})
+   ├─ page-expenses.html ✓  KPI strip (คลิก ยังไม่แนบเอกสาร = กรอง), ตัวกรอง เดือน/วิธีชำระ/เอกสาร, chip หมวด, expenseModal_ + เอกสารแนบ
+   └─ page-*.html           ขั้นที่ 6+: Pages.<key> = {render(el, params)} ต่อเมนู (receipts, reports)
 ```
 
 - **Master sync:** `api()` ส่ง `_mv` (master version ของเบราว์เซอร์) ทุกครั้ง ถ้า master เปลี่ยน (จากคำขอนี้หรือผู้ใช้อื่น)

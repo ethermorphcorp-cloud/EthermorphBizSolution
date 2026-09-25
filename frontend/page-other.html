@@ -1,0 +1,147 @@
+<script>
+/* page-other.html — รายได้อื่นๆ (design/Income-Other): Minibar, ห้องอาหาร, ซักรีด … in the income tabs.
+ * Category cards for the month (categories without rows are hidden and named in the filter bar), filters that exist
+ * in the data, category chips with counts, page total. otherModal_ ties a line to a stay (its room follows the stay),
+ * to a room only, or to nobody (a walk-in diner); amount = qty × unit price; attachments via js-upload. */
+const OI_ST={month:'',q:'',filters:{},page:1};
+const CAT_TONES=['primary','info','warning','success','',''];
+const catBadge_=(group,code)=>{const i=Master.options(group,true).findIndex(d=>d.code===code);return`<span class="badge nodot ${i<0?'':CAT_TONES[i%CAT_TONES.length]}">${esc(Master.label(group,code))}</span>`};
+const roomLabel_=no=>{if(!no)return'';const r=Master.rooms().find(x=>x.roomNo===no);return(r?r.typeCode+' ':'')+no};
+
+Pages.other={render(el,params){
+  const st=OI_ST;
+  el.innerHTML=pageHead('บันทึกรายได้','รายได้อื่นๆ ผูกกับห้องหรือการเข้าพักได้ เพื่อรวมในใบเสร็จฉบับเดียว',
+      `<button type="button" class="btn" id="oiExport">${icon('download')}<span>ส่งออก Excel</span></button>`+
+      (can('otherIncome.edit')?`<button type="button" class="btn primary" id="oiAdd">${icon('plus')}<span>บันทึกรายได้อื่น</span></button>`:''))+
+    `<div class="inc-bar"><div class="tabs" role="tablist" aria-label="ประเภทรายได้">
+      ${can('roomIncome.view')?`<button type="button" role="tab" aria-selected="false" data-go-rooms="table">${icon('bed','s16')}รายได้จากห้องพัก<span class="cnt" id="cntRooms">·</span></button>`:''}
+      <button type="button" role="tab" aria-selected="true">${icon('cup','s16')}รายได้อื่นๆ<span class="cnt" id="cntOther">·</span></button>
+      ${can('booking.view')?`<button type="button" role="tab" aria-selected="false" data-go-rooms="grid">${icon('calendar','s16')}ตารางจองห้องพักรายวัน</button>`:''}</div>
+      ${can('roomIncome.view')?`<div class="seg" role="group" aria-label="มุมมอง"><button type="button" aria-pressed="true">${icon('grid','s16')}ตาราง</button><button type="button" aria-pressed="false" data-go-rooms="calendar">${icon('calendar','s16')}ปฏิทิน</button></div>`:''}</div>
+    <div class="cat-cards" id="oiCats"></div>
+    <section class="card" id="oiCard"><div class="filterbar"><div class="iw search"><span class="lead">${icon('search','s16')}</span><input class="input sm" id="oiQ" type="search" placeholder="ค้นหาเลขที่ รายการ หรือเลขห้อง" aria-label="ค้นหาเลขที่ รายการ หรือเลขห้อง" value="${esc(st.q)}"></div>
+      <select class="select sm" id="oiMonth" aria-label="เดือน" style="width:auto"></select><select class="select sm" id="oiPay" aria-label="วิธีชำระ" style="width:auto"></select>
+      <button type="button" class="btn ghost sm" id="oiClear">ล้างตัวกรอง</button><span class="grow"></span><span class="cap" id="oiHidden"></span></div>
+      <div class="chiprow" id="oiChips" role="group" aria-label="กรองตามประเภท"></div>
+      <div class="tbl-wrap" id="oiTable"></div><div class="pager" id="oiPager"></div></section>`;
+  $$('[data-go-rooms]',el).forEach(b=>b.onclick=()=>go('rooms',{view:b.dataset.goRooms}));
+  const reload=()=>oiTable_(el,st);
+  $('#oiMonth',el).onchange=e=>{st.month=e.target.value;st.filters={};st.page=1;reload()};
+  $('#oiPay',el).onchange=e=>{st.filters.payMethod=e.target.value;st.page=1;reload()};
+  $('#oiQ',el).oninput=UI.debounce(e=>{st.q=e.target.value.trim();st.page=1;reload()},400);
+  $('#oiClear',el).onclick=()=>{st.q='';st.filters={};st.page=1;$('#oiQ',el).value='';reload()};
+  $('#oiExport',el).onclick=()=>oiExport_(st);
+  if($('#oiAdd',el))$('#oiAdd',el).onclick=()=>otherModal_({},reload);
+  st.pageSize=UI.pageSizeFor($('#oiCard',el),{header:58+48+44+45,rowHeight:61});
+  reload();
+  if(params.add&&can('otherIncome.edit'))otherModal_({bookingNo:params.bookingNo||''},reload);
+  if(params.docNo)otherOpen_(params.docNo,reload)}};
+
+async function oiTable_(el,st){
+  let r;
+  try{r=await api('otherIncome.list',{month:st.month,q:st.q,filters:st.filters,page:st.page,pageSize:st.pageSize},{loading:'กำลังโหลดรายได้อื่นๆ'})}
+  catch(e){$('#oiTable',el).innerHTML=UI.empty('โหลดข้อมูลไม่สำเร็จ',e.message);return}
+  if(!el.isConnected||!$('#oiTable',el))return;
+  st.month=r.month;st.page=r.page;
+  $('#cntRooms',el)&&($('#cntRooms',el).textContent=fmtN(r.counts.rooms));$('#cntOther',el).textContent=fmtN(r.counts.other);
+  const live=r.categories.filter(c=>c.count),hidden=r.categories.filter(c=>!c.count);
+  $('#oiCats',el).innerHTML=live.length?live.map(c=>`<button type="button" class="cat-card" data-cat="${esc(c.code)}" aria-pressed="${st.filters.category===c.code}"><span class="lab">${esc(c.label)}</span><b>${fmtM(c.amount)}</b><span class="sub">${fmtN(c.count)} รายการ · ${c.share.toFixed(1)}%</span></button>`).join('')
+    :`<div class="cat-card"><span class="lab">รายได้อื่นๆ เดือนนี้</span><b>${fmtM(0)}</b><span class="sub">ยังไม่มีรายการ</span></div>`;
+  $('#oiHidden',el).innerHTML=hidden.length&&live.length?`${icon('info','s16')} ซ่อนประเภทที่ไม่มีข้อมูลในเดือนนี้ (${esc(hidden.map(c=>c.label).join(', '))})`:'ตัวกรองแสดงเฉพาะค่าที่มีข้อมูล';
+  $('#oiMonth',el).innerHTML=(r.months.length?'':`<option value="${esc(r.month)}">ยังไม่มีข้อมูล</option>`)+r.months.map(m=>`<option value="${m.value}" ${m.value===r.month?'selected':''}>${esc(m.label)} (${fmtN(m.count)})</option>`).join('');
+  $('#oiPay',el).innerHTML=`<option value="">วิธีชำระ: ทั้งหมด (${r.options.payMethod.length})</option>`+r.options.payMethod.map(o=>`<option value="${esc(o.value)}" ${o.value===st.filters.payMethod?'selected':''}>${esc(o.label)} (${fmtN(o.count)})</option>`).join('');
+  $('#oiChips',el).innerHTML=live.length?[{code:'',label:'ทั้งหมด',count:r.kpi.count}].concat(live).map(c=>`<button type="button" class="fchip" data-chip="${esc(c.code)}" aria-pressed="${(st.filters.category||'')===c.code}">${esc(c.label)}<span class="n">${fmtN(c.count)}</span></button>`).join(''):'';
+  const pick=code=>{st.filters.category=st.filters.category===code?'':code;st.page=1;oiTable_(el,st)};
+  $$('[data-chip]',el).forEach(b=>b.onclick=()=>pick(b.dataset.chip));
+  $$('[data-cat]',el).forEach(b=>b.onclick=()=>pick(b.dataset.cat));
+  const host=$('#oiTable',el),again=()=>oiTable_(el,st);
+  if(!r.rows.length){host.innerHTML=UI.empty(r.kpi.count?'ไม่พบรายการที่ตรงกับตัวกรอง':'ยังไม่มีรายได้อื่นในเดือนนี้',r.kpi.count?'ลองเปลี่ยนคำค้นหาหรือล้างตัวกรอง':'กดปุ่ม บันทึกรายได้อื่น เพื่อเพิ่มรายการ เช่น Minibar หรือซักรีด');$('#oiPager',el).innerHTML='';return}
+  host.innerHTML=`<table class="tbl stack"><thead><tr><th scope="col">เลขที่</th><th scope="col">วันที่</th><th scope="col">รายการ</th><th scope="col">อ้างอิงการเข้าพัก</th><th scope="col">ประเภท</th><th scope="col" class="r">จำนวน</th><th scope="col" class="r">ยอดรวม</th><th scope="col">วิธีชำระ</th><th scope="col" class="act"><span class="sr-only">จัดการ</span></th></tr></thead>
+    <tbody>${r.rows.map((o,i)=>`<tr class="clickable" data-row="${i}"><td data-label="เลขที่"><span class="mono">${esc(o.docNo)}</span></td><td data-label="วันที่">${fmtD(o.date)}</td>
+      <td data-label="รายการ" class="wrap"><span><b style="font-weight:500">${esc(o.description||Master.label('othercat',o.category))}</b>${o.files?`<span class="cap" style="display:block">${icon('file','s16')} ${o.files} ไฟล์</span>`:''}</span></td>
+      <td data-label="อ้างอิงการเข้าพัก"><span>${o.roomNo?esc(roomLabel_(o.roomNo)):'<span class="cap">-</span>'}<span class="cap mono" style="display:block">${o.bookingNo?esc(o.bookingNo):'ลูกค้าภายนอก'}</span></span></td>
+      <td data-label="ประเภท">${catBadge_('othercat',o.category)}</td><td data-label="จำนวน" class="r">${fmtN(o.qty)} × ${fmtM(o.unitPrice)}</td><td data-label="ยอดรวม" class="r">${fmtM(o.amount)}</td>
+      <td data-label="วิธีชำระ">${o.payMethod?esc(Master.label('pay',o.payMethod)):o.bookingNo?'<span class="badge info nodot">รวมในใบเสร็จ</span>':'<span class="badge warning">ยังไม่ชำระ</span>'}</td>
+      <td class="r nolabel act"><button type="button" class="btn plain icon sm" data-act="${i}" aria-haspopup="menu" aria-label="จัดการ ${esc(o.docNo)}">${icon('more')}</button></td></tr>`).join('')}</tbody>
+    <tfoot><tr><td colspan="6" class="nolabel">รวมหน้านี้ (${r.rows.length} รายการ)</td><td class="r" data-label="ยอดรวม">${fmtM(r.pageSum)}</td><td colspan="2" class="nolabel"></td></tr></tfoot></table>`;
+  UI.pager($('#oiPager',el),{page:r.page,pageSize:r.pageSize,total:r.total,onPage:p=>{st.page=p;again()}});
+  $$('tr[data-row]',host).forEach(tr=>tr.onclick=e=>{if(!e.target.closest('button'))otherOpen_(r.rows[+tr.dataset.row].docNo,again)});
+  $$('[data-act]',host).forEach(b=>b.onclick=e=>{e.stopPropagation();const o=r.rows[+b.dataset.act];
+    UI.openMenu(b,[{icon:can('otherIncome.edit')?'edit':'eye',label:can('otherIncome.edit')?'แก้ไข':'ดูรายละเอียด',onClick:()=>otherOpen_(o.docNo,again)},
+      ...(o.bookingNo&&can('roomIncome.view')?[{icon:'bed',label:'ดูการจอง '+o.bookingNo,onClick:()=>bookingOpen_(o.bookingNo,again)}]:[]),
+      ...(can('otherIncome.delete')?['-',{icon:'trash',label:'ลบรายการ',danger:true,onClick:()=>otherDelete_(o,again)}]:[])],
+      {header:`<b class="mono">${esc(o.docNo)}</b>${esc(o.description||Master.label('othercat',o.category))}`})})}
+
+async function otherDelete_(o,done){
+  if(!await UI.swalConfirm('ลบรายการนี้?',`ลบ ${o.docNo} · ${fmtM(o.amount)} ออกจากระบบถาวร พร้อมไฟล์แนบ — รายการที่อยู่ในใบเสร็จแล้วจะลบไม่ได้`,'ลบรายการ'))return;
+  try{await api('otherIncome.delete',{docNo:o.docNo},{loading:'กำลังลบ'});UI.toast('ลบรายการแล้ว','success',o.docNo);done()}catch(e){UI.swalError('ลบไม่สำเร็จ',e.message)}}
+
+async function oiExport_(st){
+  try{UI.showLoading('กำลังเตรียมไฟล์ Excel');const [d,XLSX]=await Promise.all([api('otherIncome.export',{month:st.month,q:st.q,filters:st.filters},{loading:false}),UI.xlsx()]);
+    const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,xlsxSheet_(XLSX,d.headers,d.rows,[4]),'รายได้อื่นๆ');
+    const name=`other-income-${d.month.replace('-','')}.xlsx`;XLSX.writeFile(wb,name);UI.toast('ส่งออกไฟล์แล้ว','success',`${fmtN(d.rows.length)} รายการ · ${name}`)}
+  catch(e){UI.swalError('ส่งออกไม่สำเร็จ',e.message)}finally{UI.hideLoading()}}
+
+/* ---------- form ---------- */
+async function otherOpen_(docNo,done){
+  try{const o=await api('otherIncome.get',{docNo},{loading:'กำลังโหลดรายการ'});otherModal_({item:o},done)}catch(e){UI.swalError('เปิดรายการไม่สำเร็จ',e.message)}}
+
+async function otherModal_(p,done){
+  const o=p.item||null,isNew=!o,ro=!can('otherIncome.edit');
+  const cats=Master.options('othercat').concat(o&&!Master.options('othercat').some(x=>x.code===o.category)?[{code:o.category,label:Master.label('othercat',o.category)}]:[]);
+  if(!cats.length){UI.swalInfo('ยังไม่มีประเภทรายได้อื่น','เพิ่มตัวเลือกในกลุ่ม ประเภทรายได้อื่น ที่เมนู ตั้งค่าทั่วไป ก่อนบันทึก');return}
+  let stays=[];
+  if(!ro){try{stays=await api('otherIncome.bookings',{},{loading:'กำลังเตรียมแบบฟอร์ม'})}catch(e){UI.swalError('เปิดแบบฟอร์มไม่สำเร็จ',e.message);return}}
+  /* the linked stay: from the list, or the one the saved line points to (it may be older than the list) */
+  const stayOf=no=>{const s=stays.find(x=>x[0]===no);return s?{docNo:s[0],roomNo:s[1],guestName:s[2],checkIn:s[3],checkOut:s[4]}:(o&&o.booking&&o.booking.docNo===no?o.booking:null)};
+  const st={booking:o&&o.bookingNo?(stayOf(o.bookingNo)||{docNo:o.bookingNo,roomNo:o.roomNo,guestName:'',checkIn:'',checkOut:''}):null};
+  if(!st.booking&&p.bookingNo)st.booking=stayOf(p.bookingNo);
+  const stayText=b=>b?`${b.docNo} · ${roomLabel_(b.roomNo)}${b.guestName?' · '+b.guestName:''}`:'';
+  const rooms=[['','— ไม่ผูกห้อง (ลูกค้าภายนอก) —']].concat(Master.rooms().map(r=>[r.roomNo,r.typeCode+' '+r.roomNo]));
+  const pay=[['','รวมในใบเสร็จ / ยังไม่ชำระ']].concat(Master.options('pay').concat(o&&o.payMethod&&!Master.options('pay').some(x=>x.code===o.payMethod)?[{code:o.payMethod,label:Master.label('pay',o.payMethod)}]:[]).map(x=>[x.code,x.label]));
+  const body=`<form id="oiForm" novalidate style="display:flex;flex-direction:column;gap:16px">
+    <div class="grid2">${V.field('date','วันที่',{value:o?o.date:TODAY,type:'date',req:true})}${V.select('category','ประเภทรายได้',cats.map(c=>[c.code,c.label]),o?o.category:cats[0].code,{req:true})}
+      <div class="field span2" data-f="bookingNo"><label for="f-bk">อ้างอิงการเข้าพัก</label>
+        <div style="display:flex;gap:8px"><div class="iw" style="flex:1"><span class="lead">${icon('search','s16')}</span><input class="input" id="f-bk" placeholder="พิมพ์เลขที่การจอง ชื่อผู้เข้าพัก หรือเลขห้อง" value="${esc(stayText(st.booking))}" aria-describedby="e-bookingNo" ${ro?'readonly':''}></div>
+        ${ro?'':`<button type="button" class="btn" id="oiUnlink">${icon('x','s16')}ไม่ผูกการจอง</button>`}</div>
+        <div class="err" id="e-bookingNo" role="alert">${icon('alert','s16')}<span></span></div><div class="help" id="bkHelp"></div></div>
+      ${V.select('roomNo','ห้อง',rooms,o?o.roomNo:'',{help:'ผูกการจองแล้ว ห้องจะตามการเข้าพักนั้น'})}${V.select('payMethod','วิธีชำระเงิน',pay,o?o.payMethod:'',{help:'ว่างไว้ถ้ารวมจ่ายกับค่าห้องในใบเสร็จ'})}
+      ${V.textarea('description','รายการ',{value:o?o.description:'',span:true,ph:'เช่น น้ำอัดลม 2, ขนม 1'})}
+      ${V.field('qty','จำนวน',{value:o?o.qty:1,type:'num',req:true,mono:true})}${V.field('unitPrice','ราคาต่อหน่วย (บาท)',{value:o?o.unitPrice.toFixed(2):'',type:'money',req:true,mono:true})}</div>
+    <div class="summary" id="oiSum" aria-live="polite"></div>
+    <p class="form-sec-title">เอกสารแนบ</p><div id="oiAtt"></div><button type="submit" hidden></button></form>`;
+  let att=null;
+  const m=UI.openModal({title:isNew?'บันทึกรายได้อื่น':(ro?'รายละเอียดรายได้อื่น':'แก้ไขรายได้อื่น')+' · '+o.docNo,iconName:'cup',body,onClose:()=>att&&att.discard(),
+    foot:`<span class="cap grow">${isNew?'เลขที่เอกสารสร้างอัตโนมัติเมื่อบันทึก · ':''}* จำเป็นต้องกรอก</span><button type="button" class="btn" data-close>${ro?'ปิด':'ยกเลิก'}</button>${ro?'':`<button type="button" class="btn primary" id="oiSave">${icon('check')}บันทึก</button>`}`});
+  const f=$('#oiForm',m.el);V.live(f);
+  att=UI.attachments($('#oiAtt',f),{docNo:o?o.docNo:'',entity:'OtherIncome',files:o?o.attachments||[]:[],canEdit:!ro});
+  att.onChange=()=>{done&&done()};   /* a file attached to a saved line: the list's file count changes */
+  if(ro)$('input,select,textarea',f).forEach(x=>x.disabled=true);
+  const num=k=>Number(String(V.val(f,k)).replace(/[,฿\s]/g,''))||0;
+  const drawSum=()=>{const q=num('qty'),u=num('unitPrice');$('#oiSum',f).innerHTML=`<div class="ln"><span>${fmtN(q)} × ${fmtM(u)}</span><span class="num"></span></div><div class="ln total"><span>ยอดรวม</span><b class="num">${fmtM(Math.round(q*u*100)/100)}</b></div>`};
+  const drawStay=()=>{const b=st.booking,sel=$('#f-roomNo',f);
+    $('#bkHelp',f).textContent=b?(b.checkIn?`เข้าพัก ${fmtD(b.checkIn)} – ${fmtD(b.checkOut)} · รวมในใบเสร็จของการจองนี้ได้`:'ผูกกับการจองนี้'):'ไม่บังคับ — ผูกไว้เพื่อรวมในใบเสร็จฉบับเดียวกับค่าห้อง';
+    if(b){sel.value=b.roomNo;sel.disabled=true}else sel.disabled=ro;
+    if($('#oiUnlink',f))$('#oiUnlink',f).style.display=b?'':'none'};
+  if(!ro){UI.combobox($('#f-bk',f),{source:q=>{const d=q.replace(/\s/g,'');return stays.filter(s=>s[0].toLowerCase().includes(d)||String(s[1]).toLowerCase()===d||String(s[2]).toLowerCase().includes(q))},
+      render:s=>`<span class="grow"><b>${esc(s[2])}</b><span class="cap mono">${esc(s[0])} · ห้อง ${esc(roomLabel_(s[1]))}</span></span><span class="cap">${fmtD(s[3]).slice(0,5)} – ${fmtD(s[4])}</span>`,
+      onPick:s=>{st.booking=stayOf(s[0]);$('#f-bk',f).value=stayText(st.booking);$('[data-f="bookingNo"]',f).classList.remove('invalid');drawStay()}});
+    $('#f-bk',f).addEventListener('input',()=>{if(st.booking){st.booking=null;drawStay()}});
+    $('#oiUnlink',f).onclick=()=>{st.booking=null;$('#f-bk',f).value='';drawStay()};
+    ['qty','unitPrice'].forEach(k=>$('#f-'+k,f).addEventListener('input',drawSum))}
+  drawStay();drawSum();
+  if(ro)return;
+  const save=async()=>{
+    if(!st.booking&&V.val(f,'bk').trim())return V.setErr(f,'bookingNo','เลือกการจองจากรายการ หรือกด ไม่ผูกการจอง');
+    const v=V.form(f,{date:{label:'วันที่',type:'date',req:true},description:{label:'รายการ',max:300},qty:{label:'จำนวน',type:'num',req:true,min:0.01},unitPrice:{label:'ราคาต่อหน่วย',type:'money',req:true,min:0}});
+    if(!v)return;
+    if(!(v.qty*v.unitPrice>0))return V.setErr(f,'unitPrice','ยอดรวมต้องมากกว่า 0 กรุณาตรวจจำนวนและราคาต่อหน่วย');
+    if(att.busy())return UI.swalInfo('ไฟล์แนบยังอัปโหลดไม่เสร็จ','รอให้อัปโหลดเสร็จ หรือหยุดแล้วเอาไฟล์นั้นออกก่อนบันทึก');
+    const data=Object.assign(v,{docNo:o?o.docNo:'',category:V.val(f,'category'),bookingNo:st.booking?st.booking.docNo:'',roomNo:st.booking?st.booking.roomNo:V.val(f,'roomNo'),payMethod:V.val(f,'payMethod')});
+    let r;try{r=await api('otherIncome.save',{data},{loading:'กำลังบันทึกรายได้อื่น'})}
+    catch(e){if(e.field)V.setErr(f,e.field,e.message);else UI.swalError('บันทึกไม่สำเร็จ',e.message);return}
+    let files='';
+    if(isNew){try{const n=await att.commit(r.docNo);if(n)files=` · แนบ ${n} ไฟล์`}catch(e){UI.toast('บันทึกแล้ว แต่แนบไฟล์ไม่สำเร็จ','warning',e.message)}}
+    m.close();UI.swalSuccess(isNew?'บันทึกรายได้อื่นแล้ว':'บันทึกการแก้ไขแล้ว',`เลขที่ ${r.docNo} · ${Master.label('othercat',r.category)} · ${fmtM(r.amount)}${r.bookingNo?' · '+r.bookingNo:''}${files}`);done&&done(r)};
+  $('#oiSave',m.el).onclick=save;f.onsubmit=e=>{e.preventDefault();save()}}
+</script>

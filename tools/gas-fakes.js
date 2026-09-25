@@ -84,14 +84,14 @@ function createGas(root, opts = {}) {
   };
   const props = {};
   let lockHeld = 0, lockAcquired = 0;
-  const folders = {}, files = {};
+  const folders = {}, files = {}, uploads = {sessions: {}, dropNext: false};
   function Folder(name) {
     const f = {id: newId('F'), name, kids: []};
     Object.assign(f, {
       getId: () => f.id,
       getFoldersByName: n => { const m = f.kids.filter(k => k.name === n); let i = 0; return {hasNext: () => i < m.length, next: () => m[i++]}; },
       createFolder: n => { const k = Folder(n); f.kids.push(k); return k; },
-      createFile: blob => { const id = newId('FILE'), file = {id, blob, trashed: false, sharing: null, getId: () => id, getName: () => blob.name,
+      createFile: blob => { const id = newId('FILE'), file = {id, blob, trashed: false, sharing: null, getId: () => id, getName: () => blob.name, getBlob: () => ({getBytes: () => blob.bytes}),
         getUrl: () => 'https://drive.google.com/file/d/' + id, setSharing(a, p) { file.sharing = a; }, setTrashed(t) { file.trashed = t; }}; files[id] = file; return file; }
     });
     folders[f.id] = f;
@@ -123,9 +123,37 @@ function createGas(root, opts = {}) {
       DigestAlgorithm: {SHA_256: 'sha256'}, Charset: {UTF_8: 'utf8'},
       base64Decode: b64 => Array.from(Buffer.from(b64, 'base64')).map(b => (b > 127 ? b - 256 : b)),
       newBlob: (bytes, mime, name) => ({bytes, mime, name, getName: () => name}),
+      base64Encode: bytes => Buffer.from(bytes.map(b => b & 255)).toString('base64'),
       computeDigest: (alg, s) => Array.from(crypto.createHash(alg).update(s, 'utf8').digest()).map(b => (b > 127 ? b - 256 : b))
     },
-    ScriptApp: {getService: () => ({getUrl: () => appUrl})},
+    ScriptApp: {getService: () => ({getUrl: () => appUrl}), getOAuthToken: () => 'fake-token'},
+    // Drive resumable upload (the parts Upload.gs uses): init → session URI, PUT slices with Content-Range,
+    // 308 + Range while incomplete, 200 + {id} when the last byte lands; "bytes */size" asks for the offset.
+    // uploads.dropNext = true stores the next slice but loses the answer (a dropped connection).
+    UrlFetchApp: {fetch: (url, p) => {
+      const R = (code, headers = {}, body = '') => ({getResponseCode: () => code, getHeaders: () => headers, getContentText: () => body});
+      if (url.startsWith('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable')) {
+        if (p.method !== 'post' || !/^Bearer /.test(p.headers.Authorization)) return R(401);
+        const meta = JSON.parse(p.payload), sid = newId('SESS');
+        uploads.sessions[sid] = {meta, size: Number(p.headers['X-Upload-Content-Length']), bytes: [], fileId: ''};
+        return R(200, {Location: 'https://fake-upload.local/' + sid});
+      }
+      if (url.startsWith('https://fake-upload.local/')) {
+        const u = uploads.sessions[url.split('/').pop()], cr = String(p.headers['Content-Range'] || '');
+        if (!u) return R(404);
+        if (/^bytes \*\//.test(cr)) return u.fileId ? R(200, {}, JSON.stringify({id: u.fileId})) : R(308, u.bytes.length ? {Range: 'bytes=0-' + (u.bytes.length - 1)} : {});
+        const m = cr.match(/^bytes (\d+)-(\d+)\/(\d+)$/);
+        if (!m || Number(m[1]) !== u.bytes.length || Number(m[2]) - Number(m[1]) + 1 !== p.payload.length) return R(400);
+        for (const b of p.payload) u.bytes.push(b);
+        if (u.bytes.length >= u.size) {
+          const f = folders[u.meta.parents[0]].createFile({bytes: u.bytes, name: u.meta.name, mime: u.meta.mimeType});
+          u.fileId = f.getId();
+        }
+        if (uploads.dropNext) { uploads.dropNext = false; return R(503); }
+        return u.fileId ? R(200, {}, JSON.stringify({id: u.fileId})) : R(308, {Range: 'bytes=0-' + (u.bytes.length - 1)});
+      }
+      return R(404);
+    }},
     DriveApp: {getFolderById: id => { if (!folders[id]) throw new Error('no folder'); return folders[id]; }, createFolder: n => Folder(n),
       getFileById: id => { if (!files[id]) throw new Error('no file'); return files[id]; },
       Access: {ANYONE_WITH_LINK: 'ANYONE_WITH_LINK'}, Permission: {VIEW: 'VIEW'}},
@@ -156,7 +184,7 @@ function createGas(root, opts = {}) {
   const order = ['Config.gs', 'Database.gs'].concat(fs.readdirSync(path.join(root, 'backend')).filter(f => f.endsWith('.gs') && f !== 'Config.gs' && f !== 'Database.gs').sort());
   order.forEach(f => vm.runInContext(fs.readFileSync(path.join(root, 'backend', f), 'utf8'), ctx, {filename: f}));
   const G = code => vm.runInContext(code, ctx);
-  return {ctx, G, books, props, cacheStore, folders, files, Book, fmtDate,
+  return {ctx, G, books, props, cacheStore, folders, files, uploads, Book, fmtDate,
     lock: {get held() { return lockHeld; }, get acquired() { return lockAcquired; }, reset() { lockAcquired = 0; }}};
 }
 

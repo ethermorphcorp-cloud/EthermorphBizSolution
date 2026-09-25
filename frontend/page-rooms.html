@@ -225,10 +225,13 @@ async function bookingModal_(o,done){
       <div class="field" data-f="payStatus"><span class="lbl" id="l-pay">สถานะการชำระ</span><div class="radio-pills" role="radiogroup" aria-labelledby="l-pay">${['paid','dep','due'].map(s=>`<button type="button" role="radio" data-pay="${s}" aria-checked="${st.pay===s}" ${ro?'disabled':''}>${PAY_LABEL[s]}</button>`).join('')}</div><div class="err" role="alert">${icon('alert','s16')}<span></span></div></div>
       ${V.field('deposit','ยอดมัดจำ (บาท)',{value:b&&b.deposit?b.deposit.toFixed(2):'',type:'money',req:true,mono:true})}
       ${V.textarea('note','หมายเหตุ',{value:b?b.note:'',span:true,ph:'เช่น ขอหมอนเพิ่ม เดินทางถึงดึก'})}</div>
-    <div class="summary" id="bkSum" aria-live="polite"></div><button type="submit" hidden></button></form>`;
-  const m=UI.openModal({title:isNew?'เพิ่มรายได้ห้องพัก':(ro?'รายละเอียดการจอง':'แก้ไขการจอง')+' · '+b.docNo,iconName:'bed',size:'lg',body,
+    <div class="summary" id="bkSum" aria-live="polite"></div>
+    <p class="form-sec-title">เอกสารแนบ</p><div id="bkAtt"></div><button type="submit" hidden></button></form>`;
+  let att=null;
+  const m=UI.openModal({title:isNew?'เพิ่มรายได้ห้องพัก':(ro?'รายละเอียดการจอง':'แก้ไขการจอง')+' · '+b.docNo,iconName:'bed',size:'lg',body,onClose:()=>att&&att.discard(),
     foot:`<span class="cap grow">${isNew?'เลขที่เอกสารสร้างอัตโนมัติเมื่อบันทึก · ':''}* จำเป็นต้องกรอก · ตรวจสอบข้อมูล 3 ชั้น: หน้าจอ → Server → ฐานข้อมูล</span><button type="button" class="btn" data-close>${ro?'ปิด':'ยกเลิก'}</button>${ro?'':`<button type="button" class="btn primary" id="bkSave">${icon('check')}บันทึก</button>`}`});
   const f=$('#bkForm',m.el);V.live(f);
+  att=UI.attachments($('#bkAtt',f),{docNo:b?b.docNo:'',entity:'RoomIncome',files:b?b.attachments||[]:[],canEdit:!ro});
   if(b&&b.payStatus==='cxl')f.insertAdjacentHTML('afterbegin',`<div class="banner warning">${icon('ban')}<span class="grow"><strong>การจองนี้ถูกยกเลิกแล้ว</strong> — แก้ไขไม่ได้ ถ้าต้องการจองอีกครั้งให้สร้างรายการใหม่</span></div>`);
   if(ro)$$('input,select,textarea',f).forEach(x=>x.disabled=true);
   const typeOf=()=>types.find(t=>t.code===V.val(f,'typeCode'));
@@ -281,10 +284,12 @@ async function bookingModal_(o,done){
     let deposit=0;if(st.pay==='dep'){const r=V.check(V.val(f,'deposit'),{label:'ยอดมัดจำ',type:'money',req:true,min:0.01});if(r.err)return V.setErr(f,'deposit',r.err);
       if(r.val>x.total)return V.setErr(f,'deposit','ยอดมัดจำต้องไม่เกินยอดสุทธิ '+fmtM(x.total));deposit=r.val}
     if(st.pay!=='due'&&!V.val(f,'payMethod'))return V.setErr(f,'payMethod','กรุณาเลือกวิธีชำระเงิน');
+    if(att.busy())return UI.swalInfo('ไฟล์แนบยังอัปโหลดไม่เสร็จ','รอให้อัปโหลดเสร็จ หรือหยุดแล้วเอาไฟล์นั้นออกก่อนบันทึก');
     const data=Object.assign(v,{docNo:b?b.docNo:'',customerId:st.customerId,typeCode:V.val(f,'typeCode'),roomNo:V.val(f,'roomNo'),channel:V.val(f,'channel'),
       payMethod:V.val(f,'payMethod'),payStatus:st.pay,deposit});
-    try{const r=await api('roomIncome.save',{data},{loading:'กำลังบันทึกการจอง'});m.close();
-      UI.swalSuccess(isNew?'บันทึกการจองแล้ว':'บันทึกการแก้ไขแล้ว',`เลขที่ ${r.docNo} · ห้อง ${r.roomNo} · ${fmtD(r.checkIn)} – ${fmtD(r.checkOut)} · ${fmtM(r.total)}`);done&&done(r)}
+    try{const r=await api('roomIncome.save',{data},{loading:'กำลังบันทึกการจอง'});let files='';
+      if(isNew){try{const n=await att.commit(r.docNo);if(n)files=` · แนบ ${n} ไฟล์`}catch(e){UI.toast('บันทึกแล้ว แต่แนบไฟล์ไม่สำเร็จ','warning',e.message)}}
+      m.close();UI.swalSuccess(isNew?'บันทึกการจองแล้ว':'บันทึกการแก้ไขแล้ว',`เลขที่ ${r.docNo} · ห้อง ${r.roomNo} · ${fmtD(r.checkIn)} – ${fmtD(r.checkOut)} · ${fmtM(r.total)}${files}`);done&&done(r)}
     catch(e){if(e.field)V.setErr(f,e.field==='customerId'?'customerId':e.field,e.message);else UI.swalError('บันทึกไม่สำเร็จ',e.message)}};
   $('#bkSave',m.el).onclick=save;f.onsubmit=e=>{e.preventDefault();save()}}
 </script>

@@ -448,6 +448,34 @@ function demoExpense_(o, rnd) {
   return o;
 }
 
+/* ---------- Attachments ---------- */
+
+/** Attachment rows for the demo expenses (no Drive files: a demo download says so). Expenses shows September with
+ *  7 of 58 not attached — EX-202609-0051 and 0053 plus five cash purchases — and EX-202609-0056 with two files.
+ *  Run by setup() whenever the demo hotel has expenses and no attachments, so an already seeded demo gets them too. */
+function seedDemoAttachments_() {
+  var rnd = demoRng_(DEMO_SEED + 5), sep = DemoData.months[DemoData.months.length - 1][0];
+  var exps = readTable('Expenses').sort(function (a, b) { return a.docNo < b.docNo ? -1 : 1; });
+  var none = {'EX-202609-0051': 1, 'EX-202609-0053': 1}, fixed = {};
+  DemoData.expenses.forEach(function (e) { fixed[e[0]] = 1; });
+  var cash = exps.filter(function (e) { return e.date.slice(0, 7) === sep && !fixed[e.docNo] && e.category === 'FNB' && e.payMethod === 'CASH'; });
+  for (var n = 0; n < 5 && cash.length; n++) none[cash.splice(Math.floor(rnd() * cash.length), 1)[0].docNo] = 1;
+  var kind = {SALARY: ['สลิปโอนเงินเดือน', 'pdf'], UTIL: ['ใบแจ้งหนี้', 'pdf'], OTA: ['ใบแจ้งหนี้', 'pdf'], TAX: ['ใบเสร็จ', 'pdf'], MKT: ['ใบกำกับภาษี', 'pdf']};
+  var rows = [];
+  exps.forEach(function (e) {
+    if (none[e.docNo] || (e.date.slice(0, 7) !== sep && rnd() < 0.08)) return;
+    var k = kind[e.category] || ['ใบเสร็จ', 'jpg'], files = [k];
+    if (e.docNo === 'EX-202609-0056') files.push(['ใบเสนอราคา', 'pdf']);
+    files.forEach(function (f, i) {
+      rows.push({fileId: 'DEMO-' + e.docNo + '-' + (i + 1), docNo: e.docNo, fileName: f[0] + '_' + e.docNo + '.' + f[1],
+        mime: f[1] === 'pdf' ? 'application/pdf' : 'image/jpeg', size: Math.round((80 + rnd() * 3400) * 1024), driveUrl: '',
+        uploadedBy: e.createdBy, uploadedAt: e.createdAt});
+    });
+  });
+  withLock_(function () { insertRows('Attachments', rows); });
+  return 'demo attachments: ' + rows.length;
+}
+
 /* ---------- Sequences ---------- */
 
 /** last = the highest number per PREFIX-yyyyMM, so the next save continues after the demo rows. */

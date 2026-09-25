@@ -1,0 +1,108 @@
+<script>
+/* page-expenses.html — บันทึกรายจ่าย (design/Expenses): KPI strip (month total, count, top category, not yet
+ * attached), filters that exist in the data (month, pay method, attachment), category chips with counts that follow
+ * the search and the other filters, page total. expenseModal_ adds / edits an expense with its receipts attached. */
+const EX_ST={month:'',q:'',filters:{},page:1};
+
+Pages.expenses={render(el,params){
+  const st=EX_ST;
+  el.innerHTML=pageHead('บันทึกรายจ่าย','ค่าใช้จ่ายของโรงแรมแยกตามหมวดหมู่ พร้อมแนบใบเสร็จหรือใบกำกับภาษี',
+      `<button type="button" class="btn" id="exExport">${icon('download')}<span>ส่งออก Excel</span></button>`+
+      (can('expense.edit')?`<button type="button" class="btn primary" id="exAdd">${icon('plus')}<span>เพิ่มรายจ่าย</span></button>`:''))+
+    `<div class="kpi-strip" id="exKpi"></div>
+    <section class="card" id="exCard"><div class="filterbar"><div class="iw search"><span class="lead">${icon('search','s16')}</span><input class="input sm" id="exQ" type="search" placeholder="ค้นหารายการ ผู้ขาย หรือเลขที่" aria-label="ค้นหารายการ ผู้ขาย หรือเลขที่" value="${esc(st.q)}"></div>
+      <select class="select sm" id="exMonth" aria-label="เดือน" style="width:auto"></select><select class="select sm" id="exPay" aria-label="วิธีชำระ" style="width:auto"></select>
+      <select class="select sm" id="exAttach" aria-label="เอกสารแนบ" style="width:auto"></select>
+      <button type="button" class="btn ghost sm" id="exClear">ล้างตัวกรอง</button><span class="grow"></span><span class="cap">${icon('info','s16')} แสดงเฉพาะหมวดที่มีรายการ</span></div>
+      <div class="chiprow" id="exChips" role="group" aria-label="กรองตามหมวดหมู่"></div>
+      <div class="tbl-wrap" id="exTable"></div><div class="pager" id="exPager"></div></section>`;
+  const reload=()=>exTable_(el,st);
+  $('#exMonth',el).onchange=e=>{st.month=e.target.value;st.filters={};st.page=1;reload()};
+  [['#exPay','payMethod'],['#exAttach','attach']].forEach(([id,k])=>$(id,el).onchange=e=>{st.filters[k]=e.target.value;st.page=1;reload()});
+  $('#exQ',el).oninput=UI.debounce(e=>{st.q=e.target.value.trim();st.page=1;reload()},400);
+  $('#exClear',el).onclick=()=>{st.q='';st.filters={};st.page=1;$('#exQ',el).value='';reload()};
+  $('#exExport',el).onclick=()=>exExport_(st);
+  if($('#exAdd',el))$('#exAdd',el).onclick=()=>expenseModal_(null,reload);
+  st.pageSize=UI.pageSizeFor($('#exCard',el),{header:58+48+44+45,rowHeight:61});
+  reload();
+  if(params.add&&can('expense.edit'))expenseModal_(null,reload);
+  if(params.docNo)expenseOpen_(params.docNo,reload)}};
+
+async function exTable_(el,st){
+  let r;
+  try{r=await api('expense.list',{month:st.month,q:st.q,filters:st.filters,page:st.page,pageSize:st.pageSize},{loading:'กำลังโหลดรายจ่าย'})}
+  catch(e){$('#exTable',el).innerHTML=UI.empty('โหลดข้อมูลไม่สำเร็จ',e.message);return}
+  if(!el.isConnected||!$('#exTable',el))return;
+  st.month=r.month;st.page=r.page;
+  const mon=r.months.find(m=>m.value===r.month);
+  $('#exKpi',el).innerHTML=`<div><span class="lab">รายจ่าย ${esc(mon?mon.label:r.month)}</span><b>${fmtM(r.kpi.amount)}</b></div>
+    <div><span class="lab">จำนวนรายการ</span><b>${fmtN(r.kpi.count)} รายการ</b></div>
+    <div><span class="lab">หมวดสูงสุด${r.kpi.top?' · '+esc(r.kpi.top.label):''}</span><b>${r.kpi.top?fmtM(r.kpi.top.amount):'-'}</b></div>
+    <button type="button" class="kpi-btn" id="exNoFile" aria-pressed="${st.filters.attach==='no'}" ${r.kpi.noFile?'':'disabled'}><span class="lab">ยังไม่แนบเอกสาร</span><b style="${r.kpi.noFile?'color:var(--warning)':''}">${fmtN(r.kpi.noFile)} รายการ</b>${r.kpi.noFile?'<span class="sub">คลิกเพื่อดูรายการ</span>':''}</button>`;
+  $('#exNoFile',el).onclick=()=>{st.filters.attach=st.filters.attach==='no'?'':'no';st.page=1;exTable_(el,st)};
+  $('#exMonth',el).innerHTML=(r.months.length?'':`<option value="${esc(r.month)}">ยังไม่มีข้อมูล</option>`)+r.months.map(m=>`<option value="${m.value}" ${m.value===r.month?'selected':''}>${esc(m.label)} (${fmtN(m.count)})</option>`).join('');
+  const opt=(id,label,list,cur)=>{$(id,el).innerHTML=`<option value="">${label}: ทั้งหมด${list.length>1?' ('+list.length+')':''}</option>`+list.map(o=>`<option value="${esc(o.value)}" ${o.value===cur?'selected':''}>${esc(o.label)} (${fmtN(o.count)})</option>`).join('')};
+  opt('#exPay','วิธีชำระ',r.options.payMethod,st.filters.payMethod);opt('#exAttach','เอกสาร',r.options.attach,st.filters.attach);
+  $('#exChips',el).innerHTML=r.kpi.count?[{value:'',label:'ทั้งหมด',count:r.chipsAll}].concat(r.chips).map(c=>`<button type="button" class="fchip" data-chip="${esc(c.value)}" aria-pressed="${(st.filters.category||'')===c.value}">${esc(c.label)}<span class="n">${fmtN(c.count)}</span></button>`).join(''):'';
+  $$('[data-chip]',el).forEach(b=>b.onclick=()=>{st.filters.category=b.dataset.chip;st.page=1;exTable_(el,st)});
+  const host=$('#exTable',el),again=()=>exTable_(el,st);
+  if(!r.rows.length){host.innerHTML=UI.empty(r.kpi.count?'ไม่พบรายการที่ตรงกับตัวกรอง':'ยังไม่มีรายจ่ายในเดือนนี้',r.kpi.count?'ลองเปลี่ยนคำค้นหา เลือกหมวดอื่น หรือล้างตัวกรอง':'กดปุ่ม เพิ่มรายจ่าย เพื่อบันทึกค่าใช้จ่ายพร้อมแนบใบเสร็จ');$('#exPager',el).innerHTML='';return}
+  host.innerHTML=`<table class="tbl stack"><thead><tr><th scope="col">เลขที่</th><th scope="col">วันที่</th><th scope="col">รายการ</th><th scope="col">หมวดหมู่</th><th scope="col">วิธีชำระ</th><th scope="col" class="r">ยอดเงิน</th><th scope="col">เอกสาร</th><th scope="col">ผู้บันทึก</th><th scope="col" class="act"><span class="sr-only">จัดการ</span></th></tr></thead>
+    <tbody>${r.rows.map((x,i)=>`<tr class="clickable" data-row="${i}"><td data-label="เลขที่"><span class="mono">${esc(x.docNo)}</span></td><td data-label="วันที่">${fmtD(x.date)}</td>
+      <td data-label="รายการ" class="wrap"><span><b style="font-weight:500">${esc(x.description)}</b><span class="cap" style="display:block">${esc(x.vendor||'-')}</span></span></td>
+      <td data-label="หมวดหมู่">${catBadge_('expcat',x.category)}</td><td data-label="วิธีชำระ">${esc(Master.label('pay',x.payMethod))}</td><td data-label="ยอดเงิน" class="r">${fmtM(x.amount)}</td>
+      <td data-label="เอกสาร">${x.files?`<span class="att-count">${icon('file','s16')}${x.files} ไฟล์</span>`:'<span class="badge warning">ไม่มี</span>'}</td><td data-label="ผู้บันทึก">${esc(x.createdByName)}</td>
+      <td class="r nolabel act"><button type="button" class="btn plain icon sm" data-act="${i}" aria-haspopup="menu" aria-label="จัดการ ${esc(x.docNo)}">${icon('more')}</button></td></tr>`).join('')}</tbody>
+    <tfoot><tr><td colspan="5" class="nolabel">รวมหน้านี้ (${r.rows.length} รายการ)</td><td class="r" data-label="ยอดเงิน">${fmtM(r.pageSum)}</td><td colspan="3" class="nolabel"></td></tr></tfoot></table>`;
+  UI.pager($('#exPager',el),{page:r.page,pageSize:r.pageSize,total:r.total,onPage:p=>{st.page=p;again()}});
+  $$('tr[data-row]',host).forEach(tr=>tr.onclick=e=>{if(!e.target.closest('button'))expenseOpen_(r.rows[+tr.dataset.row].docNo,again)});
+  $$('[data-act]',host).forEach(b=>b.onclick=e=>{e.stopPropagation();const x=r.rows[+b.dataset.act],edit=can('expense.edit');
+    UI.openMenu(b,[{icon:edit?'edit':'eye',label:edit?'แก้ไข':'ดูรายละเอียด',onClick:()=>expenseOpen_(x.docNo,again)},
+      ...(edit&&!x.files&&!App.demo&&can('upload.create')?[{icon:'upload',label:'แนบเอกสาร',onClick:()=>expenseOpen_(x.docNo,again)}]:[]),
+      ...(can('expense.delete')?['-',{icon:'trash',label:'ลบรายการ',danger:true,onClick:()=>expenseDelete_(x,again)}]:[])],
+      {header:`<b class="mono">${esc(x.docNo)}</b>${esc(x.description)}`})})}
+
+async function expenseDelete_(x,done){
+  if(!await UI.swalConfirm('ลบรายจ่ายนี้?',`ลบ ${x.docNo} · ${x.description} · ${fmtM(x.amount)} ออกจากระบบถาวร${x.files?' ไฟล์แนบ '+x.files+' ไฟล์จะถูกย้ายไปถังขยะของ Drive':''}`,'ลบรายการ'))return;
+  try{await api('expense.delete',{docNo:x.docNo},{loading:'กำลังลบ'});UI.toast('ลบรายจ่ายแล้ว','success',x.docNo);done()}catch(e){UI.swalError('ลบไม่สำเร็จ',e.message)}}
+
+async function exExport_(st){
+  try{UI.showLoading('กำลังเตรียมไฟล์ Excel');const [d,XLSX]=await Promise.all([api('expense.export',{month:st.month,q:st.q,filters:st.filters},{loading:false}),UI.xlsx()]);
+    const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,xlsxSheet_(XLSX,d.headers,d.rows,[]),'รายจ่าย');
+    const name=`expenses-${d.month.replace('-','')}.xlsx`;XLSX.writeFile(wb,name);UI.toast('ส่งออกไฟล์แล้ว','success',`${fmtN(d.rows.length)} รายการ · ${name}`)}
+  catch(e){UI.swalError('ส่งออกไม่สำเร็จ',e.message)}finally{UI.hideLoading()}}
+
+/* ---------- form ---------- */
+async function expenseOpen_(docNo,done){
+  try{const x=await api('expense.get',{docNo},{loading:'กำลังโหลดรายจ่าย'});expenseModal_(x,done)}catch(e){UI.swalError('เปิดรายจ่ายไม่สำเร็จ',e.message)}}
+
+function expenseModal_(x,done){
+  const isNew=!x,ro=!can('expense.edit');
+  const opt=(g,cur)=>Master.options(g).concat(cur&&!Master.options(g).some(d=>d.code===cur)?[{code:cur,label:Master.label(g,cur)}]:[]).map(d=>[d.code,d.label]);
+  const cats=opt('expcat',x&&x.category);
+  if(!cats.length){UI.swalInfo('ยังไม่มีหมวดค่าใช้จ่าย','เพิ่มตัวเลือกในกลุ่ม หมวดค่าใช้จ่าย ที่เมนู ตั้งค่าทั่วไป ก่อนบันทึก');return}
+  const body=`<form id="exForm" novalidate style="display:flex;flex-direction:column;gap:16px">
+    <div class="grid2">${V.field('date','วันที่',{value:x?x.date:TODAY,type:'date',req:true})}${V.select('category','หมวดหมู่',cats,x?x.category:cats[0][0],{req:true})}
+      ${V.field('description','รายการ',{value:x?x.description:'',req:true,span:true,ph:'เช่น ค่าไฟฟ้า ส.ค. 2026'})}
+      ${V.field('vendor','ผู้ขาย / ผู้รับเงิน',{value:x?x.vendor:'',ph:'เช่น การไฟฟ้าส่วนภูมิภาค'})}${V.select('payMethod','วิธีชำระเงิน',opt('pay',x&&x.payMethod),x?x.payMethod:'CASH',{req:true})}
+      ${V.field('amount','จำนวนเงิน (บาท)',{value:x?x.amount.toFixed(2):'',type:'money',req:true,mono:true,help:'ยอดที่จ่ายจริง รวมภาษีมูลค่าเพิ่มแล้ว'})}</div>
+    <p class="form-sec-title">เอกสารแนบ</p><div id="exAtt"></div><button type="submit" hidden></button></form>`;
+  let att=null;
+  const m=UI.openModal({title:isNew?'เพิ่มรายจ่าย':(ro?'รายละเอียดรายจ่าย':'แก้ไขรายจ่าย')+' · '+x.docNo,iconName:'wallet',body,onClose:()=>att&&att.discard(),
+    foot:`<span class="cap grow">${isNew?'เลขที่เอกสารสร้างอัตโนมัติเมื่อบันทึก · ':''}* จำเป็นต้องกรอก</span><button type="button" class="btn" data-close>${ro?'ปิด':'ยกเลิก'}</button>${ro?'':`<button type="button" class="btn primary" id="exSave">${icon('check')}บันทึก</button>`}`});
+  const f=$('#exForm',m.el);V.live(f);
+  att=UI.attachments($('#exAtt',f),{docNo:x?x.docNo:'',entity:'Expenses',files:x?x.attachments||[]:[],canEdit:!ro});
+  att.onChange=()=>{done&&done()};   /* a file attached to a saved expense: the list's file count changes */
+  if(ro){$$('input,select,textarea',f).forEach(e=>e.disabled=true);return}
+  const save=async()=>{
+    const v=V.form(f,{date:{label:'วันที่',type:'date',req:true},description:{label:'รายการ',req:true,max:300},vendor:{label:'ผู้ขาย/ผู้รับเงิน',max:150},amount:{label:'จำนวนเงิน',type:'money',req:true,min:0.01}});
+    if(!v)return;
+    if(att.busy())return UI.swalInfo('ไฟล์แนบยังอัปโหลดไม่เสร็จ','รอให้อัปโหลดเสร็จ หรือหยุดแล้วเอาไฟล์นั้นออกก่อนบันทึก');
+    const data=Object.assign(v,{docNo:x?x.docNo:'',category:V.val(f,'category'),payMethod:V.val(f,'payMethod')});
+    let r;try{r=await api('expense.save',{data},{loading:'กำลังบันทึกรายจ่าย'})}
+    catch(e){if(e.field)V.setErr(f,e.field,e.message);else UI.swalError('บันทึกไม่สำเร็จ',e.message);return}
+    let files='';
+    if(isNew){try{const n=await att.commit(r.docNo);if(n)files=` · แนบ ${n} ไฟล์`}catch(e){UI.toast('บันทึกแล้ว แต่แนบไฟล์ไม่สำเร็จ','warning',e.message)}}
+    m.close();UI.swalSuccess(isNew?'บันทึกรายจ่ายแล้ว':'บันทึกการแก้ไขแล้ว',`เลขที่ ${r.docNo} · ${Master.label('expcat',r.category)} · ${fmtM(r.amount)}${files}`);done&&done(r)};
+  $('#exSave',m.el).onclick=save;f.onsubmit=e=>{e.preventDefault();save()}}
+</script>

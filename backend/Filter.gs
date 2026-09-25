@@ -38,8 +38,9 @@ function filterOptions(user, entity, field, scope) {
   return filterOptions_(rows, field, def[2][field] ? dropdownLabel_(def[2][field]) : null);
 }
 
-/** One page of rows: {rows, total, page, pageSize}. */
+/** One page of rows: {rows, total, page, pageSize}. pageSize 'all' = every row (exports). */
 function pageOf_(rows, page, pageSize) {
+  if (pageSize === 'all') return {rows: rows, total: rows.length, page: 1, pageSize: Math.max(1, rows.length)};
   pageSize = Math.max(1, Math.min(200, Number(pageSize) || 20));
   var pages = Math.max(1, Math.ceil(rows.length / pageSize));
   page = Math.max(1, Math.min(pages, Number(page) || 1));

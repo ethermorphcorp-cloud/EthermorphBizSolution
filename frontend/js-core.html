@@ -138,9 +138,9 @@ window.addEventListener('resize',()=>{closeMenu();closeCbx()});
 document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(openMenuEl)closeMenu();else if(cbxEl)closeCbx();else{const m=$$('.backdrop').pop();if(m&&m._close)m._close()}});
 
 /* ---------- Modal: add / edit forms (bottom sheet on phones) ---------- */
-UI.openModal=function({title,iconName='edit',body,foot,size=''}){closeMenu();const id='mt'+Date.now(),bd=document.createElement('div');bd.className='backdrop';
+UI.openModal=function({title,iconName='edit',body,foot,size='',onClose=null}){closeMenu();const id='mt'+Date.now(),bd=document.createElement('div');bd.className='backdrop';
   bd.innerHTML=`<div class="modal ${size}" role="dialog" aria-modal="true" aria-labelledby="${id}"><div class="modal-head"><span class="chip">${icon(iconName)}</span><h2 id="${id}">${esc(title)}</h2><button type="button" class="btn plain icon" data-close aria-label="ปิด">${icon('x')}</button></div><div class="modal-body">${body}</div>${foot?`<div class="modal-foot">${foot}</div>`:''}</div>`;
-  const back=document.activeElement,close=()=>{bd.remove();closeCbx();back&&back.focus&&back.focus()};bd._close=close;
+  const back=document.activeElement,close=()=>{if(!bd.isConnected)return;bd.remove();closeCbx();onClose&&onClose();back&&back.focus&&back.focus()};bd._close=close;
   bd.addEventListener('mousedown',e=>{bd._down=e.target===bd});
   bd.addEventListener('click',e=>{if(e.target===bd&&bd._down)close();if(e.target.closest('[data-close]'))close()});
   document.body.appendChild(bd);setTimeout(()=>{const f=bd.querySelector('input:not([type=hidden]):not([readonly]),select,textarea');f&&window.innerWidth>575&&f.focus()},30);

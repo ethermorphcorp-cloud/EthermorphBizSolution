@@ -53,6 +53,7 @@ var RoomIncomeService = {
     if (!b) throw appError_('NOT_FOUND', 'ไม่พบการจอง ' + docNo + ' อาจถูกลบไปแล้ว กรุณารีเฟรชหน้า');
     b.other = readTable('OtherIncome').filter(function (o) { return o.bookingNo === docNo; });
     b.receipts = readTable('Receipts').filter(function (r) { return r.bookingNo === docNo; }).map(function (r) { return r.docNo; });
+    b.attachments = AttachmentService.list(docNo);
     return b;
   },
 
@@ -145,6 +146,7 @@ var RoomIncomeService = {
       var other = readTable('OtherIncome').filter(function (o) { return o.bookingNo === docNo; }).length;
       var rc = readTable('Receipts').filter(function (r) { return r.bookingNo === docNo; }).length;
       if (other || rc) throw appError_('IN_USE', 'การจองนี้มี' + (rc ? 'ใบเสร็จ ' + rc + ' ใบ' : 'รายได้อื่นที่ผูกไว้ ' + other + ' รายการ') + ' จึงลบไม่ได้ — ใช้ ยกเลิกการจอง แทน');
+      dropAttachments_(docNo);
       deleteRow('RoomIncome', docNo);
       audit('DELETE', 'RoomIncome', docNo, {guest: b.guestName, total: b.total});
       return true;
@@ -176,7 +178,7 @@ var RoomIncomeService = {
   /** Rows for the .xlsx the browser writes (the month and filters of the list). Audited. */
   export: function (user, a) {
     a = a || {};
-    var r = RoomIncomeService.list({month: a.month, q: a.q, filters: a.filters, pageSize: 200000});
+    var r = RoomIncomeService.list({month: a.month, q: a.q, filters: a.filters, pageSize: 'all'});
     var ch = dropdownLabel_('channel'), pay = dropdownLabel_('pay');
     var st = {paid: 'ชำระแล้ว', dep: 'มัดจำ', due: 'ค้างชำระ', cxl: 'ยกเลิก'};
     audit('EXPORT', 'RoomIncome', r.month, {rows: r.total});

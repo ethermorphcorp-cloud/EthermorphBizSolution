@@ -88,8 +88,30 @@ var ROUTES = {
   'roomIncome.export':   {perm: 'roomIncome.view', feature: 'roomIncome', fn: function (a, u) { return RoomIncomeService.export(u, a); }},
   'customer.lookup':     {perm: 'roomIncome.view', fn: function () { return customerLookup_(); }},
   'booking.grid':        {perm: 'booking.view', feature: 'booking', fn: function (a) { return BookingService.grid(a.from, a.days, a.typeCode); }},
-  'dashboard.summary':   {perm: 'dashboard.view', feature: 'dashboard', fn: function (a) { return DashboardService.summary(a.month); }}
-  // step 5+: otherIncome.*, expense.*, receipt.*, report.*, upload.*
+  'dashboard.summary':   {perm: 'dashboard.view', feature: 'dashboard', fn: function (a) { return DashboardService.summary(a.month); }},
+
+  'otherIncome.list':    {perm: 'otherIncome.view', feature: 'otherIncome', fn: function (a) { return OtherIncomeService.list(a); }},
+  'otherIncome.get':     {perm: 'otherIncome.view', feature: 'otherIncome', fn: function (a) { return OtherIncomeService.get(a.docNo); }},
+  'otherIncome.bookings': {perm: 'otherIncome.edit', feature: 'otherIncome', fn: function () { return OtherIncomeService.bookings(); }},
+  'otherIncome.save':    {perm: 'otherIncome.edit', feature: 'otherIncome', fn: function (a, u) { return OtherIncomeService.save(u, a.data); }},
+  'otherIncome.delete':  {perm: 'otherIncome.delete', feature: 'otherIncome', fn: function (a, u) { return OtherIncomeService.delete(u, a.docNo); }},
+  'otherIncome.export':  {perm: 'otherIncome.view', feature: 'otherIncome', fn: function (a, u) { return OtherIncomeService.export(u, a); }},
+
+  'expense.list':        {perm: 'expense.view', feature: 'expense', fn: function (a) { return ExpenseService.list(a); }},
+  'expense.get':         {perm: 'expense.view', feature: 'expense', fn: function (a) { return ExpenseService.get(a.docNo); }},
+  'expense.save':        {perm: 'expense.edit', feature: 'expense', fn: function (a, u) { return ExpenseService.save(u, a.data); }},
+  'expense.delete':      {perm: 'expense.delete', feature: 'expense', fn: function (a, u) { return ExpenseService.delete(u, a.docNo); }},
+  'expense.export':      {perm: 'expense.view', feature: 'expense', fn: function (a, u) { return ExpenseService.export(u, a); }},
+
+  'upload.init':         {perm: 'upload.create', feature: 'upload', noDemo: true, fn: function (a, u) { return UploadService.init(u, a.meta); }},
+  'upload.append':       {perm: 'upload.create', feature: 'upload', noDemo: true, fn: function (a, u) { return UploadService.append(u, a.uploadId, a.offset, a.data); }},
+  'upload.status':       {perm: 'upload.create', feature: 'upload', noDemo: true, fn: function (a, u) { return UploadService.status(u, a.uploadId); }},
+  'upload.finalize':     {perm: 'upload.create', feature: 'upload', noDemo: true, fn: function (a, u) { return UploadService.finalize(u, a.uploadIds, a.docNo); }},
+  'upload.discard':      {perm: 'upload.create', feature: 'upload', noDemo: true, fn: function (a, u) { return UploadService.discard(u, a.uploadIds); }},
+  'attachment.list':     {fn: function (a, u) { attachmentNeed_(u, a.docNo, 'view'); return AttachmentService.list(a.docNo); }},
+  'attachment.download': {fn: function (a, u) { var x = findById('Attachments', a.fileId); attachmentNeed_(u, x ? x.docNo : '', 'view'); return AttachmentService.download(a.fileId); }},
+  'attachment.delete':   {noDemo: true, fn: function (a, u) { var x = findById('Attachments', a.fileId); attachmentNeed_(u, x ? x.docNo : '', 'edit'); return AttachmentService.remove(u, a.fileId); }}
+  // step 6+: receipt.*, report.*
 };
 
 function api(shop, action, token, payload) {
