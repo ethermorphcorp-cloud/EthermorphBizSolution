@@ -118,6 +118,7 @@ function setupShop(cusId) {
   log.push(seedOwner());
   if (shop.demo && !readTable('RoomIncome').length) log.push(seedDemoData_());
   if (shop.demo && readTable('Expenses').length && !readTable('Attachments').length) log.push(seedDemoAttachments_());
+  if (shop.demo && readTable('RoomIncome').length && !readTable('Receipts').length) log.push(seedDemoReceipts_());
   driveRoot_();
   var url = ScriptApp.getService().getUrl();
   if (url && !registry_()[shop.id].APP_URL) setShopField_(shop.id, 'APP_URL', url + '?shop=' + shop.id);

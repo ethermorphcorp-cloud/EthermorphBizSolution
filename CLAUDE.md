@@ -69,7 +69,7 @@ Web app บริหารรายได้-รายจ่ายโรงแ�
 ├─ appsscript.json           V8, Asia/Bangkok, web app: Execute as Me · Anyone
 ├─ design/                   ไฟล์ออกแบบ (.dc.html, tokens.json) ไว้อ้างอิง
 ├─ docs/schema.md            คอลัมน์ทุกชีต + ส่วนที่ต่างจากข้อ 5
-├─ tools/                    build.js (ตรวจ + สร้าง gas/), check-htmlservice.js, smoke-test.js (fake GAS)
+├─ tools/                    build.js (ตรวจ + สร้าง gas/), check-htmlservice.js (// ในสตริง + $(…).forEach ที่ควรเป็น $), smoke-test.js (fake GAS)
 ├─ backend/                  *.gs — Api.gs เป็นทางเข้าเดียว, Database.gs เป็นไฟล์เดียวที่แตะชีต
 │  ├─ Config.gs          ✓  SCHEMA, NUM_COLS/BOOL_COLS, FEATURES, PERMS (4 บทบาท), DOC_PREFIX, dropdown ตั้งต้น
 │  ├─ Tenant.gs          ✓  Command Center → SHOP (status, หมดอายุ, tier, demo), SALT_<CUS_ID>
@@ -77,13 +77,13 @@ Web app บริหารรายได้-รายจ่ายโรงแ�
 │  ├─ Auth.gs            ✓  login/loginDemo/logout/session_, hash = SHA-256(pepper|salt|pw), ล็อก 5 ครั้ง, roles
 │  ├─ Database.gs        ✓  Repository + withLock_ (LockService, ซ้อนได้) + sandbox demo + nextId_
 │  ├─ MasterCache.gs     ✓  version ต่อชีต, แบ่งก้อน 30,000 ตัวอักษร (≤90KB), bundle() สำหรับ master.get
-│  ├─ DocNumber.gs       ✓  nextDocNo(prefix) → PREFIX-yyyyMM-#### จากชีต Sequences
+│  ├─ DocNumber.gs       ✓  nextDocNo(prefix) → PREFIX-yyyyMM-#### จากชีต Sequences · nextReceiptNo_() ตาม Company.receiptPattern (RC-{YYYYMM}-{####} หรือ RC-{######})
 │  ├─ Validator.gs       ✓  appError_/fieldError_, RULES ต่อ entity (validation ชั้นที่ 2)
 │  ├─ Audit.gs           ✓  audit(action, entity, docNo, detail)
 │  ├─ Drive.gs           ✓  โฟลเดอร์ของโรงแรม (Attachments/RoomIncome | OtherIncome | Expenses)
 │  ├─ Setup.gs           ✓  setup(), setupShop(id), createSchema(), resetAllData()
 │  ├─ Demo.gs            ✓  DemoData: master + ทุกแถวที่ดีไซน์แสดงเลขเอกสาร + ยอดรวมที่หน้าจอแสดง
-│  ├─ DemoSeed.gs        ✓  seedDemoHotel(): ลูกค้า 214 ราย + ธุรกรรม เม.ย.–ก.ย. 2026 ให้ยอดตรงหน้าจอ (seed คงที่) + เอกสารแนบตัวอย่างของรายจ่าย (setup() เติมให้ demo ที่ยังไม่มี)
+│  ├─ DemoSeed.gs        ✓  seedDemoHotel(): ลูกค้า 214 ราย + ธุรกรรม เม.ย.–ก.ย. 2026 ให้ยอดตรงหน้าจอ (seed คงที่) + เอกสารแนบตัวอย่างของรายจ่าย + ใบเสร็จ (paid stay ณ วันเช็คเอาท์ + รายได้อื่นที่จ่ายทันที → BK-202609-0057 = RC-202609-0112 ตามดีไซน์) — setup() เติมให้ demo ที่ยังไม่มี
 │  ├─ Filter.gs          ✓  filterOptions_ (ค่าที่มีข้อมูล + จำนวน), filter.options, pageOf_ (server-side paging)
 │  ├─ Setting.gs         ✓  Dropdown (list พร้อมจำนวนที่ถูกใช้ / save / delete = ปิดใช้งานถ้าถูกใช้ / reorder), บริษัท, โลโก้
 │  ├─ User.gs            ✓  list / save / resetPassword — ไม่ลบ (ระงับแทน), ห้ามแก้บทบาทตัวเอง, ต้องเหลือ Owner ≥ 1
@@ -100,7 +100,10 @@ Web app บริหารรายได้-รายจ่ายโรงแ�
 │  ├─ Upload.gs          ✓  Drive resumable upload: init → append (ทีละ 2 MB, offset ไม่ตรง = resync) → status (ถาม Drive ว่าได้ถึงไหน)
 │  │                        → finalize(ids, docNo) / discard(ids) · เอกสารที่บันทึกแล้วแนบเองเมื่อส่วนสุดท้ายเสร็จ · สูงสุด 50 MB
 │  │                        AttachmentService list / remove / download (≤ 10 MB ผ่าน server) · ไฟล์ตามสิทธิ์ของเอกสาร (attachmentNeed_)
-│  └─ <Service>.gs          ขั้นที่ 6+: Receipt, Report
+│  ├─ Receipt.gs         ✓  list (KPI, รอออกใบเสร็จ) / candidates / prepare / create (สำเนาข้อมูลลูกค้า + VAT ลงใบเสร็จ, การจองกลายเป็นชำระแล้ว) /
+│  │                        get (+ bahtText_ จำนวนเงินตัวอักษร) / cancel (ต้องมีเหตุผล, ไม่ลบ, คืนสถานะการจอง) / print (นับครั้ง + audit) / export ·
+│  │                        createFromBooking(bookingNo, otherIncomeNos) · รายการที่อยู่ในใบเสร็จที่ใช้งาน = receiptedRefs_()
+│  └─ <Service>.gs          ขั้นที่ 7: Report
 │                           — เพิ่ม route ใน ROUTES ของ Api.gs
 └─ frontend/                 *.html — index.html include ส่วนอื่นตามลำดับ (ทุกไฟล์ต้องถูก include — smoke-test ตรวจ)
    ├─ index.html         ✓  BOOT จาก doGet + SweetAlert2 + include ทั้งหมด แล้วเรียก Shell.boot()
@@ -125,7 +128,10 @@ Web app บริหารรายได้-รายจ่ายโรงแ�
    ├─ page-other.html    ✓  รายได้อื่นๆ ในแท็บรายได้: การ์ดรายหมวด (คลิก = กรอง), chip หมวด, otherModal_ (ค้นหาการจอง, ห้อง, qty × ราคา,
    │                        เอกสารแนบ) — go('other',{add, bookingNo, docNo})
    ├─ page-expenses.html ✓  KPI strip (คลิก ยังไม่แนบเอกสาร = กรอง), ตัวกรอง เดือน/วิธีชำระ/เอกสาร, chip หมวด, expenseModal_ + เอกสารแนบ
-   └─ page-*.html           ขั้นที่ 6+: Pages.<key> = {render(el, params)} ต่อเมนู (receipts, reports)
+   ├─ page-receipts.html ✓  รายการใบเสร็จ + receiptModal_ (จากการเข้าพัก / รายได้อื่นที่ไม่ผูกการจอง, เลือกรายการ, แก้ชื่อ-ที่อยู่-เลขภาษีเฉพาะใบนี้)
+   │                        + receiptView_ (A4 ตาม design/Receipt ย่อให้พอดี) + พิมพ์ ต้นฉบับ/สำเนา (#rcPrint + body.rc-printing, @page A4)
+   │                        — go('receipts',{add | bookingNo | customerId | otherIncomeNo | docNo})
+   └─ page-*.html           ขั้นที่ 7: Pages.reports
 ```
 
 - **Master sync:** `api()` ส่ง `_mv` (master version ของเบราว์เซอร์) ทุกครั้ง ถ้า master เปลี่ยน (จากคำขอนี้หรือผู้ใช้อื่น)
@@ -177,7 +183,7 @@ clasp push --force           # ครั้งแรก: ใส่ scriptId ข�
 | RoomIncome | docNo(BK-), customerId, guestName, phone*, typeCode, roomNo*, checkIn, checkOut, nights, guests, rate, discount, total, vatAmount, channel, payMethod, payStatus(paid/dep/due/cxl), deposit, note, createdBy, createdAt, updatedAt |
 | OtherIncome | docNo(OI-), date, category, description, roomNo*, bookingNo, qty, unitPrice, amount, payMethod, createdBy, createdAt |
 | Expenses | docNo(EX-), date, category, description, vendor, payMethod, amount, createdBy, createdAt |
-| Receipts | docNo(RC-), date, customerId, bookingNo, subtotal, discount, netBeforeVat, vat, total, payMethod, issuedBy |
+| Receipts | docNo(RC-), date, customerId, bookingNo, subtotal, discount, netBeforeVat, vat, total, payMethod, status(active/cancelled), issuedBy, createdAt, customerName/Address/TaxId/Phone (สำเนา ณ วันออก), payNote, note, vatRate, vatMode, prevPayStatus, cancelReason/By/At, printCount |
 | ReceiptItems | docNo, line, description, detail, qty, unit, unitPrice, amount, refDocNo |
 | Attachments | fileId, docNo, fileName, mime, size, driveUrl, uploadedBy, uploadedAt |
 | Sequences | prefix, yyyymm, last |

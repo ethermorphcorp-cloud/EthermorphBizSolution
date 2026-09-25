@@ -106,6 +106,16 @@ var RULES = {
     unitPrice:   {label: 'ราคาต่อหน่วย', req: true, type: 'money', min: 0},
     payMethod:   {label: 'วิธีชำระเงิน', type: 'dropdown', group: 'pay'}
   },
+  Receipt: {
+    date:            {label: 'วันที่', req: true, type: 'date'},
+    customerName:    {label: 'ชื่อลูกค้า', req: true, max: 200},
+    customerAddress: {label: 'ที่อยู่', max: 400},
+    customerTaxId:   {label: 'เลขประจำตัวผู้เสียภาษี', type: 'taxId'},
+    customerPhone:   {label: 'โทรศัพท์', type: 'phone'},
+    payMethod:       {label: 'วิธีชำระเงิน', req: true, type: 'dropdown', group: 'pay'},
+    payNote:         {label: 'รายละเอียดการชำระ', max: 200},
+    note:            {label: 'หมายเหตุ', max: 300}
+  },
   Expense: {
     date:        {label: 'วันที่', req: true, type: 'date'},
     category:    {label: 'หมวดหมู่', req: true, type: 'dropdown', group: 'expcat'},

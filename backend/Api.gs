@@ -110,8 +110,22 @@ var ROUTES = {
   'upload.discard':      {perm: 'upload.create', feature: 'upload', noDemo: true, fn: function (a, u) { return UploadService.discard(u, a.uploadIds); }},
   'attachment.list':     {fn: function (a, u) { attachmentNeed_(u, a.docNo, 'view'); return AttachmentService.list(a.docNo); }},
   'attachment.download': {fn: function (a, u) { var x = findById('Attachments', a.fileId); attachmentNeed_(u, x ? x.docNo : '', 'view'); return AttachmentService.download(a.fileId); }},
-  'attachment.delete':   {noDemo: true, fn: function (a, u) { var x = findById('Attachments', a.fileId); attachmentNeed_(u, x ? x.docNo : '', 'edit'); return AttachmentService.remove(u, a.fileId); }}
-  // step 6+: receipt.*, report.*
+  'attachment.delete':   {noDemo: true, fn: function (a, u) { var x = findById('Attachments', a.fileId); attachmentNeed_(u, x ? x.docNo : '', 'edit'); return AttachmentService.remove(u, a.fileId); }},
+  'receipt.list':        {perm: 'receipt.view', feature: 'receipt', fn: function (a) { return ReceiptService.list(a); }},
+  'receipt.get':         {perm: 'receipt.view', feature: 'receipt', fn: function (a) { return ReceiptService.get(a.docNo); }},
+  'receipt.candidates':  {perm: 'receipt.create', feature: 'receipt', fn: function () { return ReceiptService.candidates(); }},
+  'receipt.prepare':     {perm: 'receipt.create', feature: 'receipt', fn: function (a) { return ReceiptService.prepare(a); }},
+  'receipt.create':      {perm: 'receipt.create', feature: 'receipt', fn: function (a, u) { return ReceiptService.create(u, a.data); }},
+  'receipt.createFromBooking': {perm: 'receipt.create', feature: 'receipt', fn: function (a, u) {   // the stay + its other income, today, as prepared
+    var p = ReceiptService.prepare({bookingNo: a.bookingNo}), c = p.customer;
+    var refs = [a.bookingNo].concat(a.otherIncomeNos || []);
+    return ReceiptService.create(u, {bookingNo: a.bookingNo, refs: refs, date: today_(), payMethod: a.payMethod || p.payMethod || 'CASH',
+      customerId: c.customerId, customerName: c.name, customerAddress: c.address, customerTaxId: c.taxId, customerPhone: c.phone});
+  }},
+  'receipt.cancel':      {perm: 'receipt.cancel', feature: 'receipt', fn: function (a, u) { return ReceiptService.cancel(u, a.docNo, a.reason); }},
+  'receipt.print':       {perm: 'receipt.view', feature: 'receipt', fn: function (a, u) { return ReceiptService.print(u, a.docNo, a.copies); }},
+  'receipt.export':      {perm: 'receipt.view', feature: 'receipt', fn: function (a, u) { return ReceiptService.export(u, a); }}
+  // step 7: report.*
 };
 
 function api(shop, action, token, payload) {

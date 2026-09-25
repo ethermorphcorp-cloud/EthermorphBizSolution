@@ -27,3 +27,20 @@ function yyyymm_() { return Utilities.formatDate(new Date(), TZ, 'yyyyMM'); }
 function checkPrefix_(prefix) {
   if (!/^[A-Z]{2,4}$/.test(String(prefix))) throw new Error('prefix ไม่ถูกต้อง: ' + prefix);
 }
+
+/** Receipt numbers follow Company.receiptPattern: RC-{YYYYMM}-{####} (monthly count, 4 digits) or RC-{######}
+ *  (one running count, key RC-ALL). Anything unreadable falls back to RC-yyyyMM-####. */
+function receiptPattern_() {
+  var m = String(readKV('Company').receiptPattern || '').match(/^([A-Z]{2,4})-(\{YYYYMM\}-)?\{(#{3,6})\}$/);
+  return m ? {prefix: m[1], monthly: !!m[2], width: m[3].length} : {prefix: DOC_PREFIX.receipt, monthly: true, width: 4};
+}
+function nextReceiptNo_() {
+  var p = receiptPattern_();
+  return withLock_(function () {
+    var ym = p.monthly ? yyyymm_() : 'ALL', key = p.prefix + '-' + ym;
+    var row = findById('Sequences', key), n = (row ? row.last : 0) + 1;
+    if (row) updateRow('Sequences', key, {last: n});
+    else insertRow('Sequences', {key: key, prefix: p.prefix, yyyymm: ym, last: n});
+    return p.prefix + '-' + (p.monthly ? ym + '-' : '') + pad_(n, p.width);
+  });
+}

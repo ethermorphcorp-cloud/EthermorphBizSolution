@@ -10,7 +10,7 @@ const App={shop:BOOT.shop,demo:BOOT.demo,token:null,user:null,perms:[],features:
 const TOKEN_KEY='hotel-token:'+BOOT.shop, MASTER_KEY='hotel-master:'+BOOT.shop;
 class ApiError extends Error{constructor(code,message,field){super(message);this.code=code||'ERROR';this.field=field||null}}
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-const WRITE_ACTION=/\.(save|delete|reorder|cancel|login|logout|demo|changePassword|resetPassword|status|logo|import|export|create\w*|init|append|finalize|clearCache)$/;
+const WRITE_ACTION=/\.(save|delete|reorder|cancel|login|logout|demo|changePassword|resetPassword|status|logo|import|export|create\w*|init|append|finalize|clearCache|print)$/;
 
 function call_(action,payload){return new Promise((resolve,reject)=>{
   google.script.run

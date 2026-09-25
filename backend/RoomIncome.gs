@@ -52,7 +52,7 @@ var RoomIncomeService = {
     var b = findById('RoomIncome', docNo);
     if (!b) throw appError_('NOT_FOUND', 'ไม่พบการจอง ' + docNo + ' อาจถูกลบไปแล้ว กรุณารีเฟรชหน้า');
     b.other = readTable('OtherIncome').filter(function (o) { return o.bookingNo === docNo; });
-    b.receipts = readTable('Receipts').filter(function (r) { return r.bookingNo === docNo; }).map(function (r) { return r.docNo; });
+    b.receipts = readTable('Receipts').filter(function (r) { return r.bookingNo === docNo; }).map(function (r) { return {docNo: r.docNo, status: r.status, total: r.total}; });
     b.attachments = AttachmentService.list(docNo);
     return b;
   },

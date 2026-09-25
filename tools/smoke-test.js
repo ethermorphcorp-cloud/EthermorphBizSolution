@@ -710,5 +710,108 @@ check('request state cleared', G('SHOP === null && SANDBOX === null && CURRENT_U
   check("another user cannot touch someone's upload", !r.ok && r.code === 'FORBIDDEN', r);
 }
 
+/* ---------- step 6: receipts ---------- */
+{
+  const login = u => api('DEMO-HOTEL', 'auth.login', null, {username: u, password: '1234'}).data.token;
+  const D = login('maneerat'), desk = login('frontdesk1'), acc = login('piyanuch');
+  const dcall = (tok, action, payload) => api('DEMO-HOTEL', action, tok, payload || {});
+  const T0 = G('today_()');
+
+  // design/Receipt: RC-202609-0112
+  let r = dcall(D, 'receipt.get', {docNo: 'RC-202609-0112'});
+  const R = r.data;
+  check('design receipt RC-202609-0112 (Receipt.dc.html)', r.ok && R.bookingNo === 'BK-202609-0057' && R.total === 5580 && R.vat === 365.05 &&
+    R.netBeforeVat === 5214.95 && R.words === 'ห้าพันห้าร้อยแปดสิบบาทถ้วน' && R.issuedByName === 'สมชาย ใจดี' && R.payLabel === 'โอนเงิน' &&
+    R.customerAddress.indexOf('123/45 ถนนนิมมานเหมินท์') === 0 && R.stay.typeName === 'Deluxe' && R.stay.channel === 'Agoda', r.ok ? R : r);
+  check('design receipt lines', R.items.length === 2 && R.items[0].description === 'ค่าห้องพัก Deluxe' && R.items[0].detail === 'ห้อง DLX 203 · 21/09/2026 – 24/09/2026' &&
+    R.items[0].unitLabel === 'คืน' && R.items[1].detail === 'น้ำอัดลม 2, ขนม 1 (OI-202609-0117)' && R.items[1].unitLabel === 'ชิ้น', R.items);
+  check('amount in Thai words', G("[bahtText_(0), bahtText_(21), bahtText_(101), bahtText_(1000001), bahtText_(1234.5), bahtText_(0.25), bahtText_(12000000)].join('|')") ===
+    'ศูนย์บาทถ้วน|ยี่สิบเอ็ดบาทถ้วน|หนึ่งร้อยเอ็ดบาทถ้วน|หนึ่งล้านเอ็ดบาทถ้วน|หนึ่งพันสองร้อยสามสิบสี่บาทห้าสิบสตางค์|ยี่สิบห้าสตางค์|สิบสองล้านบาทถ้วน');
+  r = dcall(D, 'receipt.list', {month: '2026-09', pageSize: 10});
+  check('receipt list: September', r.ok && r.data.kpi.count === 116 && r.data.rows[0].docNo === 'RC-202609-0116' && r.data.kpi.pending > 0 && r.data.months.length === 6,
+    r.ok ? r.data.kpi : r);
+  r = dcall(D, 'receipt.list', {month: '2026-09', q: 'อรทัย'});
+  check('receipt search by customer', r.ok && r.data.rows.some(x => x.docNo === 'RC-202609-0112'), r.ok ? r.data.total : r);
+
+  // issue one from a stay that checked out unpaid
+  const cand = dcall(desk, 'receipt.candidates').data;
+  const due = cand.bookings.find(b => b[5] === 'due' && b[8] && !b[7]);
+  check('candidates: a checked-out unpaid stay', !!due && cand.walkins.every(w => w.length === 6), cand.bookings.slice(0, 3));
+  r = dcall(desk, 'receipt.prepare', {bookingNo: due[0]});
+  const P = r.data;
+  check('prepare: room line first, customer copied', r.ok && P.lines[0].kind === 'room' && P.lines[0].refDocNo === due[0] && !P.lines[0].receipted && P.customer.name, r);
+  const refs = P.lines.filter(l => !l.receipted && !l.ownPay).map(l => l.refDocNo);
+  const base = {bookingNo: due[0], refs, date: T0, payMethod: 'CASH', customerId: P.customer.customerId, customerName: P.customer.name,
+    customerAddress: P.customer.address, customerTaxId: P.customer.taxId, customerPhone: P.customer.phone};
+  r = dcall(desk, 'receipt.create', {data: Object.assign({}, base, {date: '2099-01-01'})});
+  check('receipt: a future date is refused', !r.ok && r.field === 'date', r);
+  r = dcall(desk, 'receipt.create', {data: Object.assign({}, base, {customerTaxId: '12345'})});
+  check('receipt: tax id must be 13 digits', !r.ok && r.field === 'customerTaxId', r);
+  r = dcall(desk, 'receipt.create', {data: Object.assign({}, base, {refs: []})});
+  check('receipt: at least one line', !r.ok && r.field === 'refs', r);
+  r = dcall(desk, 'receipt.create', {data: base});
+  const rc1 = r.data;
+  const lineSum = P.lines.filter(l => refs.indexOf(l.refDocNo) >= 0).reduce((s, l) => s + l.amount, 0);
+  check('FrontDesk issues a receipt from a stay', r.ok && /^RC-\d{6}-\d{4}$/.test(rc1.docNo) && rc1.items.length === refs.length &&
+    Math.abs(rc1.total - (lineSum - P.discount)) < 0.005 && Math.abs(rc1.vat - Math.round(rc1.total * 7 / 107 * 100) / 100) < 0.005 && rc1.prevPayStatus === 'due', r);
+  let bk = dcall(desk, 'roomIncome.get', {docNo: due[0]}).data;
+  check('the stay is paid once receipted', bk.payStatus === 'paid' && bk.receipts.some(x => x.docNo === rc1.docNo && x.status === 'active'), bk.payStatus);
+  r = dcall(desk, 'receipt.create', {data: base});
+  check('a stay cannot be receipted twice', !r.ok && r.field === 'refs' && r.message.indexOf(rc1.docNo) >= 0, r);
+  r = dcall(desk, 'roomIncome.cancel', {docNo: due[0]});
+  check('a receipted stay cannot be cancelled', !r.ok && r.code === 'IN_USE' && r.message.indexOf('ใบเสร็จ') >= 0, r);
+  r = dcall(D, 'otherIncome.delete', {docNo: 'OI-202609-0117'});
+  check('other income on a receipt cannot be deleted', !r.ok && r.code === 'IN_USE' && r.message.indexOf('RC-202609-0112') >= 0, r);
+  r = dcall(desk, 'receipt.print', {docNo: rc1.docNo, copies: true});
+  check('print is counted', r.ok && r.data.printCount === 1 && dcall(desk, 'receipt.print', {docNo: rc1.docNo}).data.printCount === 2, r);
+
+  // cancel: Accounting only, with a reason; the stay goes back to ค้างชำระ and can be receipted again
+  r = dcall(desk, 'receipt.cancel', {docNo: rc1.docNo, reason: 'ชื่อผิด'});
+  check('FrontDesk cannot cancel a receipt', !r.ok && r.code === 'FORBIDDEN', r);
+  r = dcall(acc, 'receipt.cancel', {docNo: rc1.docNo, reason: ''});
+  check('cancel needs a reason', !r.ok && r.field === 'reason', r);
+  // sandboxes are per session: Accounting cannot see FrontDesk's demo receipt — cancel one of the seeded ones instead
+  r = dcall(acc, 'receipt.cancel', {docNo: 'RC-202609-0112', reason: 'พิมพ์ชื่อลูกค้าผิด'});
+  check('Accounting cancels a receipt', r.ok && r.data.status === 'cancelled' && r.data.cancelledByName === 'ปิยะนุช ทองคำ' && r.data.cancelReason === 'พิมพ์ชื่อลูกค้าผิด', r);
+  r = dcall(acc, 'receipt.cancel', {docNo: 'RC-202609-0112', reason: 'ซ้ำ'});
+  check('cancelling twice is refused', !r.ok && r.code === 'IN_USE', r);
+  r = dcall(acc, 'receipt.prepare', {bookingNo: 'BK-202609-0057'});
+  check('a cancelled receipt frees its lines', r.ok && r.data.lines.every(l => !l.receipted), r.ok ? r.data.lines : r);
+  r = dcall(acc, 'receipt.list', {month: '2026-09', filters: {status: 'cancelled'}});
+  check('list: cancelled filter and KPI', r.ok && r.data.total === 1 && r.data.kpi.cancelled === 1 && r.data.kpi.count === 115 &&
+    r.data.kpi.amount === Math.round((dcall(D, 'receipt.list', {month: '2026-09'}).data.kpi.amount - 5580) * 100) / 100, r.ok ? r.data.kpi : r);
+  const P2 = dcall(D, 'receipt.prepare', {bookingNo: due[0]}).data;
+  r = dcall(D, 'receipt.create', {data: Object.assign({}, base, {refs: [due[0]], customerName: 'บริษัท ทดสอบ จำกัด', customerTaxId: '0105561234567'})});
+  check('receipt keeps its own copy of the customer', r.ok && r.data.customerName === 'บริษัท ทดสอบ จำกัด' && r.data.customerTaxId === '0105561234567' &&
+    dcall(D, 'customer.get', {customerId: P2.customer.customerId}).data.name === P2.customer.name, r);
+  r = dcall(D, 'receipt.cancel', {docNo: r.data.docNo, reason: 'ทดสอบยกเลิก'});
+  bk = dcall(D, 'roomIncome.get', {docNo: due[0]}).data;
+  check('cancelling puts the stay back to ค้างชำระ', r.ok && bk.payStatus === 'due', bk.payStatus);
+
+  // other income alone (a walk-in), and lines of two stays never share a receipt
+  const walk = dcall(D, 'otherIncome.save', {data: {date: '2026-09-25', category: 'FOOD', description: 'ชุดอาหารเย็น', qty: 2, unitPrice: 445, payMethod: 'CASH'}}).data;
+  r = dcall(D, 'receipt.create', {data: {refs: [walk.docNo], date: T0, payMethod: 'CASH', customerName: 'ลูกค้าทั่วไป'}});
+  check('walk-in receipt', r.ok && r.data.bookingNo === '' && r.data.total === 890 && !r.data.stay && r.data.items[0].unitLabel === 'ชุด', r);
+  const w2 = dcall(D, 'otherIncome.save', {data: {date: '2026-09-25', category: 'LAUNDRY', qty: 1, unitPrice: 120, payMethod: 'CASH'}}).data;
+  const linked = dcall(D, 'otherIncome.save', {data: {date: '2026-09-25', category: 'MINIBAR', bookingNo: 'BK-202609-0064', qty: 1, unitPrice: 40, payMethod: 'CASH'}}).data;
+  r = dcall(D, 'receipt.create', {data: {refs: [w2.docNo, linked.docNo], date: T0, payMethod: 'CASH', customerName: 'x'}});
+  check('lines of different stays are refused', !r.ok && r.field === 'refs', r);
+  r = dcall(D, 'receipt.create', {data: {bookingNo: 'BK-202609-0057', refs: [w2.docNo], date: T0, payMethod: 'CASH', customerName: 'x'}});
+  check('a line of another stay is refused', !r.ok && r.field === 'refs', r);
+  r = dcall(D, 'receipt.createFromBooking', {bookingNo: 'BK-202609-0064', otherIncomeNos: [linked.docNo]});
+  check('receipt.createFromBooking', r.ok && r.data.items.length === 2 && r.data.items[0].refDocNo === 'BK-202609-0064', r);
+
+  // numbering follows Company.receiptPattern
+  let nos;
+  within('HT001', () => {
+    nos = G("(function () { var old = readKV('Company').receiptPattern; withLock_(function () { writeKV('Company', {receiptPattern: 'INV-{######}'}); });" +
+      " var a = nextReceiptNo_(), b = nextReceiptNo_(); withLock_(function () { writeKV('Company', {receiptPattern: old}); }); return [a, b, nextReceiptNo_()]; })()");
+  });
+  check('receipt numbers follow the pattern', nos[0] === 'INV-000001' && nos[1] === 'INV-000002' && /^RC-\d{6}-\d{4}$/.test(nos[2]), nos);
+  r = dcall(D, 'receipt.export', {month: '2026-09'});
+  check('receipt export', r.ok && r.data.rows.length === dcall(D, 'receipt.list', {month: '2026-09'}).data.total && r.data.headers.length === 11, r.ok ? r.data.rows.length : r);
+  check('receipt rows are text in the sheet', dataRows('DEMO-HOTEL', 'Receipts').every(x => x.every(c => typeof c === 'string')));
+}
+
 console.log(`${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

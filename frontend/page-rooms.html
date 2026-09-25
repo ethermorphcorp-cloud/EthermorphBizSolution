@@ -232,6 +232,8 @@ async function bookingModal_(o,done){
     foot:`<span class="cap grow">${isNew?'เลขที่เอกสารสร้างอัตโนมัติเมื่อบันทึก · ':''}* จำเป็นต้องกรอก · ตรวจสอบข้อมูล 3 ชั้น: หน้าจอ → Server → ฐานข้อมูล</span><button type="button" class="btn" data-close>${ro?'ปิด':'ยกเลิก'}</button>${ro?'':`<button type="button" class="btn primary" id="bkSave">${icon('check')}บันทึก</button>`}`});
   const f=$('#bkForm',m.el);V.live(f);
   att=UI.attachments($('#bkAtt',f),{docNo:b?b.docNo:'',entity:'RoomIncome',files:b?b.attachments||[]:[],canEdit:!ro});
+  if(b&&b.receipts&&b.receipts.length&&can('receipt.view'))f.insertAdjacentHTML('afterbegin',`<div class="banner info">${icon('receipt')}<span class="grow">ใบเสร็จของการจองนี้: ${b.receipts.map(x=>`<a href="#" data-rc="${esc(x.docNo)}">${esc(x.docNo)}</a>${x.status==='cancelled'?' (ยกเลิก)':' · '+fmtM(x.total)}`).join(', ')}</span></div>`);
+  $$('[data-rc]',f).forEach(a=>a.onclick=e=>{e.preventDefault();receiptOpen_(a.dataset.rc,done)});
   if(b&&b.payStatus==='cxl')f.insertAdjacentHTML('afterbegin',`<div class="banner warning">${icon('ban')}<span class="grow"><strong>การจองนี้ถูกยกเลิกแล้ว</strong> — แก้ไขไม่ได้ ถ้าต้องการจองอีกครั้งให้สร้างรายการใหม่</span></div>`);
   if(ro)$$('input,select,textarea',f).forEach(x=>x.disabled=true);
   const typeOf=()=>types.find(t=>t.code===V.val(f,'typeCode'));

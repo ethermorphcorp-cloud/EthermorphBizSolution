@@ -69,6 +69,7 @@ async function oiTable_(el,st){
   $$('[data-act]',host).forEach(b=>b.onclick=e=>{e.stopPropagation();const o=r.rows[+b.dataset.act];
     UI.openMenu(b,[{icon:can('otherIncome.edit')?'edit':'eye',label:can('otherIncome.edit')?'แก้ไข':'ดูรายละเอียด',onClick:()=>otherOpen_(o.docNo,again)},
       ...(o.bookingNo&&can('roomIncome.view')?[{icon:'bed',label:'ดูการจอง '+o.bookingNo,onClick:()=>bookingOpen_(o.bookingNo,again)}]:[]),
+      ...(can('receipt.create')?[{icon:'receipt',label:'ออกใบเสร็จ',onClick:()=>go('receipts',o.bookingNo?{bookingNo:o.bookingNo}:{otherIncomeNo:o.docNo})}]:[]),
       ...(can('otherIncome.delete')?['-',{icon:'trash',label:'ลบรายการ',danger:true,onClick:()=>otherDelete_(o,again)}]:[])],
       {header:`<b class="mono">${esc(o.docNo)}</b>${esc(o.description||Master.label('othercat',o.category))}`})})}
 
@@ -116,7 +117,7 @@ async function otherModal_(p,done){
   const f=$('#oiForm',m.el);V.live(f);
   att=UI.attachments($('#oiAtt',f),{docNo:o?o.docNo:'',entity:'OtherIncome',files:o?o.attachments||[]:[],canEdit:!ro});
   att.onChange=()=>{done&&done()};   /* a file attached to a saved line: the list's file count changes */
-  if(ro)$('input,select,textarea',f).forEach(x=>x.disabled=true);
+  if(ro)$$('input,select,textarea',f).forEach(x=>x.disabled=true);
   const num=k=>Number(String(V.val(f,k)).replace(/[,฿\s]/g,''))||0;
   const drawSum=()=>{const q=num('qty'),u=num('unitPrice');$('#oiSum',f).innerHTML=`<div class="ln"><span>${fmtN(q)} × ${fmtM(u)}</span><span class="num"></span></div><div class="ln total"><span>ยอดรวม</span><b class="num">${fmtM(Math.round(q*u*100)/100)}</b></div>`};
   const drawStay=()=>{const b=st.booking,sel=$('#f-roomNo',f);

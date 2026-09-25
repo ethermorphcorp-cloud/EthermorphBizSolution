@@ -29,7 +29,8 @@ var SCHEMA = {
                  'createdBy','createdAt','updatedAt'],
   Expenses:     ['docNo','date','category','description','vendor','payMethod','amount','createdBy','createdAt','updatedAt'],
   Receipts:     ['docNo','date','customerId','bookingNo','subtotal','discount','netBeforeVat','vat','total','payMethod',
-                 'status','issuedBy','createdAt'],
+                 'status','issuedBy','createdAt','customerName','customerAddress','customerTaxId','customerPhone','payNote','note',
+                 'vatRate','vatMode','prevPayStatus','cancelReason','cancelledBy','cancelledAt','printCount'],
   ReceiptItems: ['itemId','docNo','line','description','detail','qty','unit','unitPrice','amount','refDocNo'],
   Attachments:  ['fileId','docNo','fileName','mime','size','driveUrl','uploadedBy','uploadedAt'],
   Sequences:    ['key','prefix','yyyymm','last'],
@@ -43,7 +44,7 @@ var NO_PK = {AuditLog: 1};
 
 var NUM_COLS = {price:1, weekendPrice:1, maxGuests:1, sort:1, floor:1, nights:1, guests:1, rate:1, discount:1, total:1,
                 vatAmount:1, deposit:1, qty:1, unitPrice:1, amount:1, subtotal:1, netBeforeVat:1, vat:1, line:1,
-                size:1, last:1};
+                size:1, last:1, vatRate:1, printCount:1};
 var BOOL_COLS = {active:1};
 /** key/value entries read back as numbers; 'TRUE'/'FALSE' always become booleans. */
 var KV_NUM = {vatRate:1, sessionMin:1};

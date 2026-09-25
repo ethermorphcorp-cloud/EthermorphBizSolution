@@ -1,0 +1,219 @@
+<script>
+/* page-receipts.html — ใบเสร็จรับเงิน. The list (not designed: same pattern as Expenses), receiptModal_ (issue a receipt
+ * from a stay or from other income alone), receiptView_ (design/Receipt: the A4 page, scaled to the dialog) and
+ * printing: the original, optionally a copy, on A4 — each print is counted and audited by receipt.print.
+ * A receipt is never deleted; cancelling keeps its number and frees the stay / lines for a new receipt.
+ * go('receipts', {add | bookingNo | customerId | otherIncomeNo | docNo}) */
+const RC_ST={month:'',q:'',filters:{},page:1};
+
+Pages.receipts={render(el,params){
+  const st=RC_ST;
+  el.innerHTML=pageHead('ใบเสร็จรับเงิน','ออกใบเสร็จจากการเข้าพักหรือรายได้อื่น และพิมพ์ A4 ต้นฉบับ / สำเนา',
+      `<button type="button" class="btn" id="rcExport">${icon('download')}<span>ส่งออก Excel</span></button>`+
+      (can('receipt.create')?`<button type="button" class="btn primary" id="rcAdd">${icon('plus')}<span>ออกใบเสร็จ</span></button>`:''))+
+    `<div class="kpi-strip" id="rcKpi"></div>
+    <section class="card" id="rcCard"><div class="filterbar"><div class="iw search"><span class="lead">${icon('search','s16')}</span><input class="input sm" id="rcQ" type="search" placeholder="ค้นหาเลขที่ ลูกค้า หรือเลขที่การจอง" aria-label="ค้นหาเลขที่ ลูกค้า หรือเลขที่การจอง" value="${esc(st.q)}"></div>
+      <select class="select sm" id="rcMonth" aria-label="เดือน" style="width:auto"></select><select class="select sm" id="rcPay" aria-label="วิธีชำระ" style="width:auto"></select>
+      <select class="select sm" id="rcStatus" aria-label="สถานะ" style="width:auto"></select>
+      <button type="button" class="btn ghost sm" id="rcClear">ล้างตัวกรอง</button><span class="grow"></span><span class="cap">เดือนและตัวกรองแสดงเฉพาะค่าที่มีข้อมูล</span></div>
+      <div class="tbl-wrap" id="rcTable"></div><div class="pager" id="rcPager"></div></section>`;
+  const reload=()=>rcTable_(el,st);
+  $('#rcMonth',el).onchange=e=>{st.month=e.target.value;st.filters={};st.page=1;reload()};
+  [['#rcPay','payMethod'],['#rcStatus','status']].forEach(([id,k])=>$(id,el).onchange=e=>{st.filters[k]=e.target.value;st.page=1;reload()});
+  $('#rcQ',el).oninput=UI.debounce(e=>{st.q=e.target.value.trim();st.page=1;reload()},400);
+  $('#rcClear',el).onclick=()=>{st.q='';st.filters={};st.page=1;$('#rcQ',el).value='';reload()};
+  $('#rcExport',el).onclick=()=>rcExport_(st);
+  if($('#rcAdd',el))$('#rcAdd',el).onclick=()=>receiptModal_({},reload);
+  st.pageSize=UI.pageSizeFor($('#rcCard',el),{header:58+44+45,rowHeight:61});
+  reload();
+  if(can('receipt.create')&&(params.add||params.bookingNo||params.customerId||params.otherIncomeNo))receiptModal_(params,reload);
+  if(params.docNo)receiptOpen_(params.docNo,reload)}};
+
+async function rcTable_(el,st){
+  let r;
+  try{r=await api('receipt.list',{month:st.month,q:st.q,filters:st.filters,page:st.page,pageSize:st.pageSize},{loading:'กำลังโหลดใบเสร็จ'})}
+  catch(e){$('#rcTable',el).innerHTML=UI.empty('โหลดข้อมูลไม่สำเร็จ',e.message);return}
+  if(!el.isConnected||!$('#rcTable',el))return;
+  st.month=r.month;st.page=r.page;
+  const mon=r.months.find(m=>m.value===r.month);
+  $('#rcKpi',el).innerHTML=`<div><span class="lab">ยอดรับตามใบเสร็จ ${esc(mon?mon.label:r.month)}</span><b>${fmtM(r.kpi.amount)}</b></div>
+    <div><span class="lab">จำนวนใบเสร็จ</span><b>${fmtN(r.kpi.count)} ใบ</b>${r.kpi.cancelled?`<span class="sub">ยกเลิก ${fmtN(r.kpi.cancelled)} ใบ</span>`:''}</div>
+    <div><span class="lab">ภาษีมูลค่าเพิ่ม</span><b>${fmtM(r.kpi.vat)}</b></div>
+    <button type="button" class="kpi-btn" id="rcPending" ${r.kpi.pending&&can('receipt.create')?'':'disabled'}><span class="lab">เช็คเอาท์แล้ว ยังไม่ออกใบเสร็จ</span><b style="${r.kpi.pending?'color:var(--warning)':''}">${fmtN(r.kpi.pending)} การจอง</b>${r.kpi.pending&&can('receipt.create')?'<span class="sub">คลิกเพื่อออกใบเสร็จ</span>':''}</button>`;
+  $('#rcPending',el).onclick=()=>receiptModal_({pending:true},()=>rcTable_(el,st));
+  $('#rcMonth',el).innerHTML=(r.months.length?'':`<option value="${esc(r.month)}">ยังไม่มีข้อมูล</option>`)+r.months.map(m=>`<option value="${m.value}" ${m.value===r.month?'selected':''}>${esc(m.label)} (${fmtN(m.count)})</option>`).join('');
+  const opt=(id,label,list,cur)=>{$(id,el).innerHTML=`<option value="">${label}: ทั้งหมด${list.length>1?' ('+list.length+')':''}</option>`+list.map(o=>`<option value="${esc(o.value)}" ${o.value===cur?'selected':''}>${esc(o.label)} (${fmtN(o.count)})</option>`).join('')};
+  opt('#rcPay','วิธีชำระ',r.options.payMethod,st.filters.payMethod);opt('#rcStatus','สถานะ',r.options.status,st.filters.status);
+  const host=$('#rcTable',el),again=()=>rcTable_(el,st);
+  if(!r.rows.length){host.innerHTML=UI.empty(r.total||r.kpi.count?'ไม่พบใบเสร็จที่ตรงกับตัวกรอง':'ยังไม่มีใบเสร็จในเดือนนี้',r.kpi.count?'ลองเปลี่ยนคำค้นหาหรือล้างตัวกรอง':'กดปุ่ม ออกใบเสร็จ หรือเลือก ออกใบเสร็จ จากเมนูของการจอง');$('#rcPager',el).innerHTML='';return}
+  host.innerHTML=`<table class="tbl stack"><thead><tr><th scope="col">เลขที่</th><th scope="col">วันที่</th><th scope="col">ลูกค้า</th><th scope="col">อ้างอิง</th><th scope="col" class="r">รายการ</th><th scope="col" class="r">จำนวนเงินรวม</th><th scope="col">วิธีชำระ</th><th scope="col">สถานะ</th><th scope="col" class="act"><span class="sr-only">จัดการ</span></th></tr></thead>
+    <tbody>${r.rows.map((x,i)=>{const cx=x.status==='cancelled';return`<tr class="clickable" data-row="${i}"><td data-label="เลขที่"><span class="mono">${esc(x.docNo)}</span></td><td data-label="วันที่">${fmtD(x.date)}</td>
+      <td data-label="ลูกค้า" class="wrap"><span><b style="font-weight:500">${esc(x.customerName)}</b>${x.customerTaxId?`<span class="cap mono" style="display:block">${esc(x.customerTaxId)}</span>`:''}</span></td>
+      <td data-label="อ้างอิง"><span>${x.bookingNo?`<span class="mono">${esc(x.bookingNo)}</span>`:'<span class="cap">รายได้อื่น</span>'}${x.roomNo?`<span class="cap" style="display:block">ห้อง ${esc(roomLabel_(x.roomNo))}</span>`:''}</span></td>
+      <td data-label="รายการ" class="r">${fmtN(x.items)}</td><td data-label="จำนวนเงินรวม" class="r" style="${cx?'text-decoration:line-through;color:var(--ink-muted)':''}">${fmtM(x.total)}</td>
+      <td data-label="วิธีชำระ">${esc(Master.label('pay',x.payMethod))}</td><td data-label="สถานะ">${cx?'<span class="badge danger">ยกเลิก</span>':'<span class="badge success">ใช้งาน</span>'}</td>
+      <td class="r nolabel act"><button type="button" class="btn plain icon sm" data-act="${i}" aria-haspopup="menu" aria-label="จัดการ ${esc(x.docNo)}">${icon('more')}</button></td></tr>`}).join('')}</tbody>
+    <tfoot><tr><td colspan="5" class="nolabel">รวมหน้านี้ ไม่รวมใบที่ยกเลิก (${r.rows.length} ใบ)</td><td class="r" data-label="จำนวนเงินรวม">${fmtM(r.pageSum)}</td><td colspan="3" class="nolabel"></td></tr></tfoot></table>`;
+  UI.pager($('#rcPager',el),{page:r.page,pageSize:r.pageSize,total:r.total,onPage:p=>{st.page=p;again()}});
+  $$('tr[data-row]',host).forEach(tr=>tr.onclick=e=>{if(!e.target.closest('button'))receiptOpen_(r.rows[+tr.dataset.row].docNo,again)});
+  $$('[data-act]',host).forEach(b=>b.onclick=e=>{e.stopPropagation();const x=r.rows[+b.dataset.act];
+    UI.openMenu(b,[{icon:'eye',label:'ดูใบเสร็จ',onClick:()=>receiptOpen_(x.docNo,again)},{icon:'printer',label:'พิมพ์',onClick:async()=>{try{receiptPrint_(await api('receipt.get',{docNo:x.docNo},{loading:'กำลังเตรียมพิมพ์'}),false)}catch(er){UI.swalError('พิมพ์ไม่สำเร็จ',er.message)}}},
+      ...(x.bookingNo&&can('roomIncome.view')?[{icon:'bed',label:'ดูการจอง '+x.bookingNo,onClick:()=>bookingOpen_(x.bookingNo,again)}]:[]),
+      ...(can('receipt.cancel')&&x.status!=='cancelled'?['-',{icon:'ban',label:'ยกเลิกใบเสร็จ',danger:true,onClick:()=>receiptCancel_(x,again)}]:[])],
+      {header:`<b class="mono">${esc(x.docNo)}</b>${esc(x.customerName)}`})})}
+
+async function rcExport_(st){
+  try{UI.showLoading('กำลังเตรียมไฟล์ Excel');const [d,XLSX]=await Promise.all([api('receipt.export',{month:st.month,q:st.q,filters:st.filters},{loading:false}),UI.xlsx()]);
+    const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,xlsxSheet_(XLSX,d.headers,d.rows,[3]),'ใบเสร็จ');
+    const name=`receipts-${d.month.replace('-','')}.xlsx`;XLSX.writeFile(wb,name);UI.toast('ส่งออกไฟล์แล้ว','success',`${fmtN(d.rows.length)} ใบ · ${name}`)}
+  catch(e){UI.swalError('ส่งออกไม่สำเร็จ',e.message)}finally{UI.hideLoading()}}
+
+/* ---------- issue a receipt ---------- */
+async function receiptModal_(p,done){
+  let cand;try{cand=await api('receipt.candidates',{},{loading:'กำลังเตรียมแบบฟอร์ม'})}catch(e){UI.swalError('เปิดแบบฟอร์มไม่สำเร็จ',e.message);return}
+  const PAY={paid:'ชำระแล้ว',dep:'มัดจำ',due:'ค้างชำระ'};
+  const st={mode:p.otherIncomeNo?'other':'stay',booking:null,draft:null,sel:{},walk:new Set(p.otherIncomeNo?[p.otherIncomeNo]:[]),cust:p.customerId||'',pending:!!p.pending};
+  const bkText=b=>b?`${b[0]} · ${b[1]} · ห้อง ${roomLabel_(b[2])}`:'';
+  const body=`<form id="rcForm" novalidate style="display:flex;flex-direction:column;gap:16px">
+    <div class="field" data-f="mode"><span class="lbl" id="l-rcmode">ออกใบเสร็จจาก</span><div class="radio-pills" role="radiogroup" aria-labelledby="l-rcmode">
+      <button type="button" role="radio" data-mode="stay">${icon('bed','s16')} การเข้าพัก</button><button type="button" role="radio" data-mode="other">${icon('cup','s16')} รายได้อื่นที่ไม่ผูกการจอง</button></div></div>
+    <div id="rcSrc"></div><div id="rcDraft" style="display:flex;flex-direction:column;gap:16px"></div><button type="submit" hidden></button></form>`;
+  const m=UI.openModal({title:'ออกใบเสร็จรับเงิน',iconName:'receipt',size:'lg',body,
+    foot:`<span class="cap grow">เลขที่ใบเสร็จสร้างอัตโนมัติตามรูปแบบในข้อมูลบริษัท · * จำเป็นต้องกรอก</span><button type="button" class="btn" data-close>ยกเลิก</button><button type="button" class="btn primary" id="rcSave" disabled>${icon('check')}ออกใบเสร็จ</button>`});
+  const f=$('#rcForm',m.el);V.live(f);
+  const drawMode=()=>{$$('[data-mode]',f).forEach(b=>b.setAttribute('aria-checked',b.dataset.mode===st.mode));st.draft=null;$('#rcDraft',f).innerHTML='';$('#rcSave',m.el).disabled=true;
+    const src=$('#rcSrc',f);
+    if(st.mode==='stay'){
+      const mine=st.cust?cand.bookings.filter(b=>b[6]===st.cust):null;
+      src.innerHTML=`<div class="field" data-f="bookingNo"><label for="f-rcbk">การเข้าพัก <span class="req" aria-hidden="true">*</span></label><div class="iw"><span class="lead">${icon('search','s16')}</span><input class="input" id="f-rcbk" placeholder="พิมพ์เลขที่การจอง ชื่อผู้เข้าพัก หรือเลขห้อง" aria-describedby="e-bookingNo"></div>
+        <div class="err" id="e-bookingNo" role="alert">${icon('alert','s16')}<span></span></div><div class="help">${cand.bookings.length?`แสดงการจอง 90 วันย้อนหลังถึง 30 วันข้างหน้าที่ยังออกใบเสร็จไม่ครบ${mine?' · เริ่มจากการจองของลูกค้าที่เลือก':''}`:'ไม่มีการจองที่รอออกใบเสร็จ'}</div></div>`;
+      const input=$('#f-rcbk',src);
+      UI.combobox(input,{source:q=>{const d=q.replace(/\s/g,'');let list=cand.bookings;
+          if(!q&&mine&&mine.length)list=mine;else if(!q&&st.pending)list=cand.bookings.filter(b=>b[8]&&!b[7]);
+          return list.filter(b=>!q||b[0].toLowerCase().includes(d)||String(b[2]).toLowerCase()===d||String(b[1]).toLowerCase().includes(q))},
+        render:b=>`<span class="grow"><b>${esc(b[1])}</b><span class="cap mono">${esc(b[0])} · ห้อง ${esc(roomLabel_(b[2]))} · ${fmtD(b[3]).slice(0,5)} – ${fmtD(b[4])}</span></span>${b[7]?'<span class="badge nodot">ออกค่าห้องแล้ว</span>':UI.badge('pay',b[5])}`,
+        onPick:b=>{input.value=bkText(b);loadDraft({bookingNo:b[0]})}});
+      input.addEventListener('input',()=>{if(st.draft){st.draft=null;$('#rcDraft',f).innerHTML='';$('#rcSave',m.el).disabled=true}});
+      const pre=p.bookingNo&&cand.bookings.find(b=>b[0]===p.bookingNo);
+      if(p.bookingNo){p.bookingNo=null;if(pre){input.value=bkText(pre);loadDraft({bookingNo:pre[0]})}else UI.toast('การจองนี้ไม่มีรายการที่รอออกใบเสร็จ','info','อาจออกใบเสร็จครบแล้ว หรือถูกยกเลิก')}
+      else setTimeout(()=>input.focus(),60)}
+    else{
+      src.innerHTML=cand.walkins.length?`<div class="field" data-f="refs"><span class="lbl">รายได้อื่นที่ไม่ผูกการจอง (90 วันล่าสุด) <span class="req" aria-hidden="true">*</span></span>
+        <div class="rc-pick">${cand.walkins.map(w=>`<label class="rc-line"><input type="checkbox" data-walk="${esc(w[0])}" ${st.walk.has(w[0])?'checked':''}><span class="grow"><b>${esc(w[2])}</b><span class="cap">${esc(w[3]||'')} · <span class="mono">${esc(w[0])}</span> · ${fmtD(w[1])}</span></span><span class="num">${fmtM(w[4])}</span></label>`).join('')}</div>
+        <div class="err" role="alert">${icon('alert','s16')}<span></span></div></div>`
+        :`<div class="banner info">${icon('info')}<span class="grow">ไม่มีรายได้อื่นที่ไม่ผูกการจองและยังไม่ออกใบเสร็จใน 90 วันล่าสุด</span></div>`;
+      const pick=UI.debounce(()=>{st.walk.size?loadDraft({otherIncomeNos:[...st.walk]}):($('#rcDraft',f).innerHTML='',$('#rcSave',m.el).disabled=true,st.draft=null)},250);
+      $$('[data-walk]',src).forEach(c=>c.onchange=()=>{c.checked?st.walk.add(c.dataset.walk):st.walk.delete(c.dataset.walk);pick()});
+      if(st.walk.size)loadDraft({otherIncomeNos:[...st.walk]})}};
+  const loadDraft=async a=>{let d;try{d=await api('receipt.prepare',a,{loading:'กำลังโหลดรายการ'})}catch(e){if(e.field)V.setErr(f,e.field,e.message);else UI.swalError('โหลดรายการไม่สำเร็จ',e.message);return}
+    if(!m.el.isConnected)return;st.draft=d;st.sel={};d.lines.forEach(l=>{st.sel[l.refDocNo]=!l.receipted&&!(st.mode==='stay'&&l.kind==='other'&&l.ownPay)});drawDraft()};
+  const drawDraft=()=>{const d=st.draft,c=d.customer,b=d.booking,pays=Master.options('pay');
+    const payOpts=pays.concat(d.payMethod&&!pays.some(x=>x.code===d.payMethod)?[{code:d.payMethod,label:Master.label('pay',d.payMethod)}]:[]).map(x=>[x.code,x.label]);
+    const open=d.lines.filter(l=>!l.receipted);
+    $('#rcDraft',f).innerHTML=`${b?`<div class="rc-stay"><span><b>${esc(b.guestName)}</b><span class="cap mono">${esc(b.docNo)} · ห้อง ${esc(b.typeCode)} ${esc(b.roomNo)} · ${fmtD(b.checkIn)} – ${fmtD(b.checkOut)} · ${esc(b.channel)}</span></span>${UI.badge('pay',b.payStatus)}</div>`:''}
+      <p class="form-sec-title">รายการในใบเสร็จ</p>
+      <div class="field" data-f="refs"><div class="rc-pick">${d.lines.map(l=>`<label class="rc-line ${l.receipted?'done':''}"><input type="checkbox" data-ref="${esc(l.refDocNo)}" ${st.sel[l.refDocNo]?'checked':''} ${l.receipted?'disabled':''}>
+          <span class="grow"><b>${esc(l.description)}</b><span class="cap">${esc(l.detail)}${l.receipted?` · อยู่ในใบเสร็จ ${esc(l.receipted)} แล้ว`:l.ownPay&&st.mode==='stay'?` · ชำระแยกแล้ว (${esc(Master.label('pay',l.ownPay))})`:''}</span></span>
+          <span class="cap" style="white-space:nowrap">${fmtN(l.qty)} ${esc(Master.label('unit',l.unit))} × ${fmtM(l.unitPrice)}</span><span class="num">${fmtM(l.amount)}</span></label>`).join('')}</div>
+        <div class="err" role="alert">${icon('alert','s16')}<span></span></div>${open.length?'':'<div class="help">ทุกรายการของการเข้าพักนี้ออกใบเสร็จครบแล้ว</div>'}</div>
+      <div id="rcPayNote"></div>
+      <p class="form-sec-title">ลูกค้าในใบเสร็จ</p>
+      <div class="grid2">${V.field('customerName','ชื่อลูกค้า',{value:c.name,req:true,help:'แก้ได้เฉพาะในใบเสร็จนี้ ข้อมูลลูกค้าไม่เปลี่ยน'})}${V.field('customerTaxId','เลขประจำตัวผู้เสียภาษี',{value:c.taxId,type:'taxId',mono:true,help:'13 หลัก · กรอกเมื่อลูกค้าขอ'})}
+        ${V.field('customerPhone','โทรศัพท์',{value:c.phone,type:'phone',mono:true})}${V.textarea('customerAddress','ที่อยู่',{value:c.address,rows:2})}</div>
+      <p class="form-sec-title">การชำระเงิน</p>
+      <div class="grid2">${V.field('date','วันที่ใบเสร็จ',{value:TODAY,type:'date',req:true,attrs:`max="${TODAY}"`})}${V.select('payMethod','วิธีชำระเงิน',payOpts,d.payMethod||'CASH',{req:true})}
+        ${V.field('payNote','รายละเอียดการชำระ',{value:'',span:true,ph:'เช่น ธนาคารกสิกรไทย · วันที่โอน 24/09/2026',help:b?'ช่องทางการจองพิมพ์ต่อท้ายให้อัตโนมัติ':''})}
+        ${V.field('note','หมายเหตุ',{value:'',span:true})}</div>
+      <div class="summary" id="rcSum" aria-live="polite"></div>`;
+    $$('[data-ref]',f).forEach(x=>x.onchange=()=>{st.sel[x.dataset.ref]=x.checked;$('[data-f="refs"]',$('#rcDraft',f)).classList.remove('invalid');drawSum()});
+    drawSum()};
+  const drawSum=()=>{const d=st.draft,vr=d.vatRate,ex=d.vatMode==='excluded',lines=d.lines.filter(l=>st.sel[l.refDocNo]);
+    const room=d.booking&&st.sel[d.booking.docNo],sub=Math.round(lines.reduce((s,l)=>s+l.amount,0)*100)/100,disc=room?d.discount:0,after=Math.round((sub-disc)*100)/100;
+    let net,vat,total;if(ex){net=after;vat=Math.round(net*vr)/100;total=Math.round((net+vat)*100)/100}else{total=after;vat=Math.round(total*vr/(100+vr)*100)/100;net=Math.round((total-vat)*100)/100}
+    $('#rcSum',f).innerHTML=`<div class="ln"><span>รวมเป็นเงิน (${lines.length} รายการ)</span><span class="num">${fmtM(sub)}</span></div>${disc?`<div class="ln"><span>ส่วนลด</span><span class="num">−${fmtM(disc)}</span></div>`:''}
+      ${vr?`<div class="ln"><span>มูลค่าก่อนภาษี</span><span class="num">${fmtM(net)}</span></div><div class="ln"><span>ภาษีมูลค่าเพิ่ม ${vr}%${ex?' (แยกนอกราคา)':' (รวมในราคา)'}</span><span class="num">${fmtM(vat)}</span></div>`:'<div class="ln"><span>ไม่มีภาษีมูลค่าเพิ่ม</span><span></span></div>'}
+      <div class="ln total"><span>จำนวนเงินรวมทั้งสิ้น</span><b class="num">${fmtM(total)}</b></div>`;
+    $('#rcPayNote',f).innerHTML=room&&d.booking.payStatus!=='paid'?`<div class="banner info">${icon('info')}<span class="grow">การจองนี้ ${PAY[d.booking.payStatus]||''} อยู่ — เมื่อออกใบเสร็จจะเปลี่ยนเป็น <strong>ชำระแล้ว</strong> (ยกเลิกใบเสร็จแล้วสถานะจะกลับเป็นเดิม)</span></div>`:'';
+    $('#rcSave',m.el).disabled=!lines.length};
+  $$('[data-mode]',f).forEach(b=>b.onclick=()=>{if(st.mode===b.dataset.mode)return;st.mode=b.dataset.mode;drawMode()});
+  drawMode();
+  const save=async()=>{const d=st.draft;if(!d)return;
+    const refs=d.lines.filter(l=>st.sel[l.refDocNo]).map(l=>l.refDocNo);
+    if(!refs.length)return V.setErr(f,'refs','กรุณาเลือกรายการอย่างน้อย 1 รายการ');
+    const v=V.form(f,{customerName:{label:'ชื่อลูกค้า',req:true,max:200},customerTaxId:{label:'เลขประจำตัวผู้เสียภาษี',type:'taxId'},customerPhone:{label:'โทรศัพท์',type:'phone'},
+      customerAddress:{label:'ที่อยู่',max:400},date:{label:'วันที่ใบเสร็จ',type:'date',req:true},payNote:{label:'รายละเอียดการชำระ',max:200},note:{label:'หมายเหตุ',max:300}});
+    if(!v)return;
+    if(v.date>TODAY)return V.setErr(f,'date','วันที่ใบเสร็จต้องไม่เกินวันนี้ กรุณาเลือกวันใหม่');
+    const data=Object.assign(v,{bookingNo:d.booking?d.booking.docNo:'',refs,payMethod:V.val(f,'payMethod'),customerId:d.customer.customerId||''});
+    try{const r=await api('receipt.create',{data},{loading:'กำลังออกใบเสร็จ'});m.close();done&&done(r);
+      await UI.swalSuccess('ออกใบเสร็จแล้ว',`เลขที่ ${r.docNo} · ${r.customerName} · ${fmtM(r.total)}`);receiptView_(r,done)}
+    catch(e){if(e.field)V.setErr(f,e.field,e.message);else UI.swalError('ออกใบเสร็จไม่สำเร็จ',e.message)}};
+  $('#rcSave',m.el).onclick=save;f.onsubmit=e=>{e.preventDefault();save()}}
+
+/* ---------- view, cancel, print ---------- */
+async function receiptOpen_(docNo,done){
+  try{receiptView_(await api('receipt.get',{docNo},{loading:'กำลังโหลดใบเสร็จ'}),done)}catch(e){UI.swalError('เปิดใบเสร็จไม่สำเร็จ',e.message)}}
+
+function receiptView_(r,done){
+  const cx=r.status==='cancelled';
+  const m=UI.openModal({title:'ใบเสร็จรับเงิน · '+r.docNo,iconName:'receipt',size:'lg',
+    body:`${cx?`<div class="banner warning">${icon('ban')}<span class="grow"><strong>ใบเสร็จนี้ถูกยกเลิกแล้ว</strong> — ${fmtDT(r.cancelledAt)} โดย ${esc(r.cancelledByName)} · เหตุผล: ${esc(r.cancelReason)}</span></div>`:''}
+      <div class="rc-preview" id="rcPrev"><div class="rc-scale">${receiptDoc_(r,'ต้นฉบับ')}</div></div>`,
+    foot:`<label class="rc-copy grow"><input type="checkbox" id="rcCopy" checked> พิมพ์สำเนาด้วย</label>
+      ${can('receipt.cancel')&&!cx?`<button type="button" class="btn danger-ghost" id="rcCancel">${icon('ban')}ยกเลิกใบเสร็จ</button>`:''}
+      <button type="button" class="btn" data-close>ปิด</button><button type="button" class="btn primary" id="rcDoPrint">${icon('printer')}พิมพ์</button>`});
+  const prev=$('#rcPrev',m.el),fit=()=>{if(!prev.isConnected){window.removeEventListener('resize',fit);return}
+    const doc=$('.rc-doc',prev),k=Math.min(1,prev.clientWidth/794);const sc=$('.rc-scale',prev);sc.style.transform=`scale(${k})`;sc.style.marginLeft=Math.max(0,(prev.clientWidth-794*k)/2)+'px';prev.style.height=Math.ceil(doc.offsetHeight*k)+'px'};
+  fit();window.addEventListener('resize',fit);
+  $('#rcDoPrint',m.el).onclick=()=>receiptPrint_(r,$('#rcCopy',m.el).checked);
+  if($('#rcCancel',m.el))$('#rcCancel',m.el).onclick=()=>receiptCancel_(r,x=>{m.close();done&&done();if(x)receiptView_(x,done)})}
+
+function receiptCancel_(r,done){
+  const m=UI.openModal({title:'ยกเลิกใบเสร็จ '+r.docNo,iconName:'ban',size:'sm',
+    body:`<form id="rcxForm" novalidate style="display:flex;flex-direction:column;gap:12px"><p class="cap" style="margin:0">${esc(r.customerName)} · ${fmtM(r.total)} — เลขที่นี้จะไม่ถูกใช้ซ้ำ รายการในใบเสร็จจะออกใบเสร็จใหม่ได้${r.prevPayStatus?' และการจองจะกลับเป็นสถานะเดิม':''}</p>
+      ${V.textarea('reason','เหตุผลที่ยกเลิก',{req:true,rows:3,ph:'เช่น พิมพ์ชื่อลูกค้าผิด ออกใบใหม่แทน'})}<button type="submit" hidden></button></form>`,
+    foot:`<button type="button" class="btn" data-close>ไม่ยกเลิก</button><button type="button" class="btn danger" id="rcxOk">${icon('ban')}ยกเลิกใบเสร็จ</button>`});
+  const f=$('#rcxForm',m.el);V.live(f);
+  const go_=async()=>{const v=V.form(f,{reason:{label:'เหตุผลที่ยกเลิก',req:true,max:200}});if(!v)return;
+    if(v.reason.length<3)return V.setErr(f,'reason','กรุณาระบุเหตุผลอย่างน้อย 3 ตัวอักษร');
+    try{const x=await api('receipt.cancel',{docNo:r.docNo,reason:v.reason},{loading:'กำลังยกเลิกใบเสร็จ'});m.close();UI.toast('ยกเลิกใบเสร็จแล้ว','warning',r.docNo);done&&done(x)}
+    catch(e){if(e.field)V.setErr(f,e.field,e.message);else UI.swalError('ยกเลิกไม่สำเร็จ',e.message)}};
+  $('#rcxOk',m.el).onclick=go_;f.onsubmit=e=>{e.preventDefault();go_()}}
+
+/* the A4 pages go into #rcPrint under <body>; the print CSS shows only them (css.html: body.rc-printing) */
+async function receiptPrint_(r,copy){
+  let n=0;try{n=(await api('receipt.print',{docNo:r.docNo,copies:!!copy},{loading:'กำลังเตรียมพิมพ์'})).printCount}catch(e){UI.swalError('พิมพ์ไม่สำเร็จ',e.message);return}
+  let root=$('#rcPrint');if(root)root.remove();
+  root=document.createElement('div');root.id='rcPrint';root.innerHTML=receiptDoc_(r,'ต้นฉบับ',n)+(copy?receiptDoc_(r,'สำเนา',n):'');
+  document.body.appendChild(root);document.body.classList.add('rc-printing');
+  const done=()=>{document.body.classList.remove('rc-printing');root.remove();window.removeEventListener('afterprint',done)};
+  window.addEventListener('afterprint',done);
+  await Promise.all($$('img',root).map(i=>i.complete?0:new Promise(res=>{i.onload=i.onerror=res;setTimeout(res,3000)})));
+  window.print();setTimeout(()=>{if(root.isConnected&&!window.matchMedia('print').matches)done()},1500)}
+
+/* design/Receipt: one A4 page, 794 × 1123 px */
+function receiptDoc_(r,label,printCount){
+  const c=Master.company(),s=r.stay,num=n=>Number(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const logo=c.logoFileId?`<img src="${UI.driveImage(c.logoFileId,200)}" alt="">`:esc((c.hotelName||'H').replace(/^โรงแรม\s*/,'').charAt(0)||'H');
+  const kv=(k,v,mono)=>`<div class="kv"><span>${k}</span><span class="${mono?'mono':''}">${v}</span></div>`;
+  const pays=Master.options('pay').concat(Master.options('pay').some(p=>p.code===r.payMethod)?[]:[{code:r.payMethod,label:r.payLabel}]);
+  const payText=[r.payNote,s&&s.channel?'ช่องทางการจอง '+s.channel:''].filter(Boolean).join(' · ');
+  return`<article class="rc-doc">${r.status==='cancelled'?'<div class="rc-void" aria-hidden="true">ยกเลิก</div>':''}
+    <header class="rc-head"><div class="rc-co"><div class="rc-logo">${logo}</div><div class="rc-coinfo"><b>${esc(c.companyName||c.hotelName||'')}</b><span class="hotel">${esc(c.hotelName||'')}${c.branch?' ('+esc(c.branch)+')':''}</span>
+        ${c.address?`<span>${esc(c.address)}</span>`:''}<span>${c.taxId?`เลขประจำตัวผู้เสียภาษี <span class="mono">${esc(c.taxId)}</span>`:''}${c.taxId&&c.phone?' · ':''}${c.phone?`โทร <span class="mono">${esc(c.phone)}</span>`:''}</span></div></div>
+      <div class="rc-title"><span class="t">ใบเสร็จรับเงิน</span><span class="en">RECEIPT</span><span class="pill">${esc(label)}</span>${printCount>1&&label==='ต้นฉบับ'?`<span class="en" style="letter-spacing:0">พิมพ์ครั้งที่ ${printCount}</span>`:''}</div></header>
+    <div class="rc-boxes"><div class="rc-box"><span class="h">ข้อมูลลูกค้า</span>${kv('ชื่อลูกค้า','<b>'+esc(r.customerName)+'</b>')}${kv('ที่อยู่',esc(r.customerAddress||'-'))}${kv('เลขผู้เสียภาษี',esc(r.customerTaxId||'-'),true)}${kv('โทรศัพท์',esc(r.customerPhone||'-'),true)}</div>
+      <div class="rc-box"><span class="h">ข้อมูลเอกสาร</span>${kv('เลขที่','<b>'+esc(r.docNo)+'</b>',true)}${kv('วันที่',fmtD(r.date))}${r.bookingNo?kv('อ้างอิง',esc(r.bookingNo),true):''}
+        ${s?kv('ห้องพัก',`${esc(s.typeCode)} ${esc(s.roomNo)} · ${esc(s.typeName)}`)+kv('เข้าพัก',`${fmtD(s.checkIn)} ${esc(c.checkInTime||'')} – ${fmtD(s.checkOut)} ${esc(c.checkOutTime||'')}`):''}</div></div>
+    <div class="rc-items"><div class="rc-row th"><div class="c">ลำดับ</div><div>รายการ</div><div class="n">จำนวน</div><div>หน่วย</div><div class="n">ราคา/หน่วย</div><div class="n">จำนวนเงิน</div></div>
+      ${r.items.map(i=>`<div class="rc-row"><div class="c">${i.line}</div><div class="d"><b>${esc(i.description)}</b><span>${esc(i.detail)}</span></div><div class="n">${fmtN(i.qty)}</div><div>${esc(i.unitLabel)}</div><div class="n">${num(i.unitPrice)}</div><div class="n"><b>${num(i.amount)}</b></div></div>`).join('')}</div>
+    <div class="rc-foot"><div class="rc-left"><div class="rc-words">(${esc(r.words)})</div>
+        <div class="rc-pay"><b>ชำระโดย</b><div class="opts">${pays.map(p=>`<span><i class="${p.code===r.payMethod?'on':''}">${p.code===r.payMethod?icon('check'):''}</i>${esc(p.label)}</span>`).join('')}</div>${payText?`<span class="cap">${esc(payText)}</span>`:''}${r.note?`<span class="cap">หมายเหตุ: ${esc(r.note)}</span>`:''}</div></div>
+      <div class="rc-tot"><div><span>รวมเป็นเงิน</span><span>${num(r.subtotal)}</span></div><div><span>ส่วนลด</span><span>${num(r.discount)}</span></div>
+        ${r.vatRate?`<div><span>มูลค่าก่อนภาษี</span><span>${num(r.netBeforeVat)}</span></div><div class="line"><span>ภาษีมูลค่าเพิ่ม ${r.vatRate}%</span><span>${num(r.vat)}</span></div>`:'<div class="line"><span>ไม่มีภาษีมูลค่าเพิ่ม</span><span></span></div>'}
+        <div class="grand"><span>จำนวนเงินรวมทั้งสิ้น</span><span>${num(r.total)}</span></div></div></div>
+    <div class="grow"></div>
+    <div class="rc-sign"><div><span class="ln"></span><span>( ........................................ )</span><b>ผู้จ่ายเงิน</b><span class="cap">วันที่ ......../......../........</span></div>
+      <div><span class="ln"></span><span>( ${esc(r.issuedByName)} )</span><b>ผู้รับเงิน</b><span class="cap">วันที่ ${fmtD(r.date)}</span></div></div>
+    <footer class="rc-end"><span>ขอบคุณที่ใช้บริการ${esc(c.hotelName||'')} · เอกสารนี้ออกโดยระบบ</span><span>${r.items.length<=12?'หน้า 1/1':esc(r.docNo)}</span></footer></article>`}
+</script>

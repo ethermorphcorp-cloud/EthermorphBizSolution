@@ -538,3 +538,65 @@ function demoSplit_(total, count, unit, rnd, even, lead) {
   }
   return alloc.map(function (a) { return a * unit; });
 }
+
+/* ---------- Receipts ---------- */
+
+/** Receipts up to the designs' "today": every paid stay on its check-out day (room + the other income left to
+ *  "รวมในใบเสร็จ"), and every line of other income paid on the spot on its own. Numbered by date within each month,
+ *  which makes BK-202609-0057's receipt (the first one on 24/09) RC-202609-0112 as in design/Receipt.
+ *  Run by setup() whenever the demo hotel has bookings and no receipts, so an already seeded demo gets them too. */
+function seedDemoReceipts_() {
+  var D = DemoData, rnd = demoRng_(DEMO_SEED + 6), cut = D.today, fixedNo = 'BK-202609-0057';
+  var custs = {}, types = roomTypeMap_(), cat = dropdownLabel_('othercat'), co = readKV('Company');
+  var vr = Number(co.vatRate) || 0, mode = co.vatMode === 'excluded' ? 'excluded' : 'included';
+  var cu = findById('Customers', 'CU-0205');   // design/Receipt shows her address
+  if (cu && !cu.address) updateRow('Customers', 'CU-0205', {address: '123/45 ถนนนิมมานเหมินท์ ตำบลสุเทพ อำเภอเมืองเชียงใหม่ จังหวัดเชียงใหม่ 50200'});
+  readTable('Customers').forEach(function (c) { custs[c.customerId] = c; });
+  var bookings = {}, withStay = {};
+  readTable('RoomIncome').forEach(function (b) { bookings[b.docNo] = b; });
+  var other = readTable('OtherIncome').sort(function (a, b) { return a.docNo < b.docNo ? -1 : 1; });
+  other.forEach(function (o) { if (o.bookingNo && !o.payMethod) (withStay[o.bookingNo] = withStay[o.bookingNo] || []).push(o); });
+  var who = function (b) {
+    var c = b && custs[b.customerId];
+    return c ? {customerId: c.customerId, customerName: c.name, customerAddress: c.address, customerTaxId: c.taxId, customerPhone: c.phone || b.phone}
+      : {customerId: '', customerName: 'ลูกค้าทั่วไป', customerAddress: '', customerTaxId: '', customerPhone: ''};
+  };
+  var drafts = [];
+  Object.keys(bookings).forEach(function (no) {
+    var b = bookings[no];
+    if (b.payStatus !== 'paid' || b.checkOut > cut) return;
+    var lines = [receiptRoomLine_(b, types)].concat((withStay[no] || []).map(function (o) { return receiptOtherLine_(o, cat); }));
+    var fixed = no === fixedNo;
+    drafts.push({lines: lines, discount: b.discount, bookingNo: no, who: who(b), date: b.checkOut, payMethod: fixed ? 'TRANSFER' : b.payMethod,
+      payNote: fixed ? 'ธนาคารกสิกรไทย · วันที่โอน 24/09/2026' : '', issuedBy: fixed ? 'somchai' : demoPick_(rnd, ['frontdesk1', 'frontdesk2']),
+      at: b.checkOut + 'T' + (fixed ? '08:05:00' : pad_(9 + Math.floor(rnd() * 3), 2) + ':' + pad_(Math.floor(rnd() * 60), 2) + ':00'), first: fixed});
+  });
+  other.forEach(function (o) {
+    if (!o.payMethod || o.date > cut) return;
+    drafts.push({lines: [receiptOtherLine_(o, cat)], discount: 0, bookingNo: o.bookingNo, who: who(bookings[o.bookingNo]), date: o.date,
+      payMethod: o.payMethod, payNote: '', issuedBy: o.createdBy, at: o.createdAt, first: false});
+  });
+  drafts.sort(function (a, b) {
+    return a.date < b.date ? -1 : a.date > b.date ? 1 : a.first !== b.first ? (a.first ? -1 : 1) : a.at < b.at ? -1 : a.at > b.at ? 1 : 0;
+  });
+  var count = {}, receipts = [], items = [];
+  drafts.forEach(function (d) {
+    var ym = d.date.slice(0, 7).replace('-', ''), n = count[ym] = (count[ym] || 0) + 1, docNo = DOC_PREFIX.receipt + '-' + ym + '-' + pad_(n, 4);
+    var m = receiptMoney_(d.lines.reduce(function (s, l) { return s + l.amount; }, 0), d.discount, vr, mode);
+    receipts.push(Object.assign({docNo: docNo, date: d.date, bookingNo: d.bookingNo, subtotal: m.subtotal, discount: m.discount,
+      netBeforeVat: m.netBeforeVat, vat: m.vat, total: m.total, payMethod: d.payMethod, status: 'active', issuedBy: d.issuedBy,
+      createdAt: d.at, payNote: d.payNote, note: '', vatRate: vr, vatMode: mode, prevPayStatus: '', cancelReason: '', cancelledBy: '',
+      cancelledAt: '', printCount: 1}, d.who));
+    d.lines.forEach(function (l, i) {
+      items.push({itemId: docNo + '-' + (i + 1), docNo: docNo, line: i + 1, description: l.description, detail: l.detail, qty: l.qty,
+        unit: l.unit, unitPrice: l.unitPrice, amount: l.amount, refDocNo: l.refDocNo});
+    });
+  });
+  withLock_(function () {
+    insertRows('Receipts', receipts);
+    insertRows('ReceiptItems', items);
+    demoSequences_(receipts);
+  });
+  var mine = receipts.filter(function (r) { return r.bookingNo === fixedNo; })[0];
+  return 'demo receipts: ' + receipts.length + ' (' + fixedNo + ' → ' + (mine ? mine.docNo : '-') + ')';
+}

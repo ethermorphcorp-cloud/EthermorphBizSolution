@@ -89,8 +89,8 @@ var OtherIncomeService = {
     return withLock_(function () {
       var o = findById('OtherIncome', docNo);
       if (!o) throw appError_('NOT_FOUND', 'ไม่พบรายการ ' + docNo + ' อาจถูกลบไปแล้ว');
-      if (readTable('ReceiptItems').some(function (i) { return i.refDocNo === docNo; })) {
-        throw appError_('IN_USE', 'รายการนี้อยู่ในใบเสร็จแล้ว จึงลบไม่ได้ — ยกเลิกใบเสร็จก่อน');
+      if (receiptedRefs_()[docNo]) {
+        throw appError_('IN_USE', 'รายการนี้อยู่ในใบเสร็จ ' + receiptedRefs_()[docNo] + ' แล้ว จึงลบไม่ได้ — ยกเลิกใบเสร็จก่อน');
       }
       dropAttachments_(docNo);
       deleteRow('OtherIncome', docNo);

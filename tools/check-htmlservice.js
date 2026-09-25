@@ -54,6 +54,12 @@ fs.readdirSync(dir).filter(f => f.endsWith('.html') && !SKIP[f]).forEach(f => {
   const re = /<script>([\s\S]*?)<\/script>/g;
   let m;
   while ((m = re.exec(src))) scan(f, m[1], src.slice(0, m.index).split('\n').length);
+  // $() is one element and has no forEach — a "$$" that lost a "$" (shell edits turn $$ into the process id)
+  src.split('\n').forEach((l, i) => {
+    if (/(^|[^$\w])\$\((?:'[^']*'|"[^"]*"|`[^`]*`)(?:,[^)]*)?\)\.(forEach|map|filter)\(/.test(l)) {
+      problems++; console.log(`${f}:${i + 1}  $(...).forEach — use $$ for a list of elements`);
+    }
+  });
 });
 if (problems) { console.log(`\n${problems} problem(s). Build the string with plain quotes and concatenation, or avoid the characters.`); process.exit(1); }
 console.log('check-htmlservice: ok');
