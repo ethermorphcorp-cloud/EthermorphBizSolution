@@ -4,11 +4,11 @@
  * instead of deleted. Every change to master data comes back with the next api() answer (Master.accept). */
 const ROLE_TONE={Owner:'info',Admin:'primary',Accounting:'warning',FrontDesk:''};
 const ROLE_HELP={Owner:'เจ้าของ — ทุกเมนู',Admin:'ผู้ดูแลระบบ — ทุกเมนู',Accounting:'บัญชี — รายได้อื่น รายจ่าย ใบเสร็จ รายงาน',FrontDesk:'ฟรอนต์ — จองห้อง รายได้อื่น ลูกค้า สถานะห้อง'};
-const TABS_SET=[['dd','Dropdown / ตัวเลือก'],['co','ข้อมูลบริษัท'],['us','ผู้ใช้งาน']];
+const TABS_SET=[['co','ข้อมูลบริษัท'],['us','ผู้ใช้งาน'],['dd','Dropdown / ตัวเลือก']];
 
 Pages.settings={render(el,params){
-  const tab=TABS_SET.some(t=>t[0]===params.tab)?params.tab:'dd';
-  el.innerHTML=pageHead('ตั้งค่าทั่วไป','จัดการตัวเลือกในระบบ ข้อมูลบริษัท และผู้ใช้งาน')+
+  const tab=TABS_SET.some(t=>t[0]===params.tab)?params.tab:TABS_SET[0][0];
+  el.innerHTML=pageHead('ตั้งค่าทั่วไป','จัดการข้อมูลบริษัท ผู้ใช้งาน และตัวเลือกในระบบ')+
     `<div class="tabs flush" role="tablist" aria-label="หมวดการตั้งค่า">${TABS_SET.map(t=>`<button type="button" role="tab" id="tab-${t[0]}" aria-selected="${t[0]===tab}" aria-controls="setPanel" data-tab="${t[0]}">${t[1]}</button>`).join('')}</div>
     <div id="setPanel" role="tabpanel" aria-labelledby="tab-${tab}"></div>`;
   $$('[data-tab]',el).forEach(b=>b.onclick=()=>go('settings',{tab:b.dataset.tab},true));
