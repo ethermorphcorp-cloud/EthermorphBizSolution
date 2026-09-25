@@ -1,24 +1,9 @@
 <script>
 /* page-stub.html — placeholders until each module ships (steps 3–7).
- * Pages.dashboard shows the rooms from the master data so the shell, session and MasterCache can be checked end to
- * end; the full Dashboard (KPIs, charts) replaces it in step 7. */
+ */
 Pages._stub={render(el,params,it){
   el.innerHTML=pageHead(it.l,'')+`<section class="card">${UI.empty('หน้านี้กำลังพัฒนา','เมนู "'+it.l+'" จะเปิดใช้งานเร็ว ๆ นี้ ระหว่างนี้ใช้เมนูอื่นได้ตามปกติ',
     `<button type="button" class="btn" id="stubHome">${icon('home')}กลับหน้า Dashboard</button>`)}</section>`;
   $('#stubHome',el).onclick=()=>go('dashboard')}};
 
-Pages.dashboard={render(el){
-  const c=Master.company(),rooms=Master.rooms(),types=Master.roomTypes(true);
-  const d=new Date(TODAY+'T12:00:00');
-  const count=st=>rooms.filter(r=>r.status===st).length;
-  const kpi=(lab,val,ic,tone,sub)=>`<div class="kpi"><div style="display:flex;justify-content:space-between;align-items:center"><span class="lab">${lab}</span><span class="chip ${tone}">${icon(ic)}</span></div><span class="val">${val}</span><span class="cap">${sub}</span></div>`;
-  el.innerHTML=pageHead('ภาพรวมโรงแรม',`${TH_DOW[d.getDay()]} ${fmtD(TODAY)} · ${esc(c.hotelName||'')}`,
-      `<button type="button" class="btn" id="dashRefresh">${icon('refresh')}<span>อัปเดตข้อมูล</span></button>`)+
-    `<div class="kpis">${kpi('ห้องทั้งหมด',fmtN(rooms.length)+' ห้อง','door','',types.length+' ประเภทห้อง')}${kpi('ห้องว่าง',fmtN(count('free'))+' ห้อง','check','success','พร้อมขาย')}${kpi('มีผู้เข้าพัก',fmtN(count('occ'))+' ห้อง','bed','info',rooms.length?'อัตราเข้าพัก '+(count('occ')/rooms.length*100).toFixed(1)+'%':'')}${kpi('รอทำความสะอาด / ปิดปรับปรุง',fmtN(count('clean'))+' / '+fmtN(count('off')),'tool','warning','ห้องที่ยังขายไม่ได้')}</div>
-    <section class="card"><div class="card-head"><h3>สถานะห้องพัก</h3><span class="cap">จากข้อมูลห้องพักล่าสุด</span></div>
-    ${rooms.length?`<div class="tbl-wrap"><table class="tbl stack"><thead><tr><th scope="col">ห้อง</th><th scope="col">ประเภท</th><th scope="col" class="r">ราคาปกติ / คืน</th><th scope="col">ชั้น</th><th scope="col">สถานะ</th><th scope="col">หมายเหตุ</th></tr></thead><tbody>${rooms.map(r=>{const t=types.find(x=>x.code===r.typeCode)||{};
-      return`<tr><td data-label="ห้อง"><span class="mono">${esc(r.roomNo)}</span></td><td data-label="ประเภท">${esc(t.name||r.typeCode)}</td><td data-label="ราคาปกติ / คืน" class="r">${fmtM(t.price)}</td><td data-label="ชั้น">${esc(r.floor)}</td><td data-label="สถานะ">${UI.badge('room',r.status)}</td><td data-label="หมายเหตุ" class="wrap">${esc(r.note||'-')}</td></tr>`}).join('')}</tbody></table></div>`
-      :UI.empty('ยังไม่มีห้องพัก','เพิ่มประเภทห้องและห้องได้ที่เมนู ประเภทห้องพัก')}</section>`;
-  $('#dashRefresh',el).onclick=async()=>{try{UI.showLoading('กำลังโหลดข้อมูลล่าสุด');await Master.refresh(true);Pages.dashboard.render(el);UI.toast('อัปเดตข้อมูลแล้ว','info')}
-    catch(e){UI.swalError('โหลดข้อมูลไม่สำเร็จ',e.message)}finally{UI.hideLoading()}}}};
 </script>

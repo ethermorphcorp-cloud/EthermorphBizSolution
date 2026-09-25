@@ -573,5 +573,29 @@ check('request state cleared', G('SHOP === null && SANDBOX === null && CURRENT_U
   check('demo bookings sheet untouched', dataRows('DEMO-HOTEL', 'RoomIncome').length === 367);
 }
 
+/* ---------- dashboard.summary ---------- */
+{
+  const D = api('DEMO-HOTEL', 'auth.login', null, {username: 'maneerat', password: '1234'}).data.token;
+  let r = api('DEMO-HOTEL', 'dashboard.summary', D, {month: '2026-09'});
+  const s = r.data;
+  check('dashboard KPIs match Main.dc.html', r.ok && s.kpi.revenue === 486250 && s.kpi.expense === 172840 && s.kpi.profit === 313410 &&
+    s.kpi.margin === 64.5 && s.kpi.room === 402650 && s.kpi.other === 83600, r.ok ? s.kpi : r);
+  const M = [['2026-04', 352000, 148200], ['2026-05', 318400, 151300], ['2026-06', 296200, 139600], ['2026-07', 402100, 160400], ['2026-08', 432600, 167600], ['2026-09', 486250, 172840]];
+  check('combo series: 6 months of revenue / expenses / margin', s.series.length === 6 &&
+    s.series.every((x, i) => x.month === M[i][0] && x.revenue === M[i][1] && x.expense === M[i][2] && x.margin === Math.round((M[i][1] - M[i][2]) / M[i][1] * 1000) / 10), s.series);
+  const rt = Object.fromEntries(s.revenueByRoomType.map(x => [x.code, x.value]));
+  check('donut: revenue by room type (SUP DLX FAM STE order)', s.revenueByRoomType.map(x => x.code).join() === 'SUP,DLX,FAM,STE' &&
+    rt.DLX === 153000 && rt.SUP === 108720 && rt.STE === 84550 && rt.FAM === 56380, s.revenueByRoomType);
+  const ic = Object.fromEntries(s.incomeByCategory.map(x => [x.code, x.value]));
+  check('donut: income by category (room first, then the dropdown order)', s.incomeByCategory[0].code === 'ROOM' && ic.ROOM === 402650 && ic.FOOD === 41850 &&
+    ic.MINIBAR === 18960 && s.incomeByCategory.reduce((t, x) => t + x.value, 0) === 486250, s.incomeByCategory);
+  check('bars: expenses by category, largest first', s.expenseByCategory[0].code === 'SALARY' && s.expenseByCategory[0].value === 78000 &&
+    s.expenseByCategory.length === 8 && s.expenseByCategory.reduce((t, x) => t + x.value, 0) === 172840 && s.expenseByCategory[0].label === 'เงินเดือนพนักงาน', s.expenseByCategory);
+  check('months with data, newest first', s.months[0].value >= '2026-09' && s.months.some(m => m.value === '2026-04'), s.months);
+  check('occupancy and tonight', s.kpi.occupancy > 0 && s.kpi.occupancy <= 100 && s.kpi.rooms === 12 && s.kpi.tonight >= 0, s.kpi);
+  r = api('DEMO-HOTEL', 'dashboard.summary', D, {month: '2026-04'});
+  check('an earlier month', r.ok && r.data.kpi.revenue === 352000 && r.data.series[0].month === '2025-11' && r.data.series[0].revenue === 0 && r.data.series[0].margin === null, r.ok ? r.data.series[0] : r);
+}
+
 console.log(`${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

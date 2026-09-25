@@ -1,0 +1,153 @@
+<script>
+/* page-dashboard.html — Dashboard (design/Main.dc.html): KPI row + four charts, all scoped by one month filter.
+ *   1. combo   รายได้ vs ค่าใช้จ่าย (columns, left axis ฿) + อัตรากำไร (line, right axis %) — 6 months to the chosen one
+ *   2. donut   รายได้รายหมวด (ห้องพัก + other income categories; past 6 slices the rest fold into "อื่นๆ")
+ *   3. donut   รายได้รายประเภทห้อง
+ *   4. bars    ค่าใช้จ่ายรายหมวด (horizontal, largest first, one colour)
+ * Colours are the validated --viz-* slots (css.html) and follow the entity, never its rank. Every chart has a hover /
+ * focus tooltip and a table view; names are put in with textContent. Charts redraw at the card's width. */
+const VIZ=['--viz-1','--viz-2','--viz-3','--viz-4','--viz-5','--viz-6'];
+const SVGNS='http:\/\/www.w3.org\/2000\/svg';
+
+Pages.dashboard={render(el,params){
+  const st=el._dash||(el._dash={month:''});
+  const load=async()=>{let d;
+    try{d=await api('dashboard.summary',{month:st.month},{loading:'กำลังโหลดภาพรวม'})}
+    catch(e){el.innerHTML=pageHead('ภาพรวมโรงแรม','')+`<section class="card">${UI.empty('โหลดข้อมูลไม่สำเร็จ',e.message)}</section>`;return}
+    st.month=d.month;draw(d)};
+  const draw=d=>{const k=d.kpi,dt=new Date(d.today+'T12:00:00');
+    el.innerHTML=pageHead('ภาพรวมโรงแรม',`วัน${TH_DOW[dt.getDay()]} ${fmtD(d.today)} · ${esc(Master.company().hotelName||'')}`,
+        `<button type="button" class="btn" id="dashRefresh">${icon('refresh')}<span>อัปเดตข้อมูล</span></button>`)+
+      `<div class="filterbar dash-filter"><label class="lbl" for="dashMonth">เดือน</label><select class="select sm" id="dashMonth" style="width:auto">${(d.months.length?d.months:[{value:d.month,label:d.label}]).map(m=>`<option value="${m.value}" ${m.value===d.month?'selected':''}>${esc(m.label)}</option>`).join('')}</select>
+        <span class="cap">ทุกตัวเลขและกราฟด้านล่างเป็นของเดือนที่เลือก · กราฟรายได้ vs ค่าใช้จ่ายแสดงย้อนหลัง 6 เดือน</span></div>
+      <div class="kpis">${kpiTile_('รายได้รวม',k.revenue,'wallet','',dashDelta_(k.revenueChange,true,k.prevLabel),`ห้องพัก ${fmtM(k.room)} · อื่นๆ ${fmtM(k.other)}`)}
+        ${kpiTile_('ค่าใช้จ่าย',k.expense,'receipt','warning',dashDelta_(k.expenseChange,false,k.prevLabel),'')}
+        ${kpiTile_('กำไรสุทธิ',k.profit,'chart','success',k.margin===null?'':`<span class="muted">อัตรากำไร ${k.margin.toFixed(1)}%</span>`,'')}
+        <div class="kpi"><div class="top"><span class="lab">อัตราเข้าพัก</span><span class="chip info">${icon('bed')}</span></div><span class="val">${k.occupancy.toFixed(1)}%</span>
+          <span class="cap">${fmtN(k.nights)} คืนที่ขายได้${d.month===d.today.slice(0,7)?` · คืนนี้ ${k.tonight}/${k.rooms} ห้อง`:''}</span></div></div>
+      <div class="dash-row">
+        ${chartCard_('cCombo','รายได้ vs ค่าใช้จ่าย','ย้อนหลัง 6 เดือนถึง '+d.label+' · เส้นคืออัตรากำไร (แกนขวา)','dash-wide')}
+        ${chartCard_('cType','รายได้รายประเภทห้อง',d.label,'')}</div>
+      <div class="dash-row even">
+        ${chartCard_('cInc','รายได้รายหมวด',d.label+' · ห้องพักและรายได้อื่น','')}
+        ${chartCard_('cExp','ค่าใช้จ่ายรายหมวด',d.label+' · เรียงจากมากไปน้อย','')}</div>`;
+    $('#dashMonth',el).onchange=e=>{st.month=e.target.value;load()};
+    $('#dashRefresh',el).onclick=()=>load();
+    const charts={cCombo:()=>vizCombo_($('#cCombo',el),d),cType:()=>vizDonut_($('#cType',el),dashSlices_(d.revenueByRoomType,4),'รายได้ห้องพัก'),
+      cInc:()=>vizDonut_($('#cInc',el),dashSlices_(d.incomeByCategory,5),'รายได้รวม'),cExp:()=>vizBars_($('#cExp',el),d.expenseByCategory)};
+    const tables={cCombo:()=>vizTable_(['เดือน','รายได้','ค่าใช้จ่าย','กำไร','อัตรากำไร'],d.series.map(s=>[s.label,fmtM(s.revenue),fmtM(s.expense),fmtM(s.profit),s.margin===null?'-':s.margin.toFixed(1)+'%'])),
+      cType:()=>vizShareTable_(d.revenueByRoomType,'ประเภทห้อง'),cInc:()=>vizShareTable_(d.incomeByCategory,'หมวด'),cExp:()=>vizShareTable_(d.expenseByCategory,'หมวด',true)};
+    Object.keys(charts).forEach(id=>{const card=$('#'+id,el).closest('.card'),btn=$('[data-view]',card);
+      const show=()=>{const tbl=btn.getAttribute('aria-pressed')==='true';$('#'+id,el).innerHTML='';tbl?$('#'+id,el).appendChild(tables[id]()):charts[id]()};
+      btn.onclick=()=>{btn.setAttribute('aria-pressed',btn.getAttribute('aria-pressed')!=='true');btn.innerHTML=btn.getAttribute('aria-pressed')==='true'?`${icon('chart','s16')}กราฟ`:`${icon('grid','s16')}ตาราง`;show()};
+      card._show=show;show()});
+    /* redraw at the new width */
+    if(el._ro)el._ro.disconnect();
+    el._ro=new ResizeObserver(UI.debounce(()=>$$('.dash-chart',el).forEach(c=>{const card=c.closest('.card');card&&card._show&&c.clientWidth!==c._w&&card._show()}),150));
+    $$('.dash-chart',el).forEach(c=>el._ro.observe(c))};
+  load()}};
+
+function kpiTile_(lab,v,ic,tone,foot,sub){return`<div class="kpi"><div class="top"><span class="lab">${lab}</span><span class="chip ${tone}">${icon(ic)}</span></div><span class="val">${fmtM(v)}</span>${foot?`<span class="cap">${foot}</span>`:''}${sub?`<span class="cap">${sub}</span>`:''}</div>`}
+/* signed change vs last month; for revenue up is good, for expenses up is bad — arrow and words, never colour alone */
+function dashDelta_(p,upGood,prev){if(p===null||p===undefined)return`<span class="muted">ไม่มีข้อมูล ${esc(prev)}</span>`;
+  const good=p===0?null:(p>0)===upGood;return`<span class="${good===null?'muted':good?'up':'down'}">${p>0?'▲':p<0?'▼':'•'} ${Math.abs(p).toFixed(1)}%</span> <span class="muted">จาก ${esc(prev)}</span>`}
+function chartCard_(id,title,sub,cls){return`<section class="card pad ${cls}"><div class="chart-head"><div><h3>${title}</h3><div class="cap">${esc(sub)}</div></div>
+  <button type="button" class="btn plain sm" data-view aria-pressed="false" aria-label="สลับกราฟและตาราง">${icon('grid','s16')}ตาราง</button></div><div class="dash-chart" id="${id}"></div></section>`}
+
+/* slices with fixed colours: the first `keep` entities (in the server's stable order) keep slots 1..keep; the rest fold
+ * into "อื่นๆ" (neutral). Zero values drop out of the drawing but not out of the table. */
+function dashSlices_(list,keep){const out=list.slice(0,keep).map((x,i)=>({label:x.label,value:x.value,color:`var(${VIZ[i]})`}));
+  const rest=list.slice(keep).reduce((s,x)=>s+x.value,0);if(rest>0)out.push({label:'อื่นๆ',value:rest,color:'var(--viz-rest)',fold:list.slice(keep).filter(x=>x.value).map(x=>x.label)});
+  return out.filter(x=>x.value>0)}
+
+/* ---------- shared bits ---------- */
+const svgEl=(tag,attrs)=>{const e=document.createElementNS(SVGNS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);return e};
+const svgText=(x,y,text,attrs={})=>{const t=svgEl('text',Object.assign({x,y,'font-size':12,fill:'var(--ink-muted)','font-family':'var(--font)'},attrs));t.textContent=text;return t};
+const kBaht=v=>Math.abs(v)>=1e6?(v/1e6).toFixed(1).replace('.0','')+'M':Math.abs(v)>=1e3?Math.round(v/1e3)+'K':String(Math.round(v));
+function niceMax_(v,steps=5){if(v<=0)return steps;const raw=v/steps,mag=Math.pow(10,Math.floor(Math.log10(raw)));return[1,2,2.5,5,10].find(x=>x*mag>=raw)*mag*steps}
+/* one tooltip per chart: rows = [[colorVar|null,'line'|'rect'|null,label,value]] — values lead, names follow */
+function vizTip_(host){let t=$('.viz-tip',host);if(!t){t=document.createElement('div');t.className='viz-tip';t.hidden=true;t.setAttribute('role','status');host.appendChild(t)}
+  return{show(title,rows,x,y){t.innerHTML='';const h=document.createElement('div');h.className='tt';h.textContent=title;t.appendChild(h);
+      rows.forEach(r=>{const row=document.createElement('div');row.className='tr';const key=document.createElement('i');key.className='key '+(r[1]||'');if(r[0])key.style.background=r[0];
+        const v=document.createElement('b');v.textContent=r[3];const l=document.createElement('span');l.textContent=r[2];row.append(key,v,l);t.appendChild(row)});
+      t.hidden=false;const w=host.clientWidth,tw=t.offsetWidth;t.style.left=Math.max(0,Math.min(x+14,w-tw))+'px';t.style.top=Math.max(0,y-10)+'px'},
+    hide(){t.hidden=true}}}
+function legend_(items){const l=document.createElement('div');l.className='viz-legend';
+  items.forEach(i=>{const s=document.createElement('span'),k=document.createElement('i');k.className='key '+i.kind;k.style.background=i.color;s.append(k,document.createTextNode(i.label));l.appendChild(s)});return l}
+
+/* ---------- 1. combo: columns (฿, left) + margin line (%, right) ---------- */
+function vizCombo_(host,d){
+  const S=d.series,W=Math.max(300,host.clientWidth),H=280,pl=52,pr=46,pt=18,pb=30,iw=W-pl-pr,ih=H-pt-pb,n=S.length,band=iw/n;host._w=host.clientWidth;
+  host.appendChild(legend_([{kind:'rect',color:'var(--viz-1)',label:'รายได้'},{kind:'rect',color:'var(--viz-2)',label:'ค่าใช้จ่าย'},{kind:'line',color:'var(--viz-3)',label:'อัตรากำไร (%) · แกนขวา'}]));
+  const yMax=niceMax_(Math.max(...S.map(s=>Math.max(s.revenue,s.expense)))),ms=S.map(s=>s.margin).filter(m=>m!==null);
+  const mMin=Math.min(0,Math.floor(Math.min(0,...ms)/20)*20),mMax=100,y=v=>pt+ih*(1-v/yMax),ym=v=>pt+ih*(1-(v-mMin)/(mMax-mMin));
+  const svg=svgEl('svg',{viewBox:`0 0 ${W} ${H}`,width:W,height:H,role:'img','aria-label':'กราฟรายได้เทียบค่าใช้จ่ายและอัตรากำไร 6 เดือน'});
+  for(let i=0;i<=5;i++){const gy=pt+ih*i/5;svg.appendChild(svgEl('line',{x1:pl,x2:W-pr,y1:gy,y2:gy,stroke:'var(--viz-grid)','stroke-width':1}));
+    svg.appendChild(svgText(pl-8,gy+4,kBaht(yMax*(1-i/5)),{'text-anchor':'end'}));
+    svg.appendChild(svgText(W-pr+8,gy+4,Math.round(mMax-(mMax-mMin)*i/5)+'%'))}
+  const bw=Math.min(24,band*0.28),hi=svgEl('rect',{x:0,y:pt,width:band,height:ih,fill:'var(--surface-hover)',opacity:0});svg.appendChild(hi);
+  const col=(x,v,color)=>{const h=Math.max(0,pt+ih-y(v)),r=Math.min(4,h,bw/2),top=pt+ih-h;
+    return svgEl('path',{d:`M${x},${pt+ih}V${top+r}Q${x},${top} ${x+r},${top}H${x+bw-r}Q${x+bw},${top} ${x+bw},${top+r}V${pt+ih}Z`,fill:color})};
+  S.forEach((s,i)=>{const cx=pl+band*i+band/2;
+    svg.appendChild(col(cx-bw-1,s.revenue,'var(--viz-1)'));svg.appendChild(col(cx+1,s.expense,'var(--viz-2)'));   /* 2px surface gap between the pair */
+    svg.appendChild(svgText(cx,H-9,band<72?s.label.split(' ')[0]:s.label,{'text-anchor':'middle','font-weight':s.month===d.month?600:400,fill:s.month===d.month?'var(--ink)':'var(--ink-muted)'}))});
+  const pts=S.map((s,i)=>s.margin===null?null:[pl+band*i+band/2,ym(s.margin)]);
+  let path='';pts.forEach((p,i)=>{if(p)path+=(path&&pts[i-1]?'L':'M')+p[0]+','+p[1]});
+  svg.appendChild(svgEl('path',{d:path,fill:'none',stroke:'var(--viz-3)','stroke-width':2,'stroke-linejoin':'round','stroke-linecap':'round'}));
+  pts.forEach(p=>{if(p)svg.appendChild(svgEl('circle',{cx:p[0],cy:p[1],r:4,fill:'var(--viz-3)',stroke:'var(--surface)','stroke-width':2}))});
+  const li=pts.length-1;if(pts[li])svg.appendChild(svgText(pts[li][0],pts[li][1]-12,S[li].margin.toFixed(1)+'%',{'text-anchor':'middle',fill:'var(--ink)','font-weight':600,stroke:'var(--surface)','stroke-width':4,'paint-order':'stroke','stroke-linejoin':'round'}));   /* direct label: the chosen month */
+  const wrap=document.createElement('div');wrap.className='viz-wrap';wrap.appendChild(svg);host.appendChild(wrap);const tip=vizTip_(wrap);
+  S.forEach((s,i)=>{const hit=svgEl('rect',{x:pl+band*i,y:pt,width:band,height:ih+pb,fill:'transparent',tabindex:0,'aria-label':`${s.label} รายได้ ${fmtM(s.revenue)} ค่าใช้จ่าย ${fmtM(s.expense)} อัตรากำไร ${s.margin===null?'-':s.margin+'%'}`});
+    const on=()=>{hi.setAttribute('x',pl+band*i);hi.setAttribute('opacity',1);const sc=wrap.clientWidth/W;
+      tip.show(s.label,[['var(--viz-1)','rect','รายได้',fmtM(s.revenue)],['var(--viz-2)','rect','ค่าใช้จ่าย',fmtM(s.expense)],[null,null,'กำไร',fmtM(s.profit)],['var(--viz-3)','line','อัตรากำไร',s.margin===null?'-':s.margin.toFixed(1)+'%']],(pl+band*i+band/2)*sc,pt*sc)};
+    const off=()=>{hi.setAttribute('opacity',0);tip.hide()};
+    hit.addEventListener('pointerenter',on);hit.addEventListener('focus',on);hit.addEventListener('pointerleave',off);hit.addEventListener('blur',off);svg.appendChild(hit)})}
+
+/* ---------- 2/3. donut ---------- */
+function vizDonut_(host,slices,centerLabel){host._w=host.clientWidth;
+  if(!slices.length){host.innerHTML=UI.empty('ยังไม่มีรายได้ในเดือนนี้','ข้อมูลจะแสดงเมื่อมีการบันทึกรายได้');return}
+  const total=slices.reduce((s,x)=>s+x.value,0),R=70,SW=24,C=2*Math.PI*R,size=180;
+  const box=document.createElement('div');box.className='donut';const wrap=document.createElement('div');wrap.className='viz-wrap donut-fig';
+  const svg=svgEl('svg',{viewBox:`0 0 ${size} ${size}`,width:size,height:size,role:'img','aria-label':centerLabel+' '+fmtM(total)});
+  const g=svgEl('g',{transform:`rotate(-90 ${size/2} ${size/2})`});svg.appendChild(g);
+  const center=document.createElement('div');center.className='donut-center';const cl=document.createElement('span');cl.className='cap';const cv=document.createElement('b');const cp=document.createElement('span');cp.className='cap';
+  center.append(cl,cv,cp);const reset=()=>{cl.textContent=centerLabel;cv.textContent=fmtM(total).replace('.00','');cp.textContent=''};reset();
+  const legend=document.createElement('div');legend.className='donut-legend';const tip=vizTip_(wrap);
+  let off=0;const arcs=slices.map((s,i)=>{const L=C*s.value/total,gap=slices.length>1?2:0;
+    const a=svgEl('circle',{cx:size/2,cy:size/2,r:R,fill:'none',stroke:s.color,'stroke-width':SW,'stroke-dasharray':`${Math.max(L-gap,.5)} ${C}`,'stroke-dashoffset':-off,tabindex:0});   /* 2px surface gap between slices */
+    off+=L;g.appendChild(a);return a});
+  const focus=(i,ev)=>{arcs.forEach((a,j)=>{a.style.opacity=i===null||i===j?1:.35;a.setAttribute('stroke-width',i===j?SW+4:SW)});$$('.row',legend).forEach((r,j)=>r.classList.toggle('on',i===j));
+    if(i===null){reset();tip.hide();return}const s=slices[i],p=(s.value/total*100).toFixed(1)+'%';cl.textContent=s.label;cv.textContent=fmtM(s.value).replace('.00','');cp.textContent=p;
+    if(ev&&ev.type==='pointerenter'){const r=wrap.getBoundingClientRect();tip.show(s.label,[[s.color,'rect',s.fold?'รวม '+s.fold.join(', '):'สัดส่วน '+p,fmtM(s.value)]],ev.clientX-r.left,ev.clientY-r.top)}else tip.hide()};
+  arcs.forEach((a,i)=>{['pointerenter','focus'].forEach(t=>a.addEventListener(t,e=>focus(i,e)));['pointerleave','blur'].forEach(t=>a.addEventListener(t,()=>focus(null)))});
+  slices.forEach((s,i)=>{const r=document.createElement('div');r.className='row';r.tabIndex=0;const k=document.createElement('i');k.className='key rect';k.style.background=s.color;
+    const n=document.createElement('span');n.className='n';n.textContent=s.label;if(s.fold)n.title=s.fold.join(', ');const v=document.createElement('span');v.className='v';v.textContent=fmtM(s.value);
+    const p=document.createElement('span');p.className='p';p.textContent=(s.value/total*100).toFixed(1)+'%';r.append(k,n,v,p);
+    ['mouseenter','focus'].forEach(t=>r.addEventListener(t,()=>focus(i)));['mouseleave','blur'].forEach(t=>r.addEventListener(t,()=>focus(null)));legend.appendChild(r)});
+  wrap.append(svg,center);box.append(wrap,legend);host.appendChild(box)}
+
+/* ---------- 4. horizontal bars (one series, one colour) ---------- */
+function vizBars_(host,list){host._w=host.clientWidth;
+  if(!list.length){host.innerHTML=UI.empty('ยังไม่มีค่าใช้จ่ายในเดือนนี้','ข้อมูลจะแสดงเมื่อมีการบันทึกรายจ่าย');return}
+  const max=Math.max(...list.map(x=>x.value)),total=list.reduce((s,x)=>s+x.value,0);
+  const wrap=document.createElement('div');wrap.className='viz-wrap hbars';const tip=vizTip_(wrap);
+  list.forEach(x=>{const row=document.createElement('div');row.className='hbar';row.tabIndex=0;
+    const n=document.createElement('span');n.className='n';n.textContent=x.label;
+    const track=document.createElement('span');track.className='track';const bar=document.createElement('span');bar.className='bar';bar.style.width=Math.max(.5,x.value/max*100)+'%';track.appendChild(bar);
+    const v=document.createElement('span');v.className='v';v.textContent=fmtM(x.value);const p=document.createElement('span');p.className='p';p.textContent=(x.value/total*100).toFixed(1)+'%';
+    row.append(n,track,v,p);
+    const on=e=>{row.classList.add('on');const r=wrap.getBoundingClientRect(),b=bar.getBoundingClientRect();tip.show(x.label,[['var(--viz-2)','rect',`${fmtN(x.count||0)} รายการ · ${(x.value/total*100).toFixed(1)}%`,fmtM(x.value)]],b.right-r.left,b.top-r.top-8)};
+    const off=()=>{row.classList.remove('on');tip.hide()};
+    row.addEventListener('pointerenter',on);row.addEventListener('focus',on);row.addEventListener('pointerleave',off);row.addEventListener('blur',off);wrap.appendChild(row)});
+  const foot=document.createElement('div');foot.className='hbar-total';const a=document.createElement('span');a.textContent='รวมทั้งเดือน';const b=document.createElement('b');b.textContent=fmtM(total);foot.append(a,b);
+  wrap.appendChild(foot);host.appendChild(wrap)}
+
+/* ---------- table views ---------- */
+function vizTable_(head,rows){const w=document.createElement('div');w.className='tbl-wrap';const t=document.createElement('table');t.className='tbl';
+  const tr=document.createElement('tr');head.forEach((h,i)=>{const th=document.createElement('th');th.scope='col';th.textContent=h;if(i)th.className='r';tr.appendChild(th)});
+  const th=document.createElement('thead');th.appendChild(tr);t.appendChild(th);const tb=document.createElement('tbody');
+  rows.forEach(r=>{const x=document.createElement('tr');r.forEach((c,i)=>{const td=document.createElement('td');td.textContent=c;if(i)td.className='r';x.appendChild(td)});tb.appendChild(x)});
+  t.appendChild(tb);w.appendChild(t);return w}
+function vizShareTable_(list,name,count){const total=list.reduce((s,x)=>s+x.value,0);
+  return vizTable_([name].concat(count?['รายการ']:[],['จำนวนเงิน','สัดส่วน']),list.map(x=>[x.label].concat(count?[fmtN(x.count)]:[],[fmtM(x.value),total?(x.value/total*100).toFixed(1)+'%':'-'])).concat([['รวม'].concat(count?['']:[],[fmtM(total),'100%'])]))}
+</script>

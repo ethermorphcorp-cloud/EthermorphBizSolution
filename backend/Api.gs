@@ -87,8 +87,9 @@ var ROUTES = {
   'roomIncome.calendar': {perm: 'roomIncome.view', feature: 'roomIncome', fn: function (a) { return RoomIncomeService.calendar(a.month); }},
   'roomIncome.export':   {perm: 'roomIncome.view', feature: 'roomIncome', fn: function (a, u) { return RoomIncomeService.export(u, a); }},
   'customer.lookup':     {perm: 'roomIncome.view', fn: function () { return customerLookup_(); }},
-  'booking.grid':        {perm: 'booking.view', feature: 'booking', fn: function (a) { return BookingService.grid(a.from, a.days, a.typeCode); }}
-  // step 5+: dashboard.summary, otherIncome.*, expense.*, receipt.*, report.*, upload.*
+  'booking.grid':        {perm: 'booking.view', feature: 'booking', fn: function (a) { return BookingService.grid(a.from, a.days, a.typeCode); }},
+  'dashboard.summary':   {perm: 'dashboard.view', feature: 'dashboard', fn: function (a) { return DashboardService.summary(a.month); }}
+  // step 5+: otherIncome.*, expense.*, receipt.*, report.*, upload.*
 };
 
 function api(shop, action, token, payload) {

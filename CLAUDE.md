@@ -92,7 +92,9 @@ Web app บริหารรายได้-รายจ่ายโรงแ�
 │  ├─ RoomIncome.gs      ✓  list (KPI เดือน, เดือนที่มีข้อมูล, ตัวกรอง, แถวรวม) / get / availability / save (ห้ามจองซ้อน,
 │  │                        VAT ตาม vatMode) / cancel (cxl) / delete / calendar(month) / export
 │  ├─ Booking.gs         ✓  grid(from, days, typeCode) → rooms × days + bars (clip ซ้าย/ขวา) + ปิดปรับปรุง + สรุปห้องว่าง · audit.client
-│  └─ <Service>.gs          ขั้นที่ 5+: OtherIncome, Expense, Receipt, Report, Dashboard, Upload
+│  ├─ Dashboard.gs       ✓  summary(month): KPI (เทียบเดือนก่อน), 6 เดือน รายได้/ค่าใช้จ่าย/อัตรากำไร, รายได้รายหมวด,
+│  │                        รายได้รายประเภทห้อง, ค่าใช้จ่ายรายหมวด
+│  └─ <Service>.gs          ขั้นที่ 5+: OtherIncome, Expense, Receipt, Report, Upload
 │                           — เพิ่ม route ใน ROUTES ของ Api.gs
 └─ frontend/                 *.html — index.html include ส่วนอื่นตามลำดับ (ทุกไฟล์ต้องถูก include — smoke-test ตรวจ)
    ├─ index.html         ✓  BOOT จาก doGet + SweetAlert2 + include ทั้งหมด แล้วเรียก Shell.boot()
@@ -103,7 +105,9 @@ Web app บริหารรายได้-รายจ่ายโรงแ�
    ├─ js-api.html        ✓  api(action, payload, {loading, retry}) · App / Session (idle timeout) · Master (cache ตาม version)
    ├─ js-app.html        ✓  Shell: boot (app.boot), Login + Demo, sidebar ย่อได้ / drawer, topbar, bottom nav + FAB,
    │                        router go(view) + google.script.history, เปลี่ยนรหัสผ่าน, ธีม — เมนูอยู่ใน NAV
-   ├─ page-stub.html     ✓  Pages._stub (เมนูที่ยังไม่ทำ) + Dashboard ชั่วคราว (สถานะห้องจาก master) → ขั้นที่ 7
+   ├─ page-stub.html     ✓  Pages._stub (เมนูที่ยังไม่ทำ)
+   ├─ page-dashboard.html ✓ KPI + combo (รายได้ vs ค่าใช้จ่าย + % กำไรแกนขวา) + donut รายหมวด / ประเภทห้อง + แท่งแนวนอน
+   │                        ค่าใช้จ่าย — SVG เอง, สี --viz-1..6 (ผ่าน validate_palette ทั้ง light/dark), tooltip + มุมมองตาราง
    ├─ page-settings.html ✓  แท็บ Dropdown (ลาก/ลูกศรเรียงลำดับ) · ข้อมูลบริษัท + โลโก้ · ผู้ใช้งาน
    ├─ page-customers.html ✓ ตาราง server-side + ตัวกรองจากข้อมูล + เมนูแถว (portal) + นำเข้า/ส่งออก Excel (SheetJS)
    ├─ page-roomtypes.html ✓ การ์ดประเภทห้อง + ตารางห้อง + เปลี่ยนสถานะห้อง (FrontDesk ทำได้)
