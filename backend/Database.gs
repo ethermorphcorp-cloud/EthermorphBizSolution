@@ -1,7 +1,8 @@
 /** Database.gs — the repository: the only file that talks to the hotel's Spreadsheet.
  *  Rules: batch reads/writes (getValues/setValues), never cell by cell. Every write goes through withLock_,
  *  checks the primary key (validation layer 3), stores text only, and refreshes the master cache when a master
- *  table changed. Master tables are served from MasterCache.gs; other tables are read once per request.
+ *  table changed. Tables are served from the cache (MasterCache.gs TableCache) and read once per request; inside the
+ *  write lock, business tables come from the sheet itself.
  */
 var SS_ = {};     // spreadsheet handle per sheet id, for the life of one execution
 var REQ_ = {};    // rows read during this request, per table (cleared by Api.gs and whenever the lock is taken)
@@ -51,15 +52,23 @@ function cache_() {
 var SANDBOX = null;
 var SANDBOX_TTL = 21600;   // the cache maximum: 6 hours
 
+var SBX_REQ_ = {};   // this request: sandbox key → raw change set (or null), so a table's changes are fetched once
+
 function sbxKey_(name) { return 'sbx_' + SANDBOX + '_' + name; }
+function sbxRaw_(name) {
+  var k = sbxKey_(name);
+  if (!(k in SBX_REQ_)) SBX_REQ_[k] = cache_().get(k);
+  return SBX_REQ_[k];
+}
 function sbxGet_(name) {
-  var raw = cache_().get(sbxKey_(name));
+  var raw = sbxRaw_(name);
   return raw ? JSON.parse(raw) : {add: [], upd: {}, del: {}};
 }
 function sbxPut_(name, d) {
   var s = JSON.stringify(d);
   if (s.length > 30000) throw appError_('DEMO_FULL', 'ข้อมูลทดลองในรอบนี้เต็มแล้ว กรุณาออกจากระบบแล้วเข้าใหม่');   // ≤ 90 KB of Thai text
   cache_().put(sbxKey_(name), s, SANDBOX_TTL);
+  SBX_REQ_[sbxKey_(name)] = s;
   if (MASTER_TABLES[name]) MasterCache.bumpSandbox();
   delete REQ_[name];
 }
@@ -71,7 +80,7 @@ function sbxRow_(name, obj) {
 }
 function sbxApply_(name, rows) {
   if (!SANDBOX || SANDBOX === '-') return rows;
-  var raw = cache_().get(sbxKey_(name));
+  var raw = sbxRaw_(name);
   if (!raw) return rows;
   var d = JSON.parse(raw), col = SCHEMA[name][0];
   if (d.rows) return d.rows;
@@ -80,6 +89,7 @@ function sbxApply_(name, rows) {
     .concat(d.add);
 }
 function sbxClear_(token) {
+  SBX_REQ_ = {};
   cache_().removeAll(Object.keys(SCHEMA).map(function (n) { return 'sbx_' + token + '_' + n; }).concat(['sbxv_' + token]));
 }
 function sbxInsert_(name, objs) {
@@ -137,10 +147,10 @@ function readTable(name) {
 }
 function readSheet_(name) {
   if (REQ_[name]) return REQ_[name];
-  // a master table written in the current lock is read from the sheet until its version is bumped
-  var rows = MASTER_TABLES[name] && !LOCK_BUMP_[name]
-    ? MasterCache.table(name, function () { return readRaw_(name); })
-    : readRaw_(name);
+  // a table written in the current lock is read from the sheet until its version is bumped; inside a real write
+  // lock business tables always are (key checks, overlaps and numbers never rely on the cache)
+  var live = LOCK_BUMP_[name] || (LOCK_DEPTH_ > 0 && SANDBOX === null && !MASTER_TABLES[name]);
+  var rows = tcCached_(name) && !live ? TableCache.table(name, function () { return readRaw_(name); }) : readRaw_(name);
   REQ_[name] = rows;
   return rows;
 }
@@ -188,7 +198,7 @@ function rowValues_(name, obj) {
 /** Called after every real write to a table. */
 function touched_(name) {
   delete REQ_[name];
-  if (MASTER_TABLES[name]) LOCK_BUMP_[name] = 1;   // bumped after flush, still inside the lock (see withLock_)
+  if (tcCached_(name)) LOCK_BUMP_[name] = 1;   // bumped after flush, still inside the lock (see withLock_)
 }
 
 /** Append one or many records in a single setValues call. Refuses a primary key that already exists. */
@@ -341,7 +351,7 @@ function withLock_(fn) {
     SpreadsheetApp.flush();
     return out;
   } finally {
-    Object.keys(LOCK_BUMP_).forEach(function (name) { MasterCache.bump(name); });
+    TableCache.bump(Object.keys(LOCK_BUMP_));
     LOCK_BUMP_ = {};
     LOCK_DEPTH_ = 0;
     lock.releaseLock();
@@ -371,4 +381,4 @@ function addDays_(iso, n) {
 }
 
 /** Forget everything read during this request (Api.gs calls it when the request ends). */
-function resetRequest_() { REQ_ = {}; HEAD_ = {}; LOCK_BUMP_ = {}; LOCK_DEPTH_ = 0; }
+function resetRequest_() { REQ_ = {}; HEAD_ = {}; LOCK_BUMP_ = {}; LOCK_DEPTH_ = 0; TC_REQ_ = null; SBX_REQ_ = {}; }

@@ -76,7 +76,9 @@ Web app บริหารรายได้-รายจ่ายโรงแ�
 │  ├─ Api.gs             ✓  doGet (?shop= / ?demo=1), include, api(shop, action, token, payload), ROUTES
 │  ├─ Auth.gs            ✓  login/loginDemo/logout/session_, hash = SHA-256(pepper|salt|pw), ล็อก 5 ครั้ง, roles
 │  ├─ Database.gs        ✓  Repository + withLock_ (LockService, ซ้อนได้) + sandbox demo + nextId_
-│  ├─ MasterCache.gs     ✓  version ต่อชีต, แบ่งก้อน 30,000 ตัวอักษร (≤90KB), bundle() สำหรับ master.get
+│  ├─ MasterCache.gs     ✓  TableCache: ทุกชีต (ยกเว้น AuditLog, Sequences) อ่านจาก CacheService ก่อน sheet — version ต่อชีต, เก็บแบบ
+│  │                        {h, r} แบ่งก้อน 30,000 ตัวอักษร, prefetch หลายชีตในครั้งเดียว (ROUTE_READS ใน Api.gs), ชีตธุรกรรมผูก
+│  │                        stamp = เวลาแก้ไขล่าสุดจาก Drive (เช็คทุก 20 วิ) · MasterCache.bundle() สำหรับ master.get
 │  ├─ DocNumber.gs       ✓  nextDocNo(prefix) → PREFIX-yyyyMM-#### จากชีต Sequences · nextReceiptNo_() ตาม Company.receiptPattern (RC-{YYYYMM}-{####} หรือ RC-{######})
 │  ├─ Validator.gs       ✓  appError_/fieldError_, RULES ต่อ entity (validation ชั้นที่ 2)
 │  ├─ Audit.gs           ✓  audit(action, entity, docNo, detail)
@@ -111,7 +113,8 @@ Web app บริหารรายได้-รายจ่ายโรงแ�
    ├─ js-core.html       ✓  icons, format (fmtM/fmtD/TODAY), store, UI.* (Loading, toast, swal*, badge, openMenu portal,
    │                        combobox, openModal, pageSize, pager)
    ├─ js-validate.html   ✓  V.field / V.form / V.setErr — validation ชั้นที่ 1 (กฎเดียวกับ Validator.gs)
-   ├─ js-api.html        ✓  api(action, payload, {loading, retry}) · App / Session (idle timeout) · Master (cache ตาม version)
+   ├─ js-api.html        ✓  api(action, payload, {loading, retry, cache}) — cache: วินาทีที่ตอบซ้ำจากหน่วยความจำ (หน้ารายการใช้ 30),
+   │                        การเขียนใดๆ ล้างทั้งหมด · App / Session (idle timeout) · Master (cache ตาม version)
    ├─ js-upload.html     ✓  UploadJob (2 MB, retry 3 ครั้งผ่าน upload.status, หยุด/ทำต่อ, จำ uploadId ในเบราว์เซอร์ 6 ชม.
    │                        → เลือกไฟล์เดิมซ้ำ = อัปโหลดต่อ) · UI.attachments(host, {docNo, entity, files, canEdit}) →
    │                        commit(docNo) หลังบันทึกเอกสารใหม่ / discard() เมื่อปิดฟอร์ม (openModal onClose) · demo แสดงว่าแนบไม่ได้
@@ -135,6 +138,9 @@ Web app บริหารรายได้-รายจ่ายโรงแ�
 ```
 
 - **Master sync:** `api()` ส่ง `_mv` (master version ของเบราว์เซอร์) ทุกครั้ง ถ้า master เปลี่ยน (จากคำขอนี้หรือผู้ใช้อื่น)
+- **Cache:** อ่านทุกชีตผ่าน cache (ครั้งถัดไปไม่แตะ Sheets) · เขียนแล้ว bump version หลัง flush ก่อนปล่อย lock ·
+  ใน write lock ชีตธุรกรรมอ่านจากชีตจริงเสมอ (ตรวจ key / ห้องซ้อน / เลขเอกสาร) · แก้ชีตด้วยมือแล้วเห็นในแอปภายใน ~20 วินาที
+  หรือกด **ล้างแคชข้อมูล** (ตั้งค่าทั่วไป) / รัน `clearCache()` ใน editor · route ใหม่ที่อ่านหลายชีตให้เพิ่มใน `ROUTE_READS`
   server แนบ `master` bundle มาในคำตอบ → `Master.accept()` + `Master.onChange()` — หน้าไม่ต้องเรียก master.get เอง
 - **สถานะห้อง "มีผู้เข้าพัก"** คำนวณจากการจองที่ครอบคืนนี้ (checkIn ≤ วันนี้ < checkOut, ไม่ใช่ cxl); `Rooms.status` เก็บเฉพาะ
   free / clean / off ที่คนตั้งเอง (`Room.gs` roomNow_) — Master rooms ยังเป็นค่าที่เก็บไว้ ใช้ `room.overview` เมื่อต้องการสถานะจริง
@@ -219,7 +225,7 @@ clasp push --force           # ครั้งแรก: ใส่ scriptId ข�
 5. **Filter เฉพาะที่มีข้อมูล**: ตัวเลือกใน dropdown/chip มาจาก `filter.options` พร้อมจำนวน
 6. **Dropdown กลาง (portal)**: สร้างครั้งเดียว วางใต้ `<body>` z-index 1070 คำนวณตำแหน่งจากปุ่ม ไม่โดนตาราง/การ์ดที่ overflow ตัด
 7. **Toggle menu**: desktop ย่อ sidebar เหลือไอคอน, mobile เป็น drawer
-8. **MasterCache**: อ่าน master จาก cache ก่อน sheet, ล้างเมื่อแก้ไข
+8. **Cache**: อ่านทุกชีตจาก cache ก่อน sheet (master และชีตธุรกรรม), ล้างเมื่อแก้ไข — ดู “Cache” ในข้อ 4
 9. **Demo mode**: เข้าจากปุ่มหน้า Login (`auth.demo`) หรือ `?demo=1` (= โรงแรม `DEMO-HOTEL`), แสดง Banner + badge DEMO, ไม่มีอะไรถูกเขียนลงชีต — การบันทึกของผู้ทดลองเก็บใน sandbox ของ session (หายเมื่อออกจากระบบหรือครบ 6 ชม.), route ที่มี `noDemo` (Drive) ถูกปฏิเสธ, ข้อมูลตั้งต้นจาก `Demo.gs`
 10. **Validation 3 ชั้น**: หน้าจอ (ใต้ช่อง) → server (Validator) → repository (unique/format)
 11. **Pagination**: `pageSize = floor((cardHeight − header − footer) / rowHeight)` แล้วขอแบบ server-side

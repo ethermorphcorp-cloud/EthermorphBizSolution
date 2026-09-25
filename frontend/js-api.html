@@ -2,7 +2,9 @@
 /* js-api.html — the only way pages talk to the server.
  *   api(action, payload, {loading, retry}) -> Promise(data)
  *     google.script.run.api(shop, action, token, payload) -> {ok, data} | {ok:false, code, message, field}
- *   Every call shows the loading overlay (loading: 'label', or false for a background call). A read is retried once
+ *   Every call shows the loading overlay (loading: 'label', or false for a background call). {cache: seconds} lets a
+ *   read (a list screen) answer from memory when the same call was made that recently; any write empties it.
+ *   A read is retried once
  *   when the connection drops; a write never is (it may have gone through). SESSION_EXPIRED signs the user out.
  *   Demo mode needs nothing here: the server keeps a demo session's writes in its own sandbox.
  * App holds the session; Master holds the master data (dropdowns, room types, rooms, company) by version. */
@@ -20,12 +22,21 @@ function call_(action,payload){return new Promise((resolve,reject)=>{
     .withFailureHandler(()=>reject(new ApiError('NETWORK','เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่')))
     .api(App.shop,action,App.token,Object.assign({_mv:Master.version()},payload||{}))})}
 
+/* recent answers of read calls made with {cache}: back and forth between screens without waiting; any write clears it */
+const RESP_CACHE=new Map(),RESP_MAX=40;
+const respKey_=(a,p)=>a+' '+JSON.stringify(p||{});
+function respClear_(){RESP_CACHE.clear()}
 async function api(action,payload,opt={}){
+  const write=WRITE_ACTION.test(action);
+  if(opt.cache&&!write){const h=RESP_CACHE.get(respKey_(action,payload));if(h&&Date.now()-h.at<opt.cache*1000)return JSON.parse(h.json)}
   const label=opt.loading===undefined?'กำลังโหลดข้อมูล':opt.loading;
-  let tries=opt.retry!==undefined?opt.retry:WRITE_ACTION.test(action)?0:1;
+  let tries=opt.retry!==undefined?opt.retry:write?0:1;
   if(label!==false)UI.showLoading(label);
   try{
-    for(;;){try{const d=await call_(action,payload);Session.touch();return d}
+    for(;;){try{const d=await call_(action,payload);Session.touch();
+        if(write)respClear_();
+        else if(opt.cache){RESP_CACHE.set(respKey_(action,payload),{at:Date.now(),json:JSON.stringify(d)});if(RESP_CACHE.size>RESP_MAX)RESP_CACHE.delete(RESP_CACHE.keys().next().value)}
+        return d}
       catch(e){if(e.code==='NETWORK'&&tries-->0){await sleep(800);continue}throw e}}
   }catch(e){
     if(e.code==='SESSION_EXPIRED'&&App.user)Session.expired();
@@ -44,7 +55,7 @@ const Session={
   saved(){return store.get(TOKEN_KEY)||store.get(TOKEN_KEY,true)},
   /* the server refreshes the session on every call; the browser signs out after the same idle time */
   touch(){clearTimeout(idleTimer);if(App.user)idleTimer=setTimeout(()=>Session.end('idle'),App.ttl*1000)},
-  clear(){clearTimeout(idleTimer);App.token=null;App.user=null;App.perms=[];store.del(TOKEN_KEY);UI.closeMenu();UI.closeCbx();$$('.backdrop').forEach(b=>b.remove())},
+  clear(){clearTimeout(idleTimer);respClear_();App.token=null;App.user=null;App.perms=[];store.del(TOKEN_KEY);UI.closeMenu();UI.closeCbx();$$('.backdrop').forEach(b=>b.remove())},
   expired(){Session.clear();Shell.login();UI.swalInfo('หมดเวลาการใช้งาน','กรุณาเข้าสู่ระบบอีกครั้ง')},
   async end(why){const idle=why==='idle',mins=Math.round(App.ttl/60);
     if(App.token)call_('auth.logout',{}).catch(()=>{});

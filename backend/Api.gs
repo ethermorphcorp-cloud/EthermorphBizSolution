@@ -128,12 +128,34 @@ var ROUTES = {
   // step 7: report.*
 };
 
+/** Tables a route reads, fetched from the cache in one round trip before it runs (MasterCache.gs TableCache.prefetch).
+ *  Only a speed-up: a table missing here is still read, one cache call later. */
+var ROUTE_READS = (function () {
+  var stay = ['RoomIncome', 'OtherIncome', 'Rooms', 'RoomTypes', 'Dropdowns', 'Company'];
+  var rc = ['Receipts', 'ReceiptItems', 'RoomIncome', 'OtherIncome', 'RoomTypes', 'Users', 'Dropdowns', 'Company', 'Customers'];
+  var map = {
+    'dashboard.summary': ['RoomIncome', 'OtherIncome', 'Expenses', 'Rooms', 'RoomTypes', 'Dropdowns'],
+    'roomIncome.list': stay, 'roomIncome.export': stay, 'roomIncome.calendar': stay, 'roomIncome.availability': stay,
+    'roomIncome.get': stay.concat(['Receipts', 'Attachments']),
+    'booking.grid': ['RoomIncome', 'Rooms', 'RoomTypes'], 'room.overview': ['RoomIncome', 'Rooms', 'RoomTypes'],
+    'otherIncome.list': ['OtherIncome', 'RoomIncome', 'Dropdowns', 'Attachments'], 'otherIncome.export': ['OtherIncome', 'RoomIncome', 'Dropdowns', 'Attachments'],
+    'otherIncome.get': ['OtherIncome', 'RoomIncome', 'Attachments'], 'otherIncome.bookings': ['RoomIncome'],
+    'expense.list': ['Expenses', 'Dropdowns', 'Attachments'], 'expense.export': ['Expenses', 'Dropdowns', 'Attachments'], 'expense.get': ['Expenses', 'Attachments'],
+    'receipt.list': rc, 'receipt.get': rc, 'receipt.candidates': rc, 'receipt.prepare': rc, 'receipt.export': rc,
+    'customer.list': ['Customers', 'RoomIncome', 'Receipts', 'Dropdowns'], 'customer.get': ['Customers', 'RoomIncome', 'Receipts', 'OtherIncome', 'Dropdowns'],
+    'customer.export': ['Customers', 'RoomIncome', 'Receipts', 'Dropdowns'], 'customer.lookup': ['Customers']
+  };
+  return map;
+})();
+
 function api(shop, action, token, payload) {
   try {
     var route = ROUTES[action];
     if (!route) throw appError_('NOT_FOUND', 'ไม่รู้จักคำสั่ง ' + action);
     useShop_(shop);   // every call re-checks the Command Center: a suspended hotel stops at its next click
     SANDBOX = SHOP.demo ? '-' : null;
+    // the session's user and the route's tables (with a demo session's changes to them) in one cache call
+    TableCache.prefetch((route.pub ? [] : ['Users']).concat(ROUTE_READS[action] || []), SHOP.demo && token ? token : null);
     var user = null;
     if (!route.pub) {
       user = session_(token).user;

@@ -7,7 +7,7 @@ const ROOM_STATUS_SET=[['free','ว่าง'],['clean','ทำความส�
 Pages.roomtypes={render(el,params){
   const st=el._rt||(el._rt={q:'',type:'',status:'',page:1});
   const load=async()=>{let d;
-    try{d=await api('room.overview',{},{loading:'กำลังโหลดข้อมูลห้องพัก'})}catch(e){el.innerHTML=pageHead('ประเภทห้องพัก','')+`<section class="card">${UI.empty('โหลดข้อมูลไม่สำเร็จ',e.message)}</section>`;return}
+    try{d=await api('room.overview',{},{cache:30,loading:'กำลังโหลดข้อมูลห้องพัก'})}catch(e){el.innerHTML=pageHead('ประเภทห้องพัก','')+`<section class="card">${UI.empty('โหลดข้อมูลไม่สำเร็จ',e.message)}</section>`;return}
     draw(d)};
   const draw=d=>{const edit=can('room.edit'),mon=TH_MON[+d.month.slice(5,7)-1];
     el.innerHTML=pageHead('ประเภทห้องพัก',`${d.types.length} ประเภท · ${d.rooms.length} ห้อง · ราคาจะเติมอัตโนมัติเมื่อบันทึกรายได้ห้องพัก`,

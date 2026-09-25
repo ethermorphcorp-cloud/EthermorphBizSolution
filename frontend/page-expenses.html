@@ -30,10 +30,10 @@ Pages.expenses={render(el,params){
 
 async function exTable_(el,st){
   let r;
-  try{r=await api('expense.list',{month:st.month,q:st.q,filters:st.filters,page:st.page,pageSize:st.pageSize},{loading:'กำลังโหลดรายจ่าย'})}
+  try{r=await api('expense.list',{month:st.month,q:st.q,filters:st.filters,page:st.page,pageSize:st.pageSize},{cache:30,loading:'กำลังโหลดรายจ่าย'})}
   catch(e){$('#exTable',el).innerHTML=UI.empty('โหลดข้อมูลไม่สำเร็จ',e.message);return}
   if(!el.isConnected||!$('#exTable',el))return;
-  st.month=r.month;st.page=r.page;
+  st.page=r.page;   /* st.month stays the user's choice ('' = the server's default month), so a repeat visit is the same call */
   const mon=r.months.find(m=>m.value===r.month);
   $('#exKpi',el).innerHTML=`<div><span class="lab">รายจ่าย ${esc(mon?mon.label:r.month)}</span><b>${fmtM(r.kpi.amount)}</b></div>
     <div><span class="lab">จำนวนรายการ</span><b>${fmtN(r.kpi.count)} รายการ</b></div>

@@ -19,7 +19,7 @@ Pages.customers={render(el,params){
       <span class="grow"></span><span class="cap">ตัวเลือกแสดงเฉพาะค่าที่มีข้อมูล</span></div>
       <div class="tbl-wrap" id="cuTable"></div><div class="pager" id="cuPager"></div></section>`;
   const load=async()=>{let r;
-    try{r=await api('customer.list',{q:st.q,filters:st.filters,sort:st.sort,page:st.page,pageSize:st.pageSize},{loading:'กำลังโหลดรายชื่อลูกค้า'})}
+    try{r=await api('customer.list',{q:st.q,filters:st.filters,sort:st.sort,page:st.page,pageSize:st.pageSize},{cache:30,loading:'กำลังโหลดรายชื่อลูกค้า'})}
     catch(e){$('#cuTable',el).innerHTML=UI.empty('โหลดรายชื่อลูกค้าไม่สำเร็จ',e.message);return}
     st.page=r.page;$('#cuCount',el).textContent=`${fmtN(r.count)} ราย · ใช้เลือกผู้เข้าพักในหน้าบันทึกรายได้และออกใบเสร็จ`;
     const opt=(sel,label,list,cur)=>{sel.innerHTML=`<option value="">${label}: ทั้งหมด (${list.length})</option>`+list.map(o=>`<option value="${esc(o.value)}" ${o.value===cur?'selected':''}>${esc(o.label)} (${fmtN(o.count)})</option>`).join('')};

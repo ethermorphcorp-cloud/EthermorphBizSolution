@@ -224,7 +224,7 @@ check('master version bumps after write', r.ok && r.data.changed && r.data.versi
 within('HT001', () => G("updateRow('Users', 'USR-001', {phone: '0812345678'})"));
 r = api('HT001', 'master.get', tok, {version: r.data.version});
 check('Users write does not change the public version', r.ok && r.data.changed === false, r);
-check('cache chunks stored', Object.keys(cacheStore).some(k => /^HT001:mc_Dropdowns_.*_0$/.test(k)));
+check('cache chunks stored', Object.keys(cacheStore).some(k => /^HT001:tc_Dropdowns_.*_0$/.test(k)));
 // a write read back inside the same lock sees the new rows (not the cached ones)
 within('HT001', () => G(`withLock_(function () {
   updateRow('RoomTypes', 'SUP', {price: 1300});
@@ -236,7 +236,7 @@ within('HT001', () => G(`insertRows('Dropdowns', Array.from({length: 400}, funct
   return {key: 'unit.X' + i, group: 'unit', code: 'X' + i, label: 'หน่วยทดสอบภาษาไทยยาวๆ เพื่อให้เกินหนึ่งก้อน ' + i, sort: 1000 + i, active: true};
 }))`));
 r = api('HT001', 'master.get', tok, {});
-const chunks = Object.keys(cacheStore).filter(k => new RegExp('^HT001:mc_Dropdowns_').test(k) && !/_n$/.test(k));
+const chunks = Object.keys(cacheStore).filter(k => new RegExp("^HT001:tc_Dropdowns_").test(k) && !/_n$/.test(k));
 check('multi-chunk master table', r.ok && r.data.dropdowns.length === 436, r.ok ? r.data.dropdowns.length : r);
 r = api('HT001', 'master.get', tok, {});
 check('multi-chunk read back from cache', r.ok && r.data.dropdowns.length === 436 && chunks.length >= 1);
@@ -811,6 +811,51 @@ check('request state cleared', G('SHOP === null && SANDBOX === null && CURRENT_U
   r = dcall(D, 'receipt.export', {month: '2026-09'});
   check('receipt export', r.ok && r.data.rows.length === dcall(D, 'receipt.list', {month: '2026-09'}).data.total && r.data.headers.length === 11, r.ok ? r.data.rows.length : r);
   check('receipt rows are text in the sheet', dataRows('DEMO-HOTEL', 'Receipts').every(x => x.every(c => typeof c === 'string')));
+}
+
+/* ---------- cache: every table, not only master ---------- */
+{
+  const T = api('HT001', 'auth.login', null, {username: 'owner', password: 'n3w-pass'}).data.token;
+  const hcall = (action, payload) => api('HT001', action, T, payload || {});
+  const book = books[G('registry_()').HT001.SHEET_ID];
+  const custSheet = book.getSheetByName('Customers');
+  hcall('customer.list', {pageSize: 50});
+  hcall('customer.list', {pageSize: 50});   // the first request after a version is made does not store (see TableCache.table)
+  let before = book.reads;
+  let r = hcall('customer.list', {pageSize: 50});
+  check('a list is served from the cache (no sheet read)', r.ok && book.reads === before, {reads: book.reads - before});
+  const n0 = r.data.total;
+  r = hcall('customer.save', {data: {name: 'คุณแคช ทดสอบ', phone: '0899990001', nationality: 'ไทย'}});
+  const cu = r.data.customerId;
+  r = hcall('customer.list', {pageSize: 50});
+  check('a write refreshes the cached table at once', r.ok && r.data.total === n0 + 1 && r.data.rows.some(c => c.customerId === cu), r.ok ? r.data.total : r);
+  // a row typed straight into the sheet: seen once the stamp is re-checked (≤ STAMP_TTL seconds)
+  const head = custSheet.rows[0];
+  const ids = custSheet.rows.slice(1).map(x => String(x[0])).filter(Boolean).sort();
+  const next = 'CU-' + String(Number(ids[ids.length - 1].slice(3)) + 1).padStart(4, '0');
+  custSheet.rows.splice(ids.length + 1, 0, head.map(h => ({customerId: next, name: 'คุณพิมพ์ ในชีต', type: 'GEN', nationality: 'ไทย', phone: '0899990002'})[h] || ''));
+  book.updated += 1000;
+  r = hcall('customer.list', {pageSize: 50});
+  check('within STAMP_TTL a hand edit is not seen yet', r.ok && r.data.total === n0 + 1, r.ok ? r.data.total : r);
+  r = hcall('customer.save', {data: {name: 'คุณหลังแก้ชีต', phone: '0899990003', nationality: 'ไทย'}});
+  check('a write reads the sheet itself: no duplicate id after a hand edit', r.ok && r.data.customerId > next, r.ok ? [next, r.data.customerId] : r);
+  delete cacheStore['HT001:stamp'];   // STAMP_TTL passed
+  r = hcall('customer.list', {pageSize: 50});
+  check('after STAMP_TTL the hand edit shows', r.ok && r.data.total === n0 + 3 && r.data.rows.some(c => c.customerId === next), r.ok ? r.data.total : r);
+  // master.clearCache drops every table of the hotel
+  hcall('customer.list', {pageSize: 50});
+  r = hcall('master.clearCache');
+  before = book.reads;
+  hcall('customer.list', {pageSize: 50});
+  check('master.clearCache: the next read goes to the sheet', r.ok && book.reads > before);
+  // several tables in one cache round trip, and nothing leaks between hotels
+  hcall('dashboard.summary', {month: '2026-09'});
+  hcall('dashboard.summary', {month: '2026-09'});
+  before = book.reads;
+  r = hcall('dashboard.summary', {month: '2026-09'});
+  check('dashboard from the cache', r.ok && book.reads === before, {reads: book.reads - before});
+  check('cache keys carry the hotel id', Object.keys(cacheStore).filter(k => /:tc_/.test(k)).every(k => /^(HT001|DEMO-HOTEL):tc_/.test(k)));
+  check('audit log and sequences are never cached', !Object.keys(cacheStore).some(k => /:tc_(AuditLog|Sequences)_/.test(k)));
 }
 
 console.log(`${passed} passed, ${failed} failed`);

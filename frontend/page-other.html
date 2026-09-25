@@ -39,10 +39,10 @@ Pages.other={render(el,params){
 
 async function oiTable_(el,st){
   let r;
-  try{r=await api('otherIncome.list',{month:st.month,q:st.q,filters:st.filters,page:st.page,pageSize:st.pageSize},{loading:'กำลังโหลดรายได้อื่นๆ'})}
+  try{r=await api('otherIncome.list',{month:st.month,q:st.q,filters:st.filters,page:st.page,pageSize:st.pageSize},{cache:30,loading:'กำลังโหลดรายได้อื่นๆ'})}
   catch(e){$('#oiTable',el).innerHTML=UI.empty('โหลดข้อมูลไม่สำเร็จ',e.message);return}
   if(!el.isConnected||!$('#oiTable',el))return;
-  st.month=r.month;st.page=r.page;
+  st.page=r.page;   /* st.month stays the user's choice ('' = the server's default month), so a repeat visit is the same call */
   $('#cntRooms',el)&&($('#cntRooms',el).textContent=fmtN(r.counts.rooms));$('#cntOther',el).textContent=fmtN(r.counts.other);
   const live=r.categories.filter(c=>c.count),hidden=r.categories.filter(c=>!c.count);
   $('#oiCats',el).innerHTML=live.length?live.map(c=>`<button type="button" class="cat-card" data-cat="${esc(c.code)}" aria-pressed="${st.filters.category===c.code}"><span class="lab">${esc(c.label)}</span><b>${fmtM(c.amount)}</b><span class="sub">${fmtN(c.count)} รายการ · ${c.share.toFixed(1)}%</span></button>`).join('')

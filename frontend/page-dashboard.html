@@ -11,10 +11,10 @@ const SVGNS='http:\/\/www.w3.org\/2000\/svg';
 
 Pages.dashboard={render(el,params){
   const st=el._dash||(el._dash={month:''});
-  const load=async()=>{let d;
-    try{d=await api('dashboard.summary',{month:st.month},{loading:'กำลังโหลดภาพรวม'})}
+  const load=async fresh=>{let d;
+    try{d=await api('dashboard.summary',{month:st.month},{loading:'กำลังโหลดภาพรวม',cache:fresh?0:30})}
     catch(e){el.innerHTML=pageHead('ภาพรวมโรงแรม','')+`<section class="card">${UI.empty('โหลดข้อมูลไม่สำเร็จ',e.message)}</section>`;return}
-    st.month=d.month;draw(d)};
+    draw(d)};
   const draw=d=>{const k=d.kpi,dt=new Date(d.today+'T12:00:00');
     el.innerHTML=pageHead('ภาพรวมโรงแรม',`วัน${TH_DOW[dt.getDay()]} ${fmtD(d.today)} · ${esc(Master.company().hotelName||'')}`,
         `<button type="button" class="btn" id="dashRefresh">${icon('refresh')}<span>อัปเดตข้อมูล</span></button>`)+
@@ -32,7 +32,7 @@ Pages.dashboard={render(el,params){
         ${chartCard_('cInc','รายได้รายหมวด',d.label+' · ห้องพักและรายได้อื่น','')}
         ${chartCard_('cExp','ค่าใช้จ่ายรายหมวด',d.label+' · เรียงจากมากไปน้อย','')}</div>`;
     $('#dashMonth',el).onchange=e=>{st.month=e.target.value;load()};
-    $('#dashRefresh',el).onclick=()=>load();
+    $('#dashRefresh',el).onclick=()=>load(true);
     const charts={cCombo:()=>vizCombo_($('#cCombo',el),d),cType:()=>vizDonut_($('#cType',el),dashSlices_(d.revenueByRoomType,4),'รายได้ห้องพัก'),
       cInc:()=>vizDonut_($('#cInc',el),dashSlices_(d.incomeByCategory,5),'รายได้รวม'),cExp:()=>vizBars_($('#cExp',el),d.expenseByCategory)};
     const tables={cCombo:()=>vizTable_(['เดือน','รายได้','ค่าใช้จ่าย','กำไร','อัตรากำไร'],d.series.map(s=>[s.label,fmtM(s.revenue),fmtM(s.expense),fmtM(s.profit),s.margin===null?'-':s.margin.toFixed(1)+'%'])),

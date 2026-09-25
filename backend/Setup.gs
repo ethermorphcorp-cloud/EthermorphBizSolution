@@ -154,6 +154,7 @@ function createSchema() {
   ss.setSpreadsheetTimeZone(TZ);
   HEAD_ = {};
   REQ_ = {};
+  if (created.length || widened.length) TableCache.clear();   // cached rows lack the new columns
   var out = [];
   if (created.length) out.push('created ' + created.join(', '));
   if (widened.length) out.push('columns ' + widened.join('; '));

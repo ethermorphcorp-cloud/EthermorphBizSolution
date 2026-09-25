@@ -90,7 +90,13 @@ function session_(token, silent) {
   var data = JSON.parse(raw);
   var u = findById('Users', data.userId);
   if (!u || u.status !== 'active') return expired();
-  cache_().put(SESSION_PREFIX + token, raw, data.ttl || SESSION_MAX_SEC);
+  // the idle time restarts at most once a minute (one cache write less per call); the extra minute keeps the
+  // server from ending a session before the browser's own idle timer does
+  var now = Date.now();
+  if (!(now - (data.seen || 0) < 60000)) {
+    data.seen = now;
+    cache_().put(SESSION_PREFIX + token, JSON.stringify(data), Math.min((data.ttl || SESSION_MAX_SEC) + 60, 21600));
+  }
   return {user: publicUser_(u), ttl: data.ttl || SESSION_MAX_SEC};
 }
 

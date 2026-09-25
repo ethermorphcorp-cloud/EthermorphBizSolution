@@ -8,10 +8,13 @@ const TABS_SET=[['co','ข้อมูลบริษัท'],['us','ผู้�
 
 Pages.settings={render(el,params){
   const tab=TABS_SET.some(t=>t[0]===params.tab)?params.tab:TABS_SET[0][0];
-  el.innerHTML=pageHead('ตั้งค่าทั่วไป','จัดการข้อมูลบริษัท ผู้ใช้งาน และตัวเลือกในระบบ')+
+  el.innerHTML=pageHead('ตั้งค่าทั่วไป','จัดการข้อมูลบริษัท ผู้ใช้งาน และตัวเลือกในระบบ',
+      can('settings.edit')?`<button type="button" class="btn" id="setClearCache" title="ใช้หลังแก้ข้อมูลใน Google Sheet โดยตรง">${icon('refresh')}<span>ล้างแคชข้อมูล</span></button>`:'')+
     `<div class="tabs flush" role="tablist" aria-label="หมวดการตั้งค่า">${TABS_SET.map(t=>`<button type="button" role="tab" id="tab-${t[0]}" aria-selected="${t[0]===tab}" aria-controls="setPanel" data-tab="${t[0]}">${t[1]}</button>`).join('')}</div>
     <div id="setPanel" role="tabpanel" aria-labelledby="tab-${tab}"></div>`;
   $$('[data-tab]',el).forEach(b=>b.onclick=()=>go('settings',{tab:b.dataset.tab},true));
+  if($('#setClearCache',el))$('#setClearCache',el).onclick=async()=>{try{await api('master.clearCache',{},{loading:'กำลังล้างแคช'});
+    UI.toast('ล้างแคชแล้ว','success','ทุกหน้าจะอ่านข้อมูลล่าสุดจาก Google Sheet');go('settings',{tab},true)}catch(e){UI.swalError('ล้างแคชไม่สำเร็จ',e.message)}};
   ({dd:setDropdowns_,co:setCompany_,us:setUsers_})[tab]($('#setPanel',el))}};
 
 /* ---------- Dropdown ---------- */

@@ -10,15 +10,18 @@ function createGas(root, opts = {}) {
   const newId = p => p + (++idSeq).toString().padStart(6, '0');
   const books = {};
 
+  let clock = Date.now();
+  const touch = sh => { if (sh.book) sh.book.updated = ++clock; };
   function Range(sh, r, c, nr, nc) {
     const cell = (i, j) => { const row = sh.rows[r - 1 + i]; return row && row[c - 1 + j] !== undefined ? row[c - 1 + j] : ''; };
     const grid = f => Array.from({length: nr}, (_, i) => Array.from({length: nc}, (_, j) => f(i, j)));
     const self = {
-      getValues: () => grid(cell),
+      getValues: () => { if (sh.book) sh.book.reads++; return grid(cell); },
       getDisplayValues: () => grid((i, j) => String(cell(i, j))),
       setValues(v) {
         if (v.length !== nr || v.some(x => x.length !== nc)) throw new Error(`setValues: ${v.length}x${v[0] && v[0].length} into ${nr}x${nc}`);
         if (c - 1 + nc > sh.maxCols) throw new Error(`setValues past max columns (${c - 1 + nc} > ${sh.maxCols}) on ${sh.name}`);
+        touch(sh);
         v.forEach((row, i) => row.forEach((x, j) => {
           while (sh.rows.length < r + i) sh.rows.push([]);
           // a text-formatted cell keeps strings; non-strings would be coerced by Sheets, so the fake flags them
@@ -28,7 +31,7 @@ function createGas(root, opts = {}) {
         return self;
       },
       setValue(x) { return self.setValues([[x]]); },
-      clearContent() { for (let i = 0; i < nr; i++) for (let j = 0; j < nc; j++) if (sh.rows[r - 1 + i]) sh.rows[r - 1 + i][c - 1 + j] = ''; return self; },
+      clearContent() { touch(sh); for (let i = 0; i < nr; i++) for (let j = 0; j < nc; j++) if (sh.rows[r - 1 + i]) sh.rows[r - 1 + i][c - 1 + j] = ''; return self; },
       setNumberFormat() { return self; }, setFontWeight() { return self; }, setBackground() { return self; },
       setFontColor() { return self; }, insertCheckboxes() { return self; }
     };
@@ -49,18 +52,20 @@ function createGas(root, opts = {}) {
       insertColumnsAfter: (after, n) => { sh.maxCols += n; },
       deleteColumns: (from, n) => { sh.maxCols -= n; sh.rows.forEach(row => row.splice(from - 1, n)); },
       deleteColumn: c => sh.deleteColumns(c, 1),
-      deleteRow: r => { sh.rows.splice(r - 1, 1); },
-      appendRow: v => { sh.rows.splice(lastRow(), 0, v.slice()); },
+      deleteRow: r => { touch(sh); sh.rows.splice(r - 1, 1); },
+      appendRow: v => { touch(sh); sh.rows.splice(lastRow(), 0, v.slice()); },
       setFrozenRows() {}
     });
     return sh;
   }
   function Book(name) {
-    const id = newId('SS'), b = {id, name, sheets: [Sheet('Sheet1')]};
+    // reads: getValues calls (the cache tests count them); updated: Drive's last-updated time, moved by every write
+    const id = newId('SS'), b = {id, name, sheets: [Sheet('Sheet1')], reads: 0, updated: ++clock};
+    b.sheets[0].book = b;
     Object.assign(b, {
       getId: () => id, getUrl: () => 'https://docs.google.com/spreadsheets/d/' + id,
       getSheetByName: n => b.sheets.find(s => s.name === n) || null,
-      insertSheet: (n, i) => { const s = Sheet(n); b.sheets.splice(i === undefined ? b.sheets.length : i, 0, s); return s; },
+      insertSheet: (n, i) => { const s = Sheet(n); s.book = b; b.sheets.splice(i === undefined ? b.sheets.length : i, 0, s); return s; },
       getSheets: () => b.sheets.slice(),
       deleteSheet: s => { b.sheets = b.sheets.filter(x => x !== s); },
       setSpreadsheetTimeZone() {}
@@ -155,7 +160,11 @@ function createGas(root, opts = {}) {
       return R(404);
     }},
     DriveApp: {getFolderById: id => { if (!folders[id]) throw new Error('no folder'); return folders[id]; }, createFolder: n => Folder(n),
-      getFileById: id => { if (!files[id]) throw new Error('no file'); return files[id]; },
+      getFileById: id => {
+        if (files[id]) return files[id];
+        if (books[id]) return {getLastUpdated: () => new Date(books[id].updated)};   // a spreadsheet, for the cache stamp
+        throw new Error('no file');
+      },
       Access: {ANYONE_WITH_LINK: 'ANYONE_WITH_LINK'}, Permission: {VIEW: 'VIEW'}},
     // templates are evaluated for real: <?!= expr ?> runs in the project's scope with the template's variables
     HtmlService: {

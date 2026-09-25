@@ -57,9 +57,9 @@ async function riTable_(body,st,el){
     $('#riClear',body).onclick=()=>{st.q='';st.filters={};st.page=1;$('#riQ',body).value='';riTable_(body,st,el)};
     st.pageSize=UI.pageSizeFor($('#riCard',body),{header:58+44+45,rowHeight:61})}
   let r;
-  try{r=await api('roomIncome.list',{month:st.month,q:st.q,filters:st.filters,sort:st.sort,page:st.page,pageSize:st.pageSize},{loading:'กำลังโหลดรายได้ห้องพัก'})}
+  try{r=await api('roomIncome.list',{month:st.month,q:st.q,filters:st.filters,sort:st.sort,page:st.page,pageSize:st.pageSize},{cache:30,loading:'กำลังโหลดรายได้ห้องพัก'})}
   catch(e){$('#riTable',body).innerHTML=UI.empty('โหลดข้อมูลไม่สำเร็จ',e.message);return}
-  st.month=r.month;st.page=r.page;counts_(el,r);
+  st.page=r.page;   /* st.month stays the user's choice ('' = the server's default month), so a repeat visit is the same call */counts_(el,r);
   const mon=r.months.find(m=>m.value===r.month);
   $('#riKpi',body).innerHTML=`<div><span class="lab">รายได้ห้องพัก (${esc(mon?mon.label:r.month)})</span><b>${fmtM(r.kpi.revenue)}</b></div>
     <div><span class="lab">คืนที่ขายได้</span><b>${fmtN(r.kpi.nights)} คืน</b></div><div><span class="lab">ราคาเฉลี่ยต่อคืน (ADR)</span><b>${fmtM(r.kpi.adr)}</b></div>
@@ -107,7 +107,7 @@ async function riExport_(st){
 /* ---------- calendar ---------- */
 async function riCalendar_(body,st,el){
   const month=st.calMonth||TODAY.slice(0,7);let r;
-  try{r=await api('roomIncome.calendar',{month},{loading:'กำลังโหลดปฏิทิน'})}catch(e){body.innerHTML=UI.empty('โหลดปฏิทินไม่สำเร็จ',e.message);return}
+  try{r=await api('roomIncome.calendar',{month},{cache:30,loading:'กำลังโหลดปฏิทิน'})}catch(e){body.innerHTML=UI.empty('โหลดปฏิทินไม่สำเร็จ',e.message);return}
   st.calMonth=r.month;if(!st.calSel||st.calSel.slice(0,7)!==r.month)st.calSel=r.today.slice(0,7)===r.month?r.today:r.month+'-01';
   api('roomIncome.list',{month:r.month,pageSize:1},{loading:false}).then(x=>counts_(el,x)).catch(()=>{});
   const [y,m]=r.month.split('-').map(Number),first=new Date(Date.UTC(y,m-1,1)).getUTCDay(),cells=[];
@@ -140,7 +140,7 @@ async function riCalendar_(body,st,el){
 /* ---------- daily booking grid ---------- */
 async function riGrid_(body,st,el){
   if(!st.from){const t=new Date(TODAY+'T12:00:00');t.setDate(t.getDate()-3);st.from=t.toISOString().slice(0,10)}
-  let g;try{g=await api('booking.grid',{from:st.from,days:st.days,typeCode:st.type},{loading:'กำลังโหลดตารางจอง'})}catch(e){body.innerHTML=UI.empty('โหลดตารางจองไม่สำเร็จ',e.message);return}
+  let g;try{g=await api('booking.grid',{from:st.from,days:st.days,typeCode:st.type},{cache:30,loading:'กำลังโหลดตารางจอง'})}catch(e){body.innerHTML=UI.empty('โหลดตารางจองไม่สำเร็จ',e.message);return}
   el._grid=g;api('roomIncome.list',{month:TODAY.slice(0,7),pageSize:1},{loading:false}).then(x=>counts_(el,x)).catch(()=>{});
   const N=g.days,cols=`120px 90px repeat(${N},minmax(44px,1fr))`,wd=['อา.','จ.','อ.','พ.','พฤ.','ศ.','ส.'];
   const dinfo=g.dates.map(d=>{const x=new Date(d+'T12:00:00');return{d,dow:x.getDay(),day:x.getDate(),mon:TH_MONTH_SHORT_[x.getMonth()]}});
