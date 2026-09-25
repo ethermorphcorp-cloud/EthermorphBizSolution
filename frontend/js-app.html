@@ -1,0 +1,162 @@
+<script>
+/* js-app.html — AppShell: boot, login and demo, sidebar (collapsible) / drawer + bottom nav, top bar, router.
+ * Pages register themselves: Pages.<key> = {title, render(el, params)}; menu keys are in NAV. */
+const Pages={};
+const NAV=[
+  {g:'ภาพรวม',items:[{k:'dashboard',l:'Dashboard',i:'dashboard',p:'dashboard.view',f:'dashboard'}]},
+  {g:'รายได้',items:[{k:'rooms',l:'บันทึกการจองห้องพัก',i:'bed',p:'roomIncome.view',f:'roomIncome'},
+                     {k:'other',l:'รายได้อื่นๆ',i:'cup',p:'otherIncome.view',f:'otherIncome'}]},
+  {g:'รายจ่าย',items:[{k:'expenses',l:'บันทึกรายจ่าย',i:'wallet',p:'expense.view',f:'expense'}]},
+  {g:'เอกสารและรายงาน',items:[{k:'receipts',l:'ใบเสร็จรับเงิน',i:'receipt',p:'receipt.view',f:'receipt'},
+                              {k:'reports',l:'รายงาน',i:'chart',p:'report.view',f:'report'}]},
+  {g:'ตั้งค่า',items:[{k:'settings',l:'ตั้งค่าทั่วไป',i:'sliders',p:'settings.view'},
+                     {k:'customers',l:'ข้อมูลลูกค้า',i:'users',p:'customer.view'},
+                     {k:'roomtypes',l:'ประเภทห้องพัก',i:'door',p:'room.view'}]}
+];
+const ROLE_LABEL={Owner:'Owner',Admin:'Admin',Accounting:'Accounting',FrontDesk:'Front Desk'};
+const navItems=()=>NAV.flatMap(g=>g.items.map(it=>Object.assign({g:g.g},it))).filter(it=>can(it.p)&&(!it.f||feat(it.f)));
+const S={view:null,params:{}};
+
+const Shell={
+  /* first screen: saved token → app.boot (session + master in one call), else the login screen */
+  async boot(){applyTheme();
+    $('#root').innerHTML=`<div class="splash" role="status"><div class="spinner" aria-hidden="true"></div>กำลังเปิดระบบ</div>`;
+    App.token=Session.saved();
+    let r;
+    try{r=await api('app.boot',{version:Master.version()},{loading:false})}
+    catch(e){if(e.code!=='SHOP')Shell.fatal(e.message);return}
+    App.info=r.info;
+    if(r.session){Session.start(r.session,true);await Master.apply(r.master);Shell.enter(await startView_())}
+    else{store.del(TOKEN_KEY);Shell.login()}},
+
+  fatal(message){$('#root').innerHTML=`<div class="login-main" style="min-height:100vh"><div class="card login-card" role="alert"><span class="chip danger">${icon('alert')}</span><h1>เปิดระบบไม่ได้</h1><p class="muted" style="margin:0">${esc(message)}</p><button type="button" class="btn primary" id="reloadBtn">${icon('refresh')}ลองใหม่อีกครั้ง</button></div></div>`;
+    $('#reloadBtn').onclick=()=>{if(BOOT.url)window.open(BOOT.url+'?shop='+encodeURIComponent(App.shop),'_top');else location.reload()}},
+
+  /* ---------- login (design/Login.dc.html) ---------- */
+  login(){const info=App.info||{},name=info.hotelName||BOOT.hotelName||'ระบบบริหารโรงแรม';
+    const canDemo=info.demo||info.demoUrl;
+    $('#root').innerHTML=`<div class="login"><section class="login-side">
+      <div class="brand-row"><span class="brand-logo" aria-hidden="true">${esc(name.replace(/^โรงแรม\s*/,'').charAt(0)||'H')}</span><div><b>${esc(name)}</b><span class="cap" style="color:var(--sidebar-ink)">Hotel Management · Digital Business Solution</span></div></div>
+      <div><h1>บันทึกรายได้ รายจ่าย<br>และดูภาพรวมโรงแรม<br>ได้ในที่เดียว</h1><p>ออกแบบให้เจ้าของและพนักงานต้อนรับใช้งานได้ทันที ทั้งบนคอมพิวเตอร์ แท็บเล็ต และมือถือ</p></div>
+      <ul>${['บันทึกรายได้ห้องพักและรายได้อื่น ทั้งแบบตารางและปฏิทิน','ติดตามค่าใช้จ่ายทุกหมวด พร้อมแนบเอกสาร','รายงานกำไรขาดทุนและ Dashboard รายวัน รายเดือน'].map(t=>`<li><span class="chip">${icon('check','s16')}</span><span>${t}</span></li>`).join('')}</ul>
+      <span class="foot">Ethermorph · Digital Business Solution · v1.0</span></section>
+      <main class="login-main"><form class="card login-card" id="loginForm" novalidate>
+        <div><h2 style="font-size:22px;line-height:32px">เข้าสู่ระบบ</h2><p class="muted" style="margin:0;font-size:14px">กรอกชื่อผู้ใช้และรหัสผ่านที่ได้รับจากผู้ดูแลระบบ</p></div>
+        ${info.demo?`<div class="banner info" style="font-size:13px;line-height:20px">${icon('info','s16')}<span class="grow"><strong>โหมดทดลอง (Demo)</strong> — ใช้ข้อมูลตัวอย่าง รายการที่บันทึกจะไม่ถูกเก็บจริง และหายไปเมื่อออกจากระบบ</span></div>`:''}
+        ${V.field('username','ชื่อผู้ใช้',{lead:'user',ph:'เช่น somchai',attrs:'autocomplete="username" autocapitalize="none" spellcheck="false"'})}
+        ${V.field('password','รหัสผ่าน',{type:'password',lead:'lock',attrs:'autocomplete="current-password"',trailBtn:`<button type="button" class="btn plain icon sm trail-btn" id="pwToggle" aria-label="แสดงรหัสผ่าน" aria-pressed="false">${icon('eye','s16')}</button>`})}
+        <div class="row"><label class="check"><input type="checkbox" id="remember">จดจำการเข้าสู่ระบบ</label><a href="#" id="forgot" style="font-size:14px;font-weight:500;text-decoration:none">ลืมรหัสผ่าน</a></div>
+        <button class="btn primary block" type="submit">เข้าสู่ระบบ</button>
+        ${canDemo?`<div class="or">หรือ</div><button class="btn block" type="button" id="demoBtn">${icon('eye')}ทดลองใช้งาน (Demo Mode)</button><p class="cap" style="margin:-8px 0 0;text-align:center">โหมดทดลองใช้ข้อมูลตัวอย่าง ไม่บันทึกลงฐานข้อมูลจริง</p>`:''}
+      </form></main></div>`;
+    const f=$('#loginForm');V.live(f);
+    $('#pwToggle').onclick=e=>{const b=e.currentTarget,p=$('#f-password'),show=p.type==='password';p.type=show?'text':'password';
+      b.setAttribute('aria-pressed',show);b.setAttribute('aria-label',show?'ซ่อนรหัสผ่าน':'แสดงรหัสผ่าน');b.innerHTML=icon(show?'eyeoff':'eye','s16')};
+    $('#forgot').onclick=e=>{e.preventDefault();UI.swalInfo('ลืมรหัสผ่าน','กรุณาติดต่อเจ้าของหรือผู้ดูแลระบบของโรงแรม เพื่อตั้งรหัสผ่านใหม่ให้')};
+    if($('#demoBtn'))$('#demoBtn').onclick=async()=>{
+      if(!info.demo){window.open(info.demoUrl,'_top');return}
+      try{const r=await api('auth.demo',{version:Master.version()},{loading:'กำลังเข้าสู่โหมดทดลอง'});await Shell.signedIn(r,false)}
+      catch(err){UI.swalError('เข้าสู่โหมดทดลองไม่สำเร็จ',err.message)}};
+    f.onsubmit=async e=>{e.preventDefault();
+      const v=V.form(f,{username:{label:'ชื่อผู้ใช้',req:true},password:{label:'รหัสผ่าน',req:true}});if(!v)return;
+      const remember=$('#remember').checked;
+      try{const r=await api('auth.login',{username:v.username,password:$('#f-password').value,remember,version:Master.version()},{loading:'กำลังเข้าสู่ระบบ'});await Shell.signedIn(r,remember)}
+      catch(err){if(err.field)V.setErr(f,err.field,err.message);else UI.swalError('เข้าสู่ระบบไม่สำเร็จ',err.message)}};
+    setTimeout(()=>{const u=$('#f-username');u&&window.innerWidth>575&&u.focus()},30)},
+
+  async signedIn(r,remember){Session.start(r,remember);await Master.apply(r.master);Shell.enter(await startView_());
+    UI.toast(`ยินดีต้อนรับ ${r.user.fullName}`,'success',App.demo?'โหมดทดลอง · ข้อมูลตัวอย่าง':'บทบาท '+(ROLE_LABEL[r.user.role]||r.user.role))},
+
+  /* ---------- the signed-in shell ---------- */
+  enter(view){const c=Master.company(),name=c.hotelName||App.info&&App.info.hotelName||'โรงแรม',u=App.user;
+    const mini=store.get('hotel-sidebar-mini')===true;
+    const nav=NAV.map(g=>{const items=g.items.filter(it=>can(it.p)&&(!it.f||feat(it.f)));if(!items.length)return'';
+      return`<div class="nav-group">${esc(g.g)}</div>`+items.map(it=>`<a href="#${it.k}" data-go="${it.k}" title="${esc(it.l)}">${icon(it.i)}<span class="t">${esc(it.l)}</span></a>`).join('')}).join('');
+    const bn=[['dashboard','Dashboard','home'],['rooms','รายได้','bed'],null,['expenses','รายจ่าย','wallet']];
+    $('#root').innerHTML=`<div class="app ${mini?'mini':''}">
+      <aside class="sidebar" aria-label="เมนูหลัก"><div class="brand"><span class="brand-logo" aria-hidden="true">${brandLogo_()}</span><div class="brand-text"><b>${esc(name)}</b><span>Hotel · ${esc(App.info&&App.info.package||'Standard')}</span></div></div>
+        <nav class="nav">${nav}</nav>
+        <div class="side-user"><span class="avatar" aria-hidden="true">${esc(initials(u.fullName))}</span><div class="who"><b>${esc(u.fullName)}</b><span class="cap" style="color:var(--sidebar-ink)">${esc(ROLE_LABEL[u.role]||u.role)}</span></div><button type="button" class="btn plain icon" id="logoutBtn" aria-label="ออกจากระบบ" title="ออกจากระบบ">${icon('logout')}</button></div></aside>
+      <div class="main"><header class="topbar">
+        <button type="button" class="btn plain icon" id="tbToggle" aria-label="ย่อ/ขยายเมนู" aria-expanded="${!mini}">${icon('menu')}</button>
+        <div class="tb-title"><span class="crumb" id="tbCrumb"></span><h2 id="tbHead"></h2></div>
+        ${App.demo?'<span class="badge info"><span class="lg-only">Demo Mode</span><span class="sm-only">DEMO</span></span>':''}
+        <span class="tb-date num">${fmtD(TODAY)}</span>
+        <button type="button" class="btn plain icon lg-only" id="themeBtn" aria-label="สลับธีมสว่าง/มืด">${icon(isDark()?'sun':'moon')}</button>
+        <button type="button" class="btn plain icon" id="bellBtn" aria-label="การแจ้งเตือน">${icon('bell')}</button>
+        <button type="button" class="avatar light" id="userBtn" aria-label="บัญชีผู้ใช้ ${esc(u.fullName)}">${esc(initials(u.fullName))}</button></header>
+        <main class="content">${App.demo?`<div class="banner info" role="status">${icon('info')}<span class="grow"><strong>โหมดทดลอง (Demo)</strong> — แสดงข้อมูลตัวอย่าง การบันทึก แก้ไข และลบ จะไม่ถูกส่งไปยังฐานข้อมูลจริง</span><a href="#" id="leaveDemo">ออกจากโหมดทดลอง</a></div>`:''}<div id="view" style="display:flex;flex-direction:column;gap:16px"></div></main></div>
+      <nav class="bottomnav" aria-label="เมนูด้านล่าง">${bn.map(b=>b?`<a href="#${b[0]}" data-go="${b[0]}"><span class="ic">${icon(b[2])}</span>${b[1]}</a>`:'<span class="gap" aria-hidden="true"></span>').join('')}<a href="#menu" id="moreNav"><span class="ic">${icon('menu')}</span>เมนู</a></nav>
+      <button type="button" class="fab" id="fab" aria-label="เพิ่มรายการ">${icon('plus')}</button></div>`;
+    const app=$('.app');
+    $$('[data-go]').forEach(a=>a.onclick=e=>{e.preventDefault();go(a.dataset.go)});
+    $('#tbToggle').onclick=()=>{if(window.innerWidth<992){app.classList.toggle('drawer');return}
+      app.classList.toggle('mini');const m=app.classList.contains('mini');store.set('hotel-sidebar-mini',m);$('#tbToggle').setAttribute('aria-expanded',!m)};
+    $('#moreNav').onclick=e=>{e.preventDefault();app.classList.add('drawer')};
+    app.addEventListener('click',e=>{if(app.classList.contains('drawer')&&!e.target.closest('.sidebar,#tbToggle,#moreNav'))app.classList.remove('drawer')});
+    $('#logoutBtn').onclick=confirmLogout_;
+    if($('#leaveDemo'))$('#leaveDemo').onclick=e=>{e.preventDefault();confirmLogout_()};
+    $('#themeBtn').onclick=()=>{setTheme(isDark()?'light':'dark');$('#themeBtn').innerHTML=icon(isDark()?'sun':'moon')};
+    $('#bellBtn').onclick=e=>UI.openMenu(e.currentTarget,[{icon:'check',label:'ไม่มีการแจ้งเตือนใหม่'}]);
+    $('#userBtn').onclick=e=>UI.openMenu(e.currentTarget,[
+      {icon:'key',label:'เปลี่ยนรหัสผ่าน',onClick:changePassword_},
+      {icon:isDark()?'sun':'moon',label:isDark()?'ใช้ธีมสว่าง':'ใช้ธีมมืด',onClick:()=>$('#themeBtn').click()},'-',
+      {icon:'logout',label:'ออกจากระบบ',danger:true,onClick:confirmLogout_}],
+      {header:`<b>${esc(u.fullName)}</b>${esc(ROLE_LABEL[u.role]||u.role)}${App.demo?' · Demo':''}`});
+    $('#fab').onclick=e=>{const q=[['rooms','บันทึกการจองห้องพัก','bed','roomIncome.edit'],['other','บันทึกรายได้อื่น','cup','otherIncome.edit'],['expenses','บันทึกรายจ่าย','wallet','expense.edit']]
+      .filter(x=>can(x[3])).map(x=>({icon:x[2],label:x[1],onClick:()=>go(x[0],{add:true})}));
+      UI.openMenu(e.currentTarget,q.length?q:[{icon:'info',label:'บัญชีนี้ไม่มีสิทธิ์เพิ่มรายการ'}],{align:'left'})};
+    go(view||'dashboard',{},true)}
+};
+
+/* sidebar logo: the uploaded logo, else the hotel's first letter */
+function brandLogo_(){const c=Master.company(),name=c.hotelName||App.info&&App.info.hotelName||'H';
+  return c.logoFileId?`<img src="${UI.driveImage(c.logoFileId,96)}" alt="">`:esc(name.replace(/^โรงแรม\s*/,'').charAt(0)||'H')}
+/* company name or logo changed (Settings, or another user): refresh the shell's brand */
+Master.onChange(()=>{const b=$('.sidebar .brand');if(!b)return;$('.brand-logo',b).innerHTML=brandLogo_();$('.brand-text b',b).textContent=Master.company().hotelName||''});
+
+/* ---------- router ---------- */
+function go(view,params={},replace){
+  const items=navItems();let it=items.find(x=>x.k===view);
+  if(!it){it=items[0];if(!it){$('#view').innerHTML=UI.empty('บัญชีนี้ยังไม่มีเมนูที่ใช้ได้','กรุณาติดต่อผู้ดูแลระบบเพื่อกำหนดสิทธิ์');return}}
+  S.view=it.k;S.params=params;
+  $('.app').classList.remove('drawer');UI.closeMenu();UI.closeCbx();
+  $$('[data-go]').forEach(a=>a.getAttribute('data-go')===it.k?a.setAttribute('aria-current','page'):a.removeAttribute('aria-current'));
+  $('#tbCrumb').textContent=it.g;$('#tbHead').textContent=it.l;document.title=it.l+' · '+(Master.company().hotelName||'Hotel');
+  const page=Pages[it.k]||Pages._stub;page.render($('#view'),params,it);window.scrollTo(0,0);
+  /* keep the view in the address bar (back button, reload) */
+  try{const h=google.script.history,st={v:it.k},q={shop:App.shop};replace?h.replace(st,q,it.k):h.push(st,q,it.k)}catch(e){}}
+function startView_(){return new Promise(res=>{try{google.script.url.getLocation(l=>res(l.hash||''))}catch(e){res('')}})}
+try{google.script.history.setChangeHandler(e=>{if(App.user&&e.state&&e.state.v)go(e.state.v,{},true)})}catch(e){}
+
+/* ---------- account ---------- */
+async function confirmLogout_(){
+  const demo=App.demo;
+  if(await UI.swalConfirm(demo?'ออกจากโหมดทดลอง?':'ออกจากระบบ?',demo?'รายการที่บันทึกระหว่างทดลองจะหายไปทั้งหมด':'ข้อมูลในฟอร์มที่ยังไม่บันทึกจะหายไป',demo?'ออกจากโหมดทดลอง':'ออกจากระบบ',false)){
+    UI.showLoading('กำลังออกจากระบบ');try{await call_('auth.logout',{})}catch(e){}finally{UI.hideLoading()}
+    Session.clear();Shell.login();UI.toast('ออกจากระบบแล้ว','info')}}
+
+function changePassword_(){
+  const body=V.field('oldPassword','รหัสผ่านเดิม',{type:'password',req:true,attrs:'autocomplete="current-password"'})+
+    V.field('newPassword','รหัสผ่านใหม่',{type:'password',req:true,help:'อย่างน้อย 6 ตัวอักษร',attrs:'autocomplete="new-password"'})+
+    V.field('confirm','ยืนยันรหัสผ่านใหม่',{type:'password',req:true,attrs:'autocomplete="new-password"'});
+  const m=UI.openModal({title:'เปลี่ยนรหัสผ่าน',iconName:'key',size:'sm',body:`<form id="pwForm" novalidate style="display:flex;flex-direction:column;gap:16px">${body}<button type="submit" hidden></button></form>`,
+    foot:`<span class="grow"></span><button type="button" class="btn" data-close>ยกเลิก</button><button type="button" class="btn primary" id="pwSave">${icon('check')}บันทึก</button>`});
+  const f=$('#pwForm',m.el);V.live(f);
+  const save=async()=>{const v=V.form(f,{oldPassword:{label:'รหัสผ่านเดิม',req:true},newPassword:{label:'รหัสผ่านใหม่',req:true},confirm:{label:'การยืนยันรหัสผ่านใหม่',req:true}});if(!v)return;
+    const pw=$('#f-newPassword',f).value;
+    if(pw.length<6)return V.setErr(f,'newPassword','รหัสผ่านใหม่ต้องมีอย่างน้อย 6 ตัวอักษร');
+    if(pw!==$('#f-confirm',f).value)return V.setErr(f,'confirm','รหัสผ่านทั้งสองช่องไม่ตรงกัน กรุณากรอกใหม่');
+    try{await api('auth.changePassword',{oldPassword:$('#f-oldPassword',f).value,newPassword:pw},{loading:'กำลังบันทึก'});m.close();
+      UI.swalSuccess('เปลี่ยนรหัสผ่านแล้ว','ใช้รหัสผ่านใหม่ในการเข้าสู่ระบบครั้งถัดไป')}
+    catch(e){if(e.field)V.setErr(f,e.field,e.message);else UI.swalError('เปลี่ยนรหัสผ่านไม่สำเร็จ',e.message)}};
+  $('#pwSave',m.el).onclick=save;f.onsubmit=e=>{e.preventDefault();save()}}
+
+/* ---------- theme: device setting until the user picks one ---------- */
+function isDark(){const t=document.documentElement.dataset.theme;return t?t==='dark':window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches}
+function setTheme(t){document.documentElement.dataset.theme=t;store.set('hotel-theme',t)}
+function applyTheme(){const t=store.get('hotel-theme');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t}
+
+/* ---------- page head used by every page ---------- */
+function pageHead(title,sub,actions=''){return`<div class="pagehead"><div><h1>${esc(title)}</h1>${sub?`<div class="sub">${sub}</div>`:''}</div><div class="actions">${actions}</div></div>`}
+</script>

@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>สถาปัตยกรรมระบบ</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:"Noto Sans Thai","Noto Sans",system-ui,sans-serif;color:#14212b;background:#f5f7f8}
+*{box-sizing:border-box}
+button,input,select,textarea{font-family:inherit;color:inherit}
+a{color:#0d7068;text-decoration:none}a:hover{color:#0a5a54}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:13px;font-weight:500}
+.thead{display:grid;align-items:center;background:#eef2f4;border-bottom:1px solid #e1e7ea;font-size:12px;line-height:18px;font-weight:500;color:#55626c}
+.thead>div{padding:10px 12px;white-space:nowrap}
+.trow{display:grid;align-items:center;border-bottom:1px solid #e1e7ea;font-size:14px;line-height:22px}
+.trow:hover{background:#f2f6f7}
+.trow>div{padding:10px 12px;min-width:0}
+button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{outline:none;box-shadow:0 0 0 2px #ffffff,0 0 0 4px #0d7068}
+input::placeholder,textarea::placeholder{color:#55626c}
+
+</style>
+</helmet>
+
+
+
+
+
+
+
+
+
+
+
+
+<div style="width: 1440px; height: 1500px; box-sizing: border-box; padding: 48px 56px; background: #f5f7f8; display: flex; flex-direction: column; gap: 24px">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<span style="font-size: 13px; line-height: 20px; font-weight: 600; color: #0d7068">Architecture · Hotel Module</span>
+<h1 style="margin: 0; font-size: 28px; line-height: 40px; font-weight: 600; letter-spacing: -0.01em">Google Apps Script Web App — CORE เดียวกับ Retail Template</h1>
+<p style="margin: 0; font-size: 15px; line-height: 24px; color: #55626c; max-width: 960px">โครงสร้าง 3 ชั้น Client → Server → Data ใช้ UI Kit และ Service pattern ชุดเดียวกับ Retail · Hotel เพิ่มเฉพาะ page และ service ของโรงแรม เปิด/ปิดฟีเจอร์ตามแพ็กเกจด้วย feature flag</p>
+</div>
+
+<div style="display: grid; grid-template-columns: minmax(0, 1fr) 64px minmax(0, 1fr) 64px minmax(0, 1fr); align-items: stretch">
+<section style="background: #ffffff; border: 1px solid #e1e7ea; border-radius: 14px; box-shadow: 0 1px 2px #14212b0d; padding: 20px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: center; gap: 12px; padding-bottom: 6px"><span style="width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: #e3f3f1; color: #0d7068"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"></rect><path d="M8 21h8"></path><path d="M12 17v4"></path></svg></span><div><h3 style="margin: 0; font-size: 16px; line-height: 24px; font-weight: 600">Client · HtmlService</h3><p style="margin: 0; font-size: 12px; line-height: 18px; color: #55626c">SPA หน้าเดียว โหลด page แบบ lazy</p></div></div>
+<div style="display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 10px; background: #f5f7f8; border: 1px solid #e1e7ea"><span style="font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 13px; line-height: 20px; font-weight: 600; color: #14212b">index.html</span><span style="font-size: 12px; line-height: 18px; color: #55626c">AppShell (Sidebar + Topbar + BottomNav), Noto Sans Thai, SweetAlert2</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 10px; background: #f5f7f8; border: 1px solid #e1e7ea"><span style="font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 13px; line-height: 20px; font-weight: 600; color: #14212b">css.html</span><span style="font-size: 12px; line-height: 18px; color: #55626c">Ethermorph tokens · light/dark · responsive 576/768/992/1200</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 10px; background: #f5f7f8; border: 1px solid #e1e7ea"><span style="font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 13px; line-height: 20px; font-weight: 600; color: #14212b">js-core.html · RetailUI</span><span style="font-size: 12px; line-height: 18px; color: #55626c">Loading, Toast, Swal, Modal, Dropdown (portal ไป body), Badge, Pagination, toggleMenu</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 10px; background: #f5f7f8; border: 1px solid #e1e7ea"><span style="font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 13px; line-height: 20px; font-weight: 600; color: #14212b">js-api.html</span><span style="font-size: 12px; line-height: 18px; color: #55626c">api(action, payload) ครอบ Loading ทุกครั้ง · retry · Demo adapter</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 10px; background: #f5f7f8; border: 1px solid #e1e7ea"><span style="font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 13px; line-height: 20px; font-weight: 600; color: #14212b">js-validate.html</span><span style="font-size: 12px; line-height: 18px; color: #55626c">ชั้นที่ 1: required, รูปแบบเบอร์/อีเมล/เลขภาษี, ช่วงวันที่, ยอดเงิน</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 10px; background: #f5f7f8; border: 1px solid #e1e7ea"><span style="font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 13px; line-height: 20px; font-weight: 600; color: #14212b">js-upload.html</span><span style="font-size: 12px; line-height: 18px; color: #55626c">แบ่งไฟล์ 2 MB/ส่วน · เก็บ offset · resume อัตโนมัติ</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 10px; background: #f5f7f8; border: 1px solid #e1e7ea"><span style="font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 13px; line-height: 20px; font-weight: 600; color: #14212b">page-*.html</span><span style="font-size: 12px; line-height: 18px; color: #55626c">dashboard · income · income-calendar · other-income · expense · receipt · report · setting · customer · roomtype</span></div>
+</section>
+<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: #0d7068; font-size: 11px; line-height: 16px; text-align: center"><span>google.script<br>.run</span><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m13 6 6 6-6 6"></path></svg></div>
+<section style="background: #ffffff; border: 1px solid #e1e7ea; border-radius: 14px; box-shadow: 0 1px 2px #14212b0d; padding: 20px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: center; gap: 12px; padding-bottom: 6px"><span style="width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: #e8effc; color: #2257c9"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="7" rx="2"></rect><rect x="3" y="14" width="18" height="7" rx="2"></rect><path d="M7 6.5h.01"></path><path d="M7 17.5h.01"></path></svg></span><div><h3 style="margin: 0; font-size: 16px; line-height: 24px; font-weight: 600">Server · Apps Script</h3><p style="margin: 0; font-size: 12px; line-height: 18px; color: #55626c">Router → Service → Repository</p></div></div>
+<div style="display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 10px; background: #f5f7f8; border: 1px solid #e1e7ea"><span style="font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 13px; line-height: 20px; font-weight: 600; color: #14212b">Code.gs · Router.gs</span><span style="font-size: 12px; line-height: 18px; color: #55626c">doGet(), include() · api(action) ตรวจ session และสิทธิ์ตามบทบาท · บล็อกการเขียนเมื่อ Demo</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 10px; background: #f5f7f8; border: 1px solid #e1e7ea"><span style="font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 13px; line-height: 20px; font-weight: 600; color: #14212b">Auth.gs</span><span style="font-size: 12px; line-height: 18px; color: #55626c">login, hash รหัสผ่าน, token ใน CacheService, บทบาท Admin/Owner/Accounting/Front Desk</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 10px; background: #f5f7f8; border: 1px solid #e1e7ea"><span style="font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 13px; line-height: 20px; font-weight: 600; color: #14212b">*Service.gs</span><span style="font-size: 12px; line-height: 18px; color: #55626c">RoomIncome, OtherIncome, Expense, Receipt, Report, Setting, Customer, RoomType</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 10px; background: #f5f7f8; border: 1px solid #e1e7ea"><span style="font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 13px; line-height: 20px; font-weight: 600; color: #14212b">Validator.gs</span><span style="font-size: 12px; line-height: 18px; color: #55626c">ชั้นที่ 2: schema ต่อ entity · ห้องว่างไม่ซ้อนวัน · มัดจำ ≤ ยอดสุทธิ</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 10px; background: #f5f7f8; border: 1px solid #e1e7ea; background: #e3f3f1; border-color: #bfe3de"><span style="font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 13px; line-height: 20px; font-weight: 600; color: #14212b">Lock.gs · withLock(fn)</span><span style="font-size: 12px; line-height: 18px; color: #55626c">LockService.getScriptLock().waitLock(30000) ครอบการเขียนและการออกเลขเอกสาร ป้องกันข้อมูลชนกัน</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 10px; background: #f5f7f8; border: 1px solid #e1e7ea; background: #e3f3f1; border-color: #bfe3de"><span style="font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 13px; line-height: 20px; font-weight: 600; color: #14212b">MasterCache.gs</span><span style="font-size: 12px; line-height: 18px; color: #55626c">CacheService แบ่งก้อน ≤ 90 KB · key มี version · bump เมื่อ master เปลี่ยน (dropdown, ห้อง, ลูกค้า)</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 10px; background: #f5f7f8; border: 1px solid #e1e7ea"><span style="font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 13px; line-height: 20px; font-weight: 600; color: #14212b">Upload.gs</span><span style="font-size: 12px; line-height: 18px; color: #55626c">initUpload → appendChunk(offset) → finalize ไป Drive · เก็บ fileId ใน Attachments</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 10px; background: #f5f7f8; border: 1px solid #e1e7ea"><span style="font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 13px; line-height: 20px; font-weight: 600; color: #14212b">Demo.gs</span><span style="font-size: 12px; line-height: 18px; color: #55626c">DemoData.* คืนข้อมูลตัวอย่างชุดเดียวกับหน้าจอ ไม่แตะ Sheet จริง</span></div>
+</section>
+<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: #0d7068; font-size: 11px; line-height: 16px; text-align: center"><span>Repository</span><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m13 6 6 6-6 6"></path></svg></div>
+<section style="background: #ffffff; border: 1px solid #e1e7ea; border-radius: 14px; box-shadow: 0 1px 2px #14212b0d; padding: 20px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: center; gap: 12px; padding-bottom: 6px"><span style="width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: #fdf1dc; color: #9a5806"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="5" rx="8" ry="3"></ellipse><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"></path><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"></path></svg></span><div><h3 style="margin: 0; font-size: 16px; line-height: 24px; font-weight: 600">Data · Google Sheets + Drive</h3><p style="margin: 0; font-size: 12px; line-height: 18px; color: #55626c">1 Sheet ต่อ 1 entity · Audit ทุกการเขียน</p></div></div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+<sc-for list="{{sheets}}" as="s" hint-placeholder-count="14">
+<div style="display: flex; flex-direction: column; padding: 8px 10px; border-radius: 10px; background: #f5f7f8; border: 1px solid #e1e7ea"><span style="font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 13px; line-height: 20px; font-weight: 600; color: #14212b; font-size: 12px">{{s.n}}</span><span style="font-size: 11px; line-height: 16px; color: #55626c">{{s.d}}</span></div>
+</sc-for>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 10px; background: #f5f7f8; border: 1px solid #e1e7ea"><span style="font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 13px; line-height: 20px; font-weight: 600; color: #14212b">Repository.gs</span><span style="font-size: 12px; line-height: 18px; color: #55626c">ชั้นที่ 3: คีย์ไม่ซ้ำ · คอลัมน์โทรศัพท์/เลขภาษีตั้งรูปแบบ “@” (Plain text) และเขียนเป็น string</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 10px; background: #f5f7f8; border: 1px solid #e1e7ea"><span style="display: flex; align-items: center; gap: 6px; font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 13px; line-height: 20px; font-weight: 600; color: #14212b"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"></path></svg>Drive /Hotel/Attachments/{yyyy}/{MM}</span><span style="font-size: 12px; line-height: 18px; color: #55626c">สลิป ใบกำกับภาษี เอกสารการจอง</span></div>
+</section>
+</div>
+
+<section style="background: #e3f3f1; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 14px">
+<h3 style="margin: 0; font-size: 16px; line-height: 24px; font-weight: 600; color: #0a5a54">ลำดับการบันทึกรายได้ห้องพัก</h3>
+<div style="display: flex; gap: 8px; align-items: stretch">
+<sc-for list="{{flow}}" as="f" hint-placeholder-count="7">
+<div style="flex: 1; display: flex; flex-direction: column; gap: 4px; padding: 12px; border-radius: 10px; background: #ffffff; border: 1px solid #e1e7ea"><span style="width: 24px; height: 24px; border-radius: 9999px; background: #0d7068; color: #ffffff; font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center">{{f.i}}</span><span style="font-size: 13px; line-height: 20px; font-weight: 600">{{f.t}}</span><span style="font-size: 12px; line-height: 18px; color: #55626c">{{f.d}}</span></div>
+</sc-for>
+</div>
+</section>
+
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px">
+<sc-for list="{{tech}}" as="t" hint-placeholder-count="8">
+<div style="background: #ffffff; border: 1px solid #e1e7ea; border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 8px"><span style="font-size: 14px; line-height: 22px; font-weight: 600">{{t.t}}</span><span style="font-size: 13px; line-height: 20px; color: #55626c">{{t.d}}</span><span style="font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 13px; line-height: 20px; font-weight: 600; color: #14212b; font-size: 12px; font-weight: 500; color: #0d7068; background: #f5f7f8; border-radius: 6px; padding: 6px 8px">{{t.c}}</span></div>
+</sc-for>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1500}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const sheets = [['Config', 'ค่าระบบ, feature flag, โหมด'], ['Dropdowns', 'กลุ่มตัวเลือกทั้งหมด'], ['Company', 'ข้อมูลบริษัท/โรงแรม'], ['Users', 'ผู้ใช้ บทบาท'], ['Customers', 'ลูกค้า'], ['RoomTypes', 'ประเภทห้อง ราคา'], ['Rooms', 'ห้องพัก สถานะ'], ['RoomIncome', 'BK- รายได้ห้องพัก'], ['OtherIncome', 'OI- รายได้อื่น'], ['Expenses', 'EX- รายจ่าย'], ['Receipts', 'RC- ใบเสร็จ + รายการ'], ['Attachments', 'fileId ↔ เอกสาร'], ['Sequences', 'เลขที่ล่าสุดต่อเดือน'], ['AuditLog', 'ใคร ทำอะไร เมื่อไร']].map((s) => ({ n: s[0], d: s[1] }));
+    const flow = [['กรอกข้อมูล', 'Validate ชั้นที่ 1 บนหน้าจอ แสดง error ใต้ช่อง'], ['Loading', 'showLoading() ก่อนเรียก Server ทุกครั้ง'], ['api()', "google.script.run.api('roomIncome.save', data)"], ['Validator', 'ชั้นที่ 2 · ตรวจห้องว่างและยอดเงิน'], ['withLock', 'ออกเลข BK-YYYYMM-#### แล้วเขียนแถว'], ['Cache', 'MasterCache.bump() · บันทึก AuditLog'], ['ผลลัพธ์', 'hideLoading() → Swal สำเร็จ หรือ Toast error']].map((f, i) => ({ i: i + 1, t: f[0], d: f[1] }));
+    const tech = [
+      ['Leading Zero Preservation', 'เบอร์โทรเก็บเป็นข้อความทุกชั้น input type=tel, ส่งเป็น string, คอลัมน์ Sheet เป็น Plain text', "range.setNumberFormat('@')"],
+      ['ตัวกรองเฉพาะที่มีข้อมูล', 'Server คืนค่า distinct ที่มีอยู่จริงพร้อมจำนวน เช่น เดือน หมวด ช่องทาง', 'getFilterOptions(entity)'],
+      ['Pagination ตามขนาดการ์ด', 'คำนวณจำนวนแถวจากความสูงการ์ด แล้วขอข้อมูลแบบ server-side', 'floor((cardH − head − foot) / rowH)'],
+      ['Demo Mode', 'เข้าจากปุ่มหน้า Login หรือ ?demo=1 · แสดง Banner · Router ไม่อนุญาตการเขียน', "Config.MODE = 'DEMO'"],
+      ['Toggle Menu', 'Desktop ย่อ Sidebar เหลือไอคอน · Mobile เป็น Drawer + BottomNav', 'data-rt-toggle="sidebar"'],
+      ['Dropdown กลาง', 'สร้างเมนูครั้งเดียวแล้ว portal ไป body คำนวณตำแหน่งจากปุ่ม ไม่โดนตารางบัง', 'RetailUI.dropdown(btn, items)'],
+      ['MasterCache', 'อ่าน master จาก Cache ก่อน Sheet ลดเวลาโหลดหน้า · ล้างเมื่อมีการแก้ไข', "MasterCache.get('rooms', v)"],
+      ['LockService', 'ทุก save/delete และการออกเลขเอกสารอยู่ใน withLock ป้องกันเลขซ้ำ', 'withLock(() => repo.insert(row))']
+    ].map((t) => ({ t: t[0], d: t[1], c: t[2] }));
+    return { sheets, flow, tech };
+  }
+}
+</script>
+</body>
+</html>

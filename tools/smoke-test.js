@@ -1,0 +1,493 @@
+// smoke-test.js — node tools/smoke-test.js
+// Runs backend/*.gs in Node against in-memory fakes of SpreadsheetApp, CacheService, LockService,
+// PropertiesService, DriveApp, Utilities, ScriptApp and HtmlService, then exercises the CORE: setup(), the router,
+// login and sessions, the demo sandbox, MasterCache versions, document numbers, validation and the text-only
+// sheet format. Fakes: tools/gas-fakes.js. The real test is setup() in the Apps Script editor.
+const fs = require('fs'), path = require('path');
+const {createGas} = require('./gas-fakes');
+const root = path.join(__dirname, '..');
+const gas = createGas(root);
+const {ctx, G, books, props, cacheStore, Book, fmtDate} = gas;
+
+/* ---------- test helpers ---------- */
+let failed = 0, passed = 0;
+function check(name, cond, info) {
+  if (cond) passed++; else { failed++; console.log('FAIL ' + name + (info !== undefined ? ' — ' + JSON.stringify(info) : '')); }
+}
+const api = (shop, action, token, payload) => ctx.api(shop, action, token, payload);
+const sheetOf = (shopId, name) => {
+  const row = G('registry_()')[shopId];
+  return books[row.SHEET_ID].getSheetByName(name);
+};
+const dataRows = (shopId, name) => sheetOf(shopId, name).getDataRange().getValues().slice(1).filter(r => String(r[0]).length);
+const within = (shopId, fn) => { ctx.__fn = fn; G(`useShop_('${shopId}'); try { __fn(); } finally { SHOP = null; SANDBOX = null; resetRequest_(); }`); };
+
+/* ---------- Command Center shaped like the real one ----------
+ * DEMO_MODE is the last column (Retail added it later) with FALSE checkboxes down to row 1001, and License_Log's
+ * lower-case header was repeated three times by the first version of setupCommandCenter. */
+const cc = Book('Command Center');
+cc.getSheetByName('Sheet1').name = 'Customers';
+const ccSh = cc.getSheetByName('Customers');
+ccSh.commandCenter = true;   // the Command Center holds real booleans (DEMO_MODE)
+const ccHead = G('CC_TABS.Customers').filter(h => h !== 'DEMO_MODE').concat(['DEMO_MODE']);
+ccSh.rows.push(ccHead.slice());
+const ccRow = o => ccHead.map(h => (o[h] === undefined ? (h === 'DEMO_MODE' ? false : '') : o[h]));
+ccSh.rows.push(ccRow({CUS_ID: 'CUS001', CUS_NAME: 'ร้านค้า', PACKAGE_TYPE: 'RETAIL', STATUS: 'ACTIVE', SHEET_ID: 'x'}));
+ccSh.rows.push(ccRow({CUS_ID: 'HT001', CUS_NAME: 'โรงแรมทดสอบ', PACKAGE_TYPE: 'HOTEL', PACKAGE_TIER: 'STANDARD', STATUS: 'ACTIVE'}));
+while (ccSh.rows.length < 1001) ccSh.rows.push(ccRow({}));
+const logSh = cc.insertSheet('License_Log');
+logSh.commandCenter = true;
+const logHead = ['ts', 'cus_id', 'field', 'old_value', 'new_value', 'by'];
+logSh.rows.push(logHead.concat(logHead, logHead), ['2026-09-24T13:30:58', 'DEMO-STANDARD', 'SHEET_ID', 'a', 'a', 'x@y'].concat(Array(12).fill('')));
+props.COMMAND_SHEET_ID = cc.getId();
+const ccIdCol = ccHead.indexOf('CUS_ID');
+const ccRowOf = id => ccSh.rows.findIndex(r => r && r[ccIdCol] === id) + 1;
+
+/* ---------- setup() ---------- */
+const out1 = ctx.setup();
+check('setup mentions both hotels', /HT001: /.test(out1) && /DEMO-HOTEL: /.test(out1), out1);
+check('setup has no failure', !/FAILED/.test(out1), out1);
+check('retail row untouched', !/CUS001/.test(out1));
+const reg = G('registry_()');
+check('HT001 got SHEET_ID, DRIVE, APP_URL', reg.HT001.SHEET_ID && reg.HT001.DRIVE_FOLDER_ID && /\?shop=HT001$/.test(reg.HT001.APP_URL), reg.HT001);
+check('demo row added as DEMO', reg['DEMO-HOTEL'] && reg['DEMO-HOTEL'].STATUS === 'DEMO' && reg['DEMO-HOTEL'].PACKAGE_TYPE === 'HOTEL');
+check('demo row written into the first blank row, not below the checkboxes', ccRowOf('DEMO-HOTEL') === 4, ccRowOf('DEMO-HOTEL'));
+check('demo row ticks the DEMO_MODE checkbox', ccSh.rows[3][ccHead.indexOf('DEMO_MODE')] === true);
+check('Customers tab keeps its 1001 rows', ccSh.getLastRow() === 1001, ccSh.getLastRow());
+check('repeated License_Log header removed', JSON.stringify(logSh.rows[0].filter(String)) === JSON.stringify(logHead) &&
+  logSh.rows[1][1] === 'DEMO-STANDARD', logSh.rows[0]);
+check('pepper per hotel', props.SALT_HT001 && props['SALT_DEMO-HOTEL'] && props.SALT_HT001 !== props['SALT_DEMO-HOTEL']);
+const schema = G('SCHEMA');
+Object.keys(schema).forEach(n => {
+  const sh = sheetOf('HT001', n);
+  check('sheet ' + n, sh && JSON.stringify(sh.rows[0]) === JSON.stringify(schema[n]), sh && sh.rows[0]);
+});
+check('blank Sheet1 removed', !books[reg.HT001.SHEET_ID].getSheetByName('Sheet1'));
+check('36 default dropdowns', dataRows('HT001', 'Dropdowns').length === 36, dataRows('HT001', 'Dropdowns').length);
+check('HT001 has only owner', dataRows('HT001', 'Users').length === 1 && dataRows('HT001', 'Users')[0][1] === 'owner');
+check('HT001 has no room types', dataRows('HT001', 'RoomTypes').length === 0);
+check('demo has 4 room types, 12 rooms, 5 users', dataRows('DEMO-HOTEL', 'RoomTypes').length === 4 &&
+  dataRows('DEMO-HOTEL', 'Rooms').length === 12 && dataRows('DEMO-HOTEL', 'Users').length === 5);
+const nonText = Object.values(books).flatMap(b => b.sheets.flatMap(s => s.nonText));
+check('every cell written as text', nonText.length === 0, nonText.slice(0, 5));
+
+const out2 = ctx.setup();
+check('License_Log header stays single', logSh.rows[0].filter(String).length === 6, logSh.rows[0]);
+check('no second demo row', ccSh.rows.filter(r => r && r[ccIdCol] === 'DEMO-HOTEL').length === 1);
+// the state the first version left behind: DEMO-HOTEL appended at row 1002, below the checkboxes
+const demoCells = ccSh.rows[3].slice();
+ccSh.rows[3] = ccRow({});
+ccSh.rows.push(demoCells);
+G('clearRegistryCache()');
+const out3 = ctx.setup();
+check('demo row moved up from row 1002', ccRowOf('DEMO-HOTEL') === 4 && ccSh.getLastRow() === 1001 && /moved DEMO-HOTEL from row 1002 to row 4/.test(out3), out3);
+check('moved row keeps its SHEET_ID', G('registry_()')['DEMO-HOTEL'].SHEET_ID === reg['DEMO-HOTEL'].SHEET_ID);
+check('setup is idempotent', dataRows('HT001', 'Dropdowns').length === 36 && dataRows('HT001', 'Users').length === 1 &&
+  dataRows('DEMO-HOTEL', 'Rooms').length === 12 && !/FAILED/.test(out2), out2);
+
+/* ---------- demo data: the totals the designs show ---------- */
+{
+  const tbl = n => { let rows; within('DEMO-HOTEL', () => { rows = G(`readTable('${n}')`); }); return rows; };
+  const sum = (arr, f) => arr.reduce((s, x) => s + f(x), 0);
+  const bk = tbl('RoomIncome'), oi = tbl('OtherIncome'), ex = tbl('Expenses'), cu = tbl('Customers');
+  const live = bk.filter(b => b.payStatus !== 'cxl');
+  const D = G('DemoData');
+  const sepRoom = live.filter(b => b.checkIn.startsWith('2026-09'));
+  check('Sep room revenue ฿402,650', sum(sepRoom, b => b.total) === 402650, sum(sepRoom, b => b.total));
+  const byType = {};
+  sepRoom.forEach(b => { byType[b.typeCode] = (byType[b.typeCode] || 0) + b.total; });
+  check('Sep revenue per room type (Dashboard donut)', JSON.stringify(byType, Object.keys(D.sepRoomByType).sort()) === JSON.stringify(D.sepRoomByType, Object.keys(D.sepRoomByType).sort()), byType);
+  check('Sep 226 nights, ADR ฿1,781.64', sum(sepRoom, b => b.nights) === 226 && (402650 / 226).toFixed(2) === '1781.64', sum(sepRoom, b => b.nights));
+  const sepOther = oi.filter(o => o.date.startsWith('2026-09')), sepExp = ex.filter(e => e.date.startsWith('2026-09'));
+  check('Sep other income ฿83,600 in 117', sum(sepOther, o => o.amount) === 83600 && sepOther.length === 117, [sum(sepOther, o => o.amount), sepOther.length]);
+  Object.keys(D.sepOther).forEach(c => {
+    const xs = sepOther.filter(o => o.category === c);
+    check('Sep other ' + c, xs.length === D.sepOther[c][0] && sum(xs, o => o.amount) === D.sepOther[c][1], [xs.length, sum(xs, o => o.amount)]);
+  });
+  check('Sep expenses ฿172,840 in 58', sum(sepExp, e => e.amount) === 172840 && sepExp.length === 58, [sum(sepExp, e => e.amount), sepExp.length]);
+  Object.keys(D.sepExpense).forEach(c => {
+    const xs = sepExp.filter(e => e.category === c);
+    check('Sep expense ' + c, xs.length === D.sepExpense[c][0] && sum(xs, e => e.amount) === D.sepExpense[c][1], [xs.length, sum(xs, e => e.amount)]);
+  });
+  D.months.forEach(m => {
+    const ym = m[0];
+    const rev = sum(live.filter(b => b.checkIn.startsWith(ym)), b => b.total) + sum(oi.filter(o => o.date.startsWith(ym)), o => o.amount);
+    const exp = sum(ex.filter(e => e.date.startsWith(ym)), e => e.amount);
+    const nos = bk.filter(b => b.docNo.startsWith('BK-' + ym.replace('-', ''))).map(b => b.docNo).sort();
+    const seq = Array.from({length: m[3]}, (_, i) => 'BK-' + ym.replace('-', '') + '-' + String(i + 1).padStart(4, '0'));
+    check('month ' + ym + ' revenue / expenses', rev === m[1] && exp === m[2], [rev, m[1], exp, m[2]]);
+    check('month ' + ym + ' has BK-…-0001 to ' + m[3] + ' without gaps', JSON.stringify(nos) === JSON.stringify(seq), nos.length);
+    const room = sum(live.filter(b => b.checkIn.startsWith(ym)), b => b.total);
+    if (ym !== '2026-09') check('month ' + ym + ' room = 83 %', room === Math.round(m[1] * 0.83 / 10) * 10, room);
+  });
+  const nightsOf = b => Array.from({length: b.nights}, (_, i) => { const d = new Date(b.checkIn + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + i); return d.toISOString().slice(0, 10); });
+  const taken = {}, clash = [];
+  live.forEach(b => nightsOf(b).forEach(n => { const k = b.roomNo + n; if (taken[k]) clash.push([taken[k], b.docNo, n]); taken[k] = b.docNo; }));
+  check('no two stays share a room night', clash.length === 0, clash.slice(0, 3));
+  check('room 104 empty while under repair', !live.some(b => b.roomNo === '104' && nightsOf(b).some(n => n >= '2026-09-21' && n <= '2026-09-27')));
+  const fixedNos = new Set(D.bookings.map(b => b[0]));
+  const inGrid = live.filter(b => nightsOf(b).some(n => n >= '2026-09-21' && n <= '2026-10-04'));
+  check('booking grid 21/09–04/10 shows only the designed stays', inGrid.every(b => fixedNos.has(b.docNo)), inGrid.filter(b => !fixedNos.has(b.docNo)).map(b => b.docNo));
+  const b61 = bk.find(b => b.docNo === 'BK-202609-0061');
+  check('designed row BK-202609-0061', b61 && b61.guestName === 'คุณวรรณา ศรีสุข' && b61.phone === '089-765-4321' && b61.roomNo === '204' &&
+    b61.checkOut === '2026-09-26' && b61.total === 3600 && b61.payStatus === 'paid' && b61.channel === 'WALKIN', b61);
+  const o117 = oi.find(o => o.docNo === 'OI-202609-0117'), e54 = ex.find(e => e.docNo === 'EX-202609-0054');
+  check('designed rows OI-0117 / EX-0054', o117 && o117.amount === 180 && o117.bookingNo === 'BK-202609-0057' && e54 && e54.amount === 26380);
+  check('generated Sep other income before OI-0110 and inside the stay', oi.filter(o => o.date.startsWith('2026-09') && o.docNo < 'OI-202609-0110').every(o => {
+    if (o.date > '2026-09-21') return false;
+    if (!o.bookingNo) return true;
+    const b = bk.find(x => x.docNo === o.bookingNo);
+    return b && b.payStatus !== 'cxl' && o.date >= b.checkIn && o.date <= b.checkOut && o.roomNo === b.roomNo;
+  }));
+  check('generated Sep expenses dated before EX-0051', ex.filter(e => e.docNo.startsWith('EX-202609') && e.docNo < 'EX-202609-0051').every(e => e.date <= '2026-09-18'));
+  const types = {};
+  cu.forEach(c => { types[c.type] = (types[c.type] || 0) + 1; });
+  check('214 customers GEN 168 · VIP 21 · CORP 14 · OTA 11', cu.length === 214 && cu[cu.length - 1].customerId === 'CU-0214' &&
+    JSON.stringify(types, ['GEN', 'VIP', 'CORP', 'OTA']) === JSON.stringify(D.customerTypeCounts, ['GEN', 'VIP', 'CORP', 'OTA']), types);
+  check('customer phones unique', new Set(cu.map(c => c.phone)).size === cu.length);
+  check('every booking guest is its customer', bk.every(b => { const c = cu.find(x => x.customerId === b.customerId); return c && c.name === b.guestName && c.phone === b.phone; }));
+  const docs = bk.map(b => b.docNo).concat(oi.map(o => o.docNo), ex.map(e => e.docNo));
+  check('document numbers unique', new Set(docs).size === docs.length);
+  let seqs;
+  within('DEMO-HOTEL', () => { seqs = G("readTable('Sequences').reduce(function (o, s) { o[s.key] = s.last; return o; }, {})"); });
+  check('Sequences continue after the demo rows', seqs['BK-202609'] === 71 && seqs['BK-202610'] === 4 && seqs['OI-202609'] === 117 && seqs['EX-202609'] === 58, seqs);
+  const bad = [];
+  within('DEMO-HOTEL', () => {
+    const pairs = [['RoomIncome', bk], ['OtherIncome', oi], ['Expense', ex], ['Customer', cu]];
+    pairs.forEach(([entity, rows]) => rows.forEach(r => {
+      ctx.__r = r;
+      try { G(`validate_('${entity}', __r)`); } catch (e) { if (bad.length < 5) bad.push([entity, r.docNo || r.customerId, e.field, e.message]); }
+    }));
+  });
+  check('every demo row passes the Validator', bad.length === 0, bad);
+  check('demo rows are text in the sheet', dataRows('DEMO-HOTEL', 'RoomIncome').every(r => r.every(x => typeof x === 'string')));
+  const again = G('JSON.stringify(demoBookings_(demoRng_(DEMO_SEED), demoCustomers_(demoRng_(DEMO_SEED))))');
+  check('seed is deterministic', again === G('JSON.stringify(demoBookings_(demoRng_(DEMO_SEED), demoCustomers_(demoRng_(DEMO_SEED))))'));
+  let msg;
+  within('DEMO-HOTEL', () => { msg = G('seedDemoData_()'); });
+  check('seeding twice is refused', /already there/.test(msg) && tbl('RoomIncome').length === bk.length, msg);
+}
+
+/* ---------- schema evolution: a new column is appended, old rows still read ---------- */
+G("SCHEMA.Rooms.push('capacityNote')");
+within('HT001', () => G('createSchema()'));
+check('new column appended', sheetOf('HT001', 'Rooms').rows[0].slice(-1)[0] === 'capacityNote');
+G('SCHEMA.Rooms.pop()');
+
+/* ---------- router, login, sessions ---------- */
+let r = api('NOPE', 'app.info', null, {});
+check('unknown hotel refused', !r.ok && r.code === 'SHOP', r);
+r = api('CUS001', 'app.info', null, {});
+check('retail shop refused', !r.ok && r.code === 'SHOP', r);
+r = api('HT001', 'nope.action', null, {});
+check('unknown action', !r.ok && r.code === 'NOT_FOUND', r);
+r = api('HT001', 'app.info', null, {});
+check('app.info', r.ok && r.data.hotelName === 'โรงแรมทดสอบ' && r.data.demo === false && /\?demo=1$/.test(r.data.demoUrl), r);
+r = api('HT001', 'master.get', 'bad-token', {});
+check('no session', !r.ok && r.code === 'SESSION_EXPIRED', r);
+r = api('HT001', 'auth.login', null, {username: 'owner', password: 'wrong'});
+check('wrong password', !r.ok && r.code === 'VALIDATION' && r.field === 'password', r);
+r = api('HT001', 'auth.login', null, {username: 'OWNER', password: '1234'});
+check('login (case-insensitive username)', r.ok && r.data.token && r.data.user.role === 'Owner' && !('passwordHash' in r.data.user), r);
+const tok = r.ok && r.data.token;
+check('lastLoginAt written', /^\d{4}-\d\d-\d\dT/.test(dataRows('HT001', 'Users')[0][9]));
+check('audit LOGIN', dataRows('HT001', 'AuditLog').some(x => x[2] === 'LOGIN' && x[1] === 'owner'));
+r = api('HT001', 'auth.me', tok, {});
+check('auth.me', r.ok && r.data.user.username === 'owner' && r.data.perms[0] === '*' && r.data.ttl === 1800 && r.data.features.receipt === true, r);
+r = api('HT001', 'auth.login', null, {username: 'owner', password: '1234', remember: true});
+check('login carries master data and a 6-hour remembered session', r.ok && r.data.master && r.data.master.changed &&
+  r.data.master.dropdowns.length > 30 && r.data.ttl === 21600 && r.data.demo === false, r.ok ? {ttl: r.data.ttl} : r);
+r = api('HT001', 'app.boot', null, {});
+check('app.boot without a token: login screen', r.ok && r.data.session === null && r.data.master === null && r.data.info.hotelName === 'โรงแรมทดสอบ' && r.data.info.package === 'Standard', r);
+r = api('HT001', 'app.boot', 'stale-token', {});
+check('app.boot with a stale token: login screen', r.ok && r.data.session === null, r);
+r = api('HT001', 'app.boot', tok, {});
+const bootVer = r.ok && r.data.master && r.data.master.version;
+check('app.boot with a valid token: session + master', r.ok && r.data.session.user.username === 'owner' && r.data.master.changed && bootVer, r);
+r = api('HT001', 'app.boot', tok, {version: bootVer});
+check('app.boot with a current master version sends no master rows', r.ok && r.data.master.changed === false && !r.data.master.dropdowns, r);
+for (let i = 0; i < 5; i++) api('HT001', 'auth.login', null, {username: 'owner', password: 'x'});
+r = api('HT001', 'auth.login', null, {username: 'owner', password: '1234'});
+check('locked after 5 failures', !r.ok && r.code === 'LOCKED', r);
+Object.keys(cacheStore).filter(k => /fail_owner/.test(k)).forEach(k => delete cacheStore[k]);
+
+/* ---------- master.get + MasterCache versions ---------- */
+r = api('HT001', 'master.get', tok, {});
+check('master.get bundle', r.ok && r.data.changed && r.data.dropdowns.length === 36 && r.data.company.hotelName === 'โรงแรมทดสอบ', r.ok ? {} : r);
+const v1 = r.data.version;
+r = api('HT001', 'master.get', tok, {version: v1});
+check('master.get unchanged', r.ok && r.data.changed === false && r.data.version === v1, r);
+within('HT001', () => G("insertRow('RoomTypes', {code: 'SUP', name: 'Superior', price: 1200, weekendPrice: 1400, maxGuests: 2, active: true})"));
+r = api('HT001', 'master.get', tok, {version: v1});
+check('master version bumps after write', r.ok && r.data.changed && r.data.version !== v1 && r.data.roomTypes.length === 1 &&
+  r.data.roomTypes[0].price === 1200 && r.data.roomTypes[0].active === true, r.ok ? r.data.roomTypes : r);
+within('HT001', () => G("updateRow('Users', 'USR-001', {phone: '0812345678'})"));
+r = api('HT001', 'master.get', tok, {version: r.data.version});
+check('Users write does not change the public version', r.ok && r.data.changed === false, r);
+check('cache chunks stored', Object.keys(cacheStore).some(k => /^HT001:mc_Dropdowns_.*_0$/.test(k)));
+// a write read back inside the same lock sees the new rows (not the cached ones)
+within('HT001', () => G(`withLock_(function () {
+  updateRow('RoomTypes', 'SUP', {price: 1300});
+  if (readTable('RoomTypes')[0].price !== 1300) throw new Error('stale read inside lock');
+})`));
+check('fresh read inside lock', true);
+// big master table spans several cache chunks
+within('HT001', () => G(`insertRows('Dropdowns', Array.from({length: 400}, function (_, i) {
+  return {key: 'unit.X' + i, group: 'unit', code: 'X' + i, label: 'หน่วยทดสอบภาษาไทยยาวๆ เพื่อให้เกินหนึ่งก้อน ' + i, sort: 1000 + i, active: true};
+}))`));
+r = api('HT001', 'master.get', tok, {});
+const chunks = Object.keys(cacheStore).filter(k => new RegExp('^HT001:mc_Dropdowns_').test(k) && !/_n$/.test(k));
+check('multi-chunk master table', r.ok && r.data.dropdowns.length === 436, r.ok ? r.data.dropdowns.length : r);
+r = api('HT001', 'master.get', tok, {});
+check('multi-chunk read back from cache', r.ok && r.data.dropdowns.length === 436 && chunks.length >= 1);
+
+/* ---------- document numbers ---------- */
+let nos;
+within('HT001', () => { nos = G("[nextDocNo('BK'), nextDocNo('BK'), nextDocNo('RC'), peekDocNo('BK')]"); });
+const ym = fmtDate(new Date(), '', 'yyyyMM');
+check('doc numbers', JSON.stringify(nos) === JSON.stringify([`BK-${ym}-0001`, `BK-${ym}-0002`, `RC-${ym}-0001`, `BK-${ym}-0003`]), nos);
+check('Sequences rows', dataRows('HT001', 'Sequences').length === 2);
+gas.lock.reset();
+within('HT001', () => G("withLock_(function () { nextDocNo('EX'); insertRow('Customers', {customerId: nextId_('Customers', 'CU-', 4), name: 'ก', phone: '0891234567', createdAt: nowISO_()}); audit('CREATE', 'Customers', 'CU-0001'); })"));
+check('nested writes take the lock once', gas.lock.acquired === 1, gas.lock.acquired);
+const cust = dataRows('HT001', 'Customers')[0];
+check('leading zero kept', cust[4] === '0891234567' && typeof cust[4] === 'string', cust);
+within('HT001', () => {
+  let err;
+  try { G("insertRow('Customers', {customerId: 'CU-0001', name: 'dup'})"); } catch (e) { err = e; }
+  check('duplicate key refused', err && err.code === 'DUPLICATE', err && err.message);
+});
+
+/* ---------- validation ---------- */
+within('HT001', () => {
+  const v = G("validate_('Customer', {name: ' สมชาย ', phone: '081 234 5678', taxId: '0-5055-66012-34-5', type: 'VIP'})");
+  check('validate cleans', v.name === 'สมชาย' && v.phone === '0812345678' && v.taxId === '0505566012345', v);
+  const bad = (entity, data, field) => {
+    let e; try { ctx.__d = data; G(`validate_('${entity}', __d)`); } catch (x) { e = x; }
+    check(`validate ${entity}.${field}`, e && e.code === 'VALIDATION' && e.field === field, e ? [e.field, e.message] : 'no error');
+  };
+  bad('Customer', {name: ''}, 'name');
+  bad('Customer', {name: 'a', phone: '12345'}, 'phone');
+  bad('Customer', {name: 'a', type: 'NOPE'}, 'type');
+  bad('Customer', {name: 'a', taxId: '123'}, 'taxId');
+  bad('Expense', {date: '31/02/2026', category: 'UTIL', description: 'x', payMethod: 'CASH', amount: 10}, 'date');
+  bad('Expense', {date: '2026-09-25', category: 'UTIL', description: 'x', payMethod: 'CASH', amount: 0}, 'amount');
+  bad('RoomIncome', {guestName: 'a', typeCode: 'SUP', roomNo: '999'}, 'roomNo');
+  const e2 = G("validate_('Expense', {date: '25/09/2026', category: 'UTIL', description: 'ค่าไฟ', payMethod: 'CASH', amount: '1,250.505'})");
+  check('date + money normalised', e2.date === '2026-09-25' && e2.amount === 1250.51, e2);
+});
+
+/* ---------- demo hotel: sandbox ---------- */
+r = api('DEMO-HOTEL', 'auth.login', null, {username: 'maneerat', password: '1234'});
+check('demo user login', r.ok && r.data.demo === true, r);
+r = api('HT001', 'auth.demo', null, {});
+check('auth.demo refused on a real hotel', !r.ok && r.code === 'FORBIDDEN', r);
+r = api('DEMO-HOTEL', 'auth.demo', null, {});
+check('auth.demo', r.ok && r.data.user.username === 'maneerat' && r.data.user.role === 'Owner', r);
+const dtok = r.data.token;
+const realUsersBefore = JSON.stringify(sheetOf('DEMO-HOTEL', 'Users').rows);
+const realAuditBefore = dataRows('DEMO-HOTEL', 'AuditLog').length;
+const realSeqBefore = JSON.stringify(dataRows('DEMO-HOTEL', 'Sequences'));
+r = api('DEMO-HOTEL', 'master.get', dtok, {});
+const dv1 = r.data.version;
+ctx.__tok = dtok;
+G(`useShop_('DEMO-HOTEL'); SANDBOX = __tok; try {
+  insertRow('Rooms', {roomNo: '501', typeCode: 'STE', floor: 5, status: 'free'});
+  updateRow('Rooms', '101', {status: 'clean'});
+  deleteRow('Rooms', '402');
+  writeKV('Company', {hotelName: 'ทดลองเปลี่ยนชื่อ'});
+  nextDocNo('BK');
+} finally { SHOP = null; SANDBOX = null; resetRequest_(); }`);
+check('demo sheet unchanged', dataRows('DEMO-HOTEL', 'Rooms').length === 12 && JSON.stringify(dataRows('DEMO-HOTEL', 'Sequences')) === realSeqBefore &&
+  JSON.stringify(sheetOf('DEMO-HOTEL', 'Users').rows) === realUsersBefore && dataRows('DEMO-HOTEL', 'AuditLog').length === realAuditBefore);
+r = api('DEMO-HOTEL', 'master.get', dtok, {version: dv1});
+const rooms = r.ok ? r.data.rooms : [];
+check('demo session sees its changes', r.ok && r.data.changed && rooms.length === 12 && rooms.some(x => x.roomNo === '501') &&
+  !rooms.some(x => x.roomNo === '402') && rooms.find(x => x.roomNo === '101').status === 'clean' &&
+  r.data.company.hotelName === 'ทดลองเปลี่ยนชื่อ', r.ok ? {n: rooms.length, hotel: r.data.company.hotelName} : r);
+r = api('DEMO-HOTEL', 'auth.demo', null, {});
+const other = r.data.token;
+r = api('DEMO-HOTEL', 'master.get', other, {});
+check('other demo session does not see them', r.ok && r.data.rooms.length === 12 && !r.data.rooms.some(x => x.roomNo === '501') &&
+  r.data.company.hotelName === 'โรงแรมสายธาร');
+r = api('DEMO-HOTEL', 'auth.logout', dtok, {});
+check('logout', r.ok && !Object.keys(cacheStore).some(k => k.indexOf('sbx_' + dtok) >= 0));
+r = api('DEMO-HOTEL', 'master.get', dtok, {});
+check('session gone after logout', !r.ok && r.code === 'SESSION_EXPIRED');
+
+/* ---------- permissions, change password, doGet ---------- */
+r = api('DEMO-HOTEL', 'auth.login', null, {username: 'frontdesk1', password: '1234'});
+const ftok = r.data.token;
+r = api('DEMO-HOTEL', 'master.clearCache', ftok, {});
+check('FrontDesk cannot clear cache', !r.ok && r.code === 'FORBIDDEN', r);
+r = api('DEMO-HOTEL', 'auth.login', null, {username: 'frontdesk2', password: '1234'});
+check('suspended user refused', !r.ok && r.field === 'username', r);
+r = api('HT001', 'auth.changePassword', tok, {oldPassword: '1234', newPassword: '12'});
+check('short password refused', !r.ok && r.field === 'newPassword', r);
+r = api('HT001', 'auth.changePassword', tok, {oldPassword: '1234', newPassword: 'n3w-pass'});
+check('change password', r.ok, r);
+check('old password no longer works', !api('HT001', 'auth.login', null, {username: 'owner', password: '1234'}).ok);
+check('new password works', api('HT001', 'auth.login', null, {username: 'owner', password: 'n3w-pass'}).ok);
+let page = ctx.doGet({parameter: {demo: '1'}});
+check('doGet ?demo=1', page.boot && page.boot.shop === 'DEMO-HOTEL' && page.boot.demo === true && page.boot.url, page.boot);
+{
+  const html = page.getContent();
+  const files = fs.readdirSync(path.join(root, 'frontend')).filter(f => f.endsWith('.html') && f !== 'index.html').map(f => f.slice(0, -5));
+  const included = [...fs.readFileSync(path.join(root, 'frontend/index.html'), 'utf8').matchAll(/include\('frontend\/([\w-]+)'\)/g)].map(m => m[1]);
+  check('index.html includes every frontend file', files.every(f => included.includes(f)), files.filter(f => !included.includes(f)));
+  check('page renders: no scriptlet left, BOOT set, boot call last', !/<\?/.test(html) && html.includes('var BOOT = {"shop":"DEMO-HOTEL"') &&
+    html.lastIndexOf('Shell.boot()') > html.lastIndexOf('Pages.dashboard'), html.slice(0, 200));
+  check('page title is the hotel', /โรงแรมสายธาร/.test(page.title), page.title);
+}
+page = ctx.doGet({parameter: {shop: 'ht001'}});
+check('doGet ?shop=', page.boot && page.boot.shop === 'HT001' && page.boot.hotelName === 'โรงแรมทดสอบ', page.boot);
+page = ctx.doGet({parameter: {}});
+check('doGet without shop shows the error page', /เปิดระบบไม่ได้/.test(page.html));
+check('lock released', gas.lock.held === 0);
+check('request state cleared', G('SHOP === null && SANDBOX === null && CURRENT_USER === null && LOCK_DEPTH_ === 0'));
+
+/* ---------- step 3: settings, users, customers, rooms ---------- */
+{
+  const T = api('HT001', 'auth.login', null, {username: 'owner', password: 'n3w-pass'}).data.token;   // real writes
+  const D = api('DEMO-HOTEL', 'auth.login', null, {username: 'maneerat', password: '1234'}).data.token;   // sandbox
+  const call = (shop, tok, action, payload) => api(shop, action, tok, payload || {});
+
+  // dropdowns
+  let r = call('DEMO-HOTEL', D, 'settings.dropdown.list');
+  const ch = r.ok && r.data.find(g => g.group === 'channel');
+  check('dropdown list: 6 groups with usage', r.ok && r.data.length === 6 && ch.items.find(i => i.code === 'WALKIN').used > 0 &&
+    ch.items.find(i => i.code === 'EXP').used === 0 && ch.hint, r.ok ? ch.items.map(i => i.code + ':' + i.used) : r);
+  r = call('HT001', T, 'settings.dropdown.save', {data: {group: 'channel', code: 'trip', label: 'Trip.com'}});
+  check('dropdown add (code upper-cased, active)', r.ok && r.data.key === 'channel.TRIP', r);
+  r = call('HT001', T, 'settings.dropdown.save', {data: {group: 'channel', code: 'TRIP2', label: 'trip.com'}});
+  check('dropdown duplicate label refused', !r.ok && r.field === 'label', r);
+  r = call('HT001', T, 'settings.dropdown.save', {data: {key: 'channel.TRIP', label: 'Trip.com (OTA)', active: true}, _mv: ''});
+  check('dropdown edit + master bundle rides along', r.ok && r.master && r.master.dropdowns.some(d => d.key === 'channel.TRIP' && d.label === 'Trip.com (OTA)'), r.ok ? Object.keys(r) : r);
+  const mv = r.master && r.master.version;
+  r = call('HT001', T, 'settings.dropdown.list', {_mv: mv});
+  check('no master bundle when nothing changed', r.ok && !r.master);
+  r = call('DEMO-HOTEL', D, 'settings.dropdown.delete', {key: 'channel.WALKIN'});
+  check('used option is deactivated, not deleted', r.ok && r.data.deactivated && r.data.used > 0, r);
+  r = call('HT001', T, 'settings.dropdown.delete', {key: 'channel.TRIP'});
+  check('unused option deleted', r.ok && r.data.deleted, r);
+  const codes = call('HT001', T, 'settings.dropdown.list').data.find(g => g.group === 'pay').items.map(i => i.code);
+  r = call('HT001', T, 'settings.dropdown.reorder', {group: 'pay', codes: codes.slice().reverse()});
+  const after = call('HT001', T, 'settings.dropdown.list').data.find(g => g.group === 'pay').items.map(i => i.code);
+  check('reorder', r.ok && JSON.stringify(after) === JSON.stringify(codes.slice().reverse()), after);
+  r = call('HT001', T, 'settings.dropdown.reorder', {group: 'pay', codes: codes.slice(1)});
+  check('reorder with a stale list refused', !r.ok && r.code === 'CONFLICT', r);
+  const units = call('HT001', T, 'settings.dropdown.list').data.find(g => g.group === 'unit').items;
+  units.slice(1).forEach(u => call('HT001', T, 'settings.dropdown.delete', {key: u.key}));
+  r = call('HT001', T, 'settings.dropdown.delete', {key: units[0].key});
+  check('the last active option of a group stays', !r.ok && r.code === 'IN_USE', r);
+
+  // company
+  const co = call('DEMO-HOTEL', D, 'settings.company.get').data;
+  r = call('DEMO-HOTEL', D, 'settings.company.save', {data: Object.assign({}, co, {taxId: '12345'})});
+  check('company: bad tax id', !r.ok && r.field === 'taxId', r);
+  r = call('DEMO-HOTEL', D, 'settings.company.save', {data: Object.assign({}, co, {receiptPattern: 'RC-0001'})});
+  check('company: bad receipt pattern', !r.ok && r.field === 'receiptPattern', r);
+  r = call('DEMO-HOTEL', D, 'settings.company.save', {data: Object.assign({}, co, {hotelName: 'สายธาร ริเวอร์'}), _mv: ''});
+  check('company save updates the master bundle', r.ok && r.master && r.master.company.hotelName === 'สายธาร ริเวอร์' && r.master.company.phone === '053-123-456', r.ok ? '' : r);
+  r = call('DEMO-HOTEL', D, 'settings.company.logo', {file: {mime: 'image/png', data: 'AAAA'}});
+  check('logo upload refused in demo', !r.ok && r.code === 'DEMO_READONLY', r);
+  r = call('HT001', T, 'settings.company.logo', {file: {mime: 'image/png', data: Buffer.from('png').toString('base64')}});
+  check('logo upload (real hotel)', r.ok && r.data.logoFileId, r);
+
+  // users
+  r = call('HT001', T, 'user.save', {data: {username: 'Desk01', fullName: 'พนักงาน หนึ่ง', role: 'FrontDesk', status: 'active', phone: '0891112222'}});
+  const newUser = r.ok && r.data.userId;
+  check('user create gets the default password', r.ok && r.data.password === '1234' && api('HT001', 'auth.login', null, {username: 'desk01', password: '1234'}).ok, r);
+  r = call('HT001', T, 'user.save', {data: {username: 'owner', fullName: 'x', role: 'Admin', status: 'active'}});
+  check('duplicate username refused', !r.ok && r.field === 'username', r);
+  const me = call('HT001', T, 'auth.me').data.user;
+  r = call('HT001', T, 'user.save', {data: Object.assign({}, me, {role: 'Admin'})});
+  check('cannot change own role', !r.ok && r.field === 'role', r);
+  r = call('HT001', T, 'user.save', {data: Object.assign({}, me, {status: 'suspended'})});
+  check('cannot suspend self', !r.ok && r.field === 'status', r);
+  r = call('HT001', T, 'user.save', {data: {userId: newUser, username: 'desk01', fullName: 'พนักงาน หนึ่ง', role: 'FrontDesk', status: 'suspended'}});
+  check('suspend another user', r.ok && !api('HT001', 'auth.login', null, {username: 'desk01', password: '1234'}).ok, r);
+  r = call('HT001', T, 'user.resetPassword', {userId: newUser});
+  check('reset password', r.ok && r.data.password === '1234', r);
+  const desk = api('DEMO-HOTEL', 'auth.login', null, {username: 'frontdesk1', password: '1234'}).data.token;
+  r = call('DEMO-HOTEL', desk, 'user.list');
+  check('FrontDesk cannot list users', !r.ok && r.code === 'FORBIDDEN', r);
+  r = call('DEMO-HOTEL', D, 'user.list');
+  check('user list: active first, Owner first', r.ok && r.data[0].role === 'Owner' && r.data[r.data.length - 1].status === 'suspended' && !('passwordHash' in r.data[0]), r.ok ? r.data.map(u => u.username) : r);
+
+  // customers
+  r = call('DEMO-HOTEL', D, 'customer.list', {page: 1, pageSize: 8});
+  check('customer list page 1 of 214, newest first', r.ok && r.data.total === 214 && r.data.rows.length === 8 && r.data.rows[0].customerId === 'CU-0214' &&
+    r.data.rows[0].stays > 0 && r.data.rows[0].lastStay, r.ok ? r.data.rows[0] : r);
+  const opt = r.data.options;
+  check('customer filter options come with counts', opt.type.find(o => o.value === 'VIP').count === 21 && opt.type.find(o => o.value === 'VIP').label === 'VIP' &&
+    opt.nationality[0].value === 'ไทย' && opt.nationality.every(o => o.count > 0), opt);
+  r = call('DEMO-HOTEL', D, 'customer.list', {filters: {type: 'CORP'}, pageSize: 50});
+  check('filter by type', r.ok && r.data.total === 14 && r.data.rows.every(c => c.type === 'CORP'), r.ok ? r.data.total : r);
+  r = call('DEMO-HOTEL', D, 'customer.list', {q: '089 765 4321'});
+  check('search by phone digits', r.ok && r.data.rows[0].customerId === 'CU-0214', r.ok ? r.data.rows.map(c => c.customerId) : r);
+  r = call('DEMO-HOTEL', D, 'customer.list', {sort: {key: 'spent', dir: 'desc'}, pageSize: 3});
+  check('sort by spending', r.ok && r.data.rows[0].spent >= r.data.rows[1].spent, r.ok ? r.data.rows.map(c => c.spent) : r);
+  r = call('DEMO-HOTEL', D, 'customer.get', {customerId: 'CU-0214'});
+  check('customer history', r.ok && r.data.history.some(h => h.docNo === 'BK-202609-0061'), r.ok ? r.data.history.length : r);
+  r = call('DEMO-HOTEL', D, 'customer.save', {data: {name: 'คุณทดสอบ ใหม่', phone: '0812345000', nationality: 'ไทย'}});
+  check('customer create: CU-0215, GEN, phone as text', r.ok && r.data.customerId === 'CU-0215' && r.data.type === 'GEN' && r.data.phone === '0812345000', r);
+  r = call('DEMO-HOTEL', D, 'customer.delete', {customerId: 'CU-0214'});
+  check('customer with stays cannot be deleted', !r.ok && r.code === 'IN_USE', r);
+  r = call('DEMO-HOTEL', D, 'customer.delete', {customerId: 'CU-0215'});
+  check('new customer deleted', r.ok, r);
+  r = call('DEMO-HOTEL', desk, 'customer.delete', {customerId: 'CU-0001'});
+  check('FrontDesk cannot delete customers', !r.ok && r.code === 'FORBIDDEN', r);
+  r = call('DEMO-HOTEL', D, 'customer.export');
+  check('export rows + headers', r.ok && r.data.rows.length === 214 && r.data.headers[0] === 'รหัส' && typeof r.data.rows[0][4] === 'string', r.ok ? r.data.headers : r);
+  const imp = [{name: 'คุณนำเข้า หนึ่ง', type: 'VIP', phone: '0899999001'}, {name: 'คุณนำเข้า สอง', type: 'ลูกค้าแปลก'},
+               {name: 'คุณซ้ำ', phone: '089-765-4321'}, {name: '', phone: '0899999002'}, {name: 'บริษัท นำเข้า จำกัด', type: 'บริษัท/องค์กร', taxId: '0105555000001'}];
+  r = call('DEMO-HOTEL', D, 'customer.import', {rows: imp, check: true});
+  check('import preview', r.ok && r.data.valid === 2 && r.data.errors.length === 2 && r.data.skipped.length === 1 && r.data.errors[0].row === 3, r.ok ? r.data : r);
+  r = call('DEMO-HOTEL', D, 'customer.import', {rows: imp});
+  const n = call('DEMO-HOTEL', D, 'customer.list', {q: 'นำเข้า'});
+  check('import adds the valid rows', r.ok && r.data.added === 2 && n.data.total === 2 && n.data.rows.some(c => c.type === 'CORP'), r.ok ? r.data : r);
+
+  // rooms
+  r = call('DEMO-HOTEL', D, 'room.overview');
+  const ov = r.data, today = ov && ov.today;
+  check('room overview: 4 types, 12 rooms', r.ok && ov.types.length === 4 && ov.rooms.length === 12 &&
+    ov.types.find(t => t.code === 'SUP').rooms === 4 && ov.types.every(t => t.occupancy >= 0 && t.occupancy <= 100), r.ok ? ov.types.map(t => t.code + ':' + t.occupancy) : r);
+  const bk = call('DEMO-HOTEL', D, 'customer.get', {customerId: 'CU-0214'});   // any read to keep the session warm
+  let consistent = true;
+  within('DEMO-HOTEL', () => {
+    const live = G("readTable('RoomIncome')").filter(b => b.payStatus !== 'cxl' && b.checkIn <= today && today < b.checkOut);
+    ov.rooms.forEach(rm => {
+      const b = live.find(x => x.roomNo === rm.roomNo);
+      if (rm.statusSet !== 'off' && (!!b !== (rm.status === 'occ') || (b && rm.guest !== b.guestName))) consistent = false;
+    });
+  });
+  check('occupied = a booking covers tonight (guest shown)', consistent && bk.ok);
+  r = call('DEMO-HOTEL', D, 'roomType.save', {isNew: true, data: {code: 'dlx', name: 'x', price: 1, maxGuests: 1}});
+  check('room type duplicate code', !r.ok && r.field === 'code', r);
+  r = call('DEMO-HOTEL', D, 'roomType.save', {isNew: true, data: {code: 'VIL', name: 'Pool Villa', price: 6500, maxGuests: 4, amenities: 'สระส่วนตัว , Wi-Fi,'}});
+  check('room type create (weekend price defaults, amenities tidied)', r.ok && r.data.weekendPrice === 6500 && r.data.amenities === 'สระส่วนตัว,Wi-Fi', r);
+  r = call('DEMO-HOTEL', D, 'roomType.delete', {code: 'SUP'});
+  check('type with rooms cannot be deleted', !r.ok && r.code === 'IN_USE', r);
+  r = call('DEMO-HOTEL', D, 'room.save', {isNew: true, data: {roomNo: '501', typeCode: 'VIL', floor: 5, status: 'occ'}});
+  check('room status occ is not typed in', !r.ok && r.field === 'status', r);
+  r = call('DEMO-HOTEL', D, 'room.save', {isNew: true, data: {roomNo: '501', typeCode: 'VIL', floor: 5, status: 'free'}, _mv: ''});
+  check('room create reaches the master bundle', r.ok && r.master.rooms.some(x => x.roomNo === '501'), r.ok ? '' : r);
+  r = call('DEMO-HOTEL', D, 'room.delete', {roomNo: '101'});
+  check('room with bookings cannot be deleted', !r.ok && r.code === 'IN_USE', r);
+  r = call('DEMO-HOTEL', D, 'room.delete', {roomNo: '501'});
+  const r2 = call('DEMO-HOTEL', D, 'roomType.delete', {code: 'VIL'});
+  check('empty room and unused type deleted', r.ok && r2.ok && r2.data.deleted, [r, r2]);
+  r = call('DEMO-HOTEL', desk, 'room.status', {roomNo: '103', status: 'clean'});
+  const r3 = call('DEMO-HOTEL', desk, 'room.save', {data: {roomNo: '103', typeCode: 'SUP', status: 'free'}});
+  check('FrontDesk changes room status but cannot edit rooms', r.ok && !r3.ok && r3.code === 'FORBIDDEN', [r, r3]);
+  r = call('DEMO-HOTEL', D, 'filter.options', {entity: 'Expenses', field: 'category', scope: {month: '2026-09'}});
+  check('filter.options: Sep expense categories with counts', r.ok && r.data.length === 8 && r.data.find(o => o.value === 'FNB').count === 22 &&
+    r.data.find(o => o.value === 'FNB').label === 'วัตถุดิบอาหารและเครื่องดื่ม', r.ok ? r.data : r);
+  r = call('DEMO-HOTEL', desk, 'filter.options', {entity: 'Expenses', field: 'category'});
+  check('filter.options respects permissions', !r.ok && r.code === 'FORBIDDEN', r);
+  check('demo sheet still untouched', dataRows('DEMO-HOTEL', 'Customers').length === 214 && dataRows('DEMO-HOTEL', 'Rooms').length === 12);
+}
+
+console.log(`${passed} passed, ${failed} failed`);
+process.exit(failed ? 1 : 0);

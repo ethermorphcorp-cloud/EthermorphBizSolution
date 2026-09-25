@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>เพิ่มรายได้ห้องพัก</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:"Noto Sans Thai","Noto Sans",system-ui,sans-serif;color:#14212b;background:#f5f7f8}
+*{box-sizing:border-box}
+button,input,select,textarea{font-family:inherit;color:inherit}
+a{color:#0d7068;text-decoration:none}a:hover{color:#0a5a54}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:13px;font-weight:500}
+.thead{display:grid;align-items:center;background:#eef2f4;border-bottom:1px solid #e1e7ea;font-size:12px;line-height:18px;font-weight:500;color:#55626c}
+.thead>div{padding:10px 12px;white-space:nowrap}
+.trow{display:grid;align-items:center;border-bottom:1px solid #e1e7ea;font-size:14px;line-height:22px}
+.trow:hover{background:#f2f6f7}
+.trow>div{padding:10px 12px;min-width:0}
+button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{outline:none;box-shadow:0 0 0 2px #ffffff,0 0 0 4px #0d7068}
+input::placeholder,textarea::placeholder{color:#55626c}
+
+</style>
+</helmet>
+
+
+
+
+
+<div style="position: relative; width: 1440px; height: 1080px; display: flex; background: #f5f7f8; overflow: hidden">
+<div style="width:248px;flex-shrink:0;align-self:stretch;background:#10232a"><dc-import name="Sidebar" active="rooms" hint-size="248px,900px"></dc-import></div>
+<div style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0">
+<dc-import name="Topbar" heading="บันทึกรายได้" crumb="รายได้ / ห้องพัก" hint-size="1192px,60px"></dc-import>
+<div aria-hidden="true" style="padding: 24px; display: flex; flex-direction: column; gap: 20px">
+<div style="height: 12px; border-radius: 6px; background: #e1e7ea; width: 200px; height: 24px"></div>
+<div style="background:#ffffff;border:1px solid #e1e7ea;border-radius:14px;box-shadow:0 1px 2px #14212b0d; height: 88px"></div>
+<div style="background:#ffffff;border:1px solid #e1e7ea;border-radius:14px;box-shadow:0 1px 2px #14212b0d; height: 720px; padding: 20px; display: flex; flex-direction: column; gap: 22px">
+<div style="height: 12px; border-radius: 6px; background: #e1e7ea; width: 60%"></div><div style="height: 12px; border-radius: 6px; background: #e1e7ea"></div><div style="height: 12px; border-radius: 6px; background: #e1e7ea; width: 80%"></div><div style="height: 12px; border-radius: 6px; background: #e1e7ea"></div><div style="height: 12px; border-radius: 6px; background: #e1e7ea; width: 70%"></div><div style="height: 12px; border-radius: 6px; background: #e1e7ea"></div><div style="height: 12px; border-radius: 6px; background: #e1e7ea; width: 90%"></div>
+</div>
+</div>
+</div>
+<div style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; z-index: 1050; background: rgba(8, 18, 24, 0.52); display: flex; align-items: center; justify-content: center">
+<div role="dialog" aria-modal="true" aria-labelledby="mdl-title" style="width: 760px; max-height: 1032px; display: flex; flex-direction: column; background: #ffffff; border-radius: 14px; box-shadow: 0 20px 48px -8px #14212b40">
+<div style="display: flex; align-items: flex-start; gap: 12px; padding: 20px 24px; border-bottom: 1px solid #e1e7ea">
+<span style="width: 40px; height: 40px; border-radius: 10px; background: #e3f3f1; color: #0d7068; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 20v-8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v8"></path><path d="M4 10V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4"></path><path d="M12 4v6"></path><path d="M2 17h20"></path></svg></span>
+<div style="flex-grow: 1; display: flex; flex-direction: column">
+<h2 id="mdl-title" style="margin: 0; font-size: 18px; line-height: 28px; font-weight: 600">เพิ่มรายได้ห้องพัก</h2>
+<span style="font-size: 12px; line-height: 18px; color: #55626c">เลขที่เอกสารสร้างอัตโนมัติเมื่อบันทึก (ถัดไป <span class="mono" style="font-size: 12px">BK-202609-0065</span>)</span>
+</div>
+<a href="Income-Rooms.dc.html" aria-label="ปิด" style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 10px; color: #55626c"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></a>
+</div>
+
+<div style="padding: 20px 24px; display: flex; flex-direction: column; gap: 18px">
+<p style="margin: 0; font-size: 13px; line-height: 20px; font-weight: 600; color: #0d7068; display: flex; align-items: center; gap: 8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg>ผู้เข้าพัก</p>
+<div style="display: flex; gap: 16px; align-items: flex-start">
+<div style="flex: 2; display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 13px; line-height: 20px; font-weight: 500; color: #55626c">ลูกค้า <span style="color: #c02626">*</span></span>
+<div style="display: flex; gap: 8px">
+<button type="button" aria-label="เลือกลูกค้า" style="flex-grow: 1; display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 12px; border: 1px solid #7f8c95; border-radius: 10px; background: #ffffff; font-size: 15px; text-align: left; cursor: pointer"><span style="display: flex; color: #55626c"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg></span><span style="flex-grow: 1">คุณวรรณา ศรีสุข</span><span style="display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:9999px;font-size:12px;line-height:18px;font-weight:500;white-space:nowrap;border-radius:6px;background:#e3f3f1;color:#0d7068">VIP</span><span style="display: flex; color: #55626c"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></span></button>
+<button type="button" style="display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 12px; border: 1px solid #7f8c95; border-radius: 10px; background: #ffffff; font-size: 14px; font-weight: 500; cursor: pointer; white-space: nowrap"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>ลูกค้าใหม่</button>
+</div>
+</div>
+<label style="display:flex;flex-direction:column;gap:6px;flex: 1"><span style="font-size:13px;line-height:20px;font-weight:500;color:#55626c">โทรศัพท์</span><input type="text" class="mono" value="089-765-4321" readonly="" style="width:100%;height:40px;padding:0 12px;border:1px solid #7f8c95;border-radius:10px;background:#eef2f4;font-size:15px;color:#14212b"><span style="font-size:12px;line-height:18px;color:#55626c">เติมอัตโนมัติจากข้อมูลลูกค้า</span></label>
+</div>
+
+<p style="margin: 0; font-size: 13px; line-height: 20px; font-weight: 600; color: #0d7068; display: flex; align-items: center; gap: 8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16.5" rx="2"></rect><path d="M3 9.5h18"></path><path d="M8 2.5v4"></path><path d="M16 2.5v4"></path></svg>การเข้าพัก</p>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px">
+<div style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:13px;line-height:20px;font-weight:500;color:#55626c">ประเภทห้อง *</span><button type="button" aria-label="ประเภทห้อง *" style="display:flex;align-items:center;justify-content:space-between;width:100%;height:40px;padding:0 12px;border:1px solid #7f8c95;border-radius:10px;background:#ffffff;font-size:15px;color:#14212b;cursor:pointer"><span>Deluxe · ฿1,800.00/คืน</span><span style="display:flex;color:#55626c"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></span></button></div>
+<div style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:13px;line-height:20px;font-weight:500;color:#55626c">ห้อง *</span><button type="button" aria-label="ห้อง *" style="display:flex;align-items:center;justify-content:space-between;width:100%;height:40px;padding:0 12px;border:1px solid #7f8c95;border-radius:10px;background:#ffffff;font-size:15px;color:#14212b;cursor:pointer"><span>DLX 204 · ว่าง</span><span style="display:flex;color:#55626c"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></span></button></div>
+<label style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:13px;line-height:20px;font-weight:500;color:#55626c">จำนวนผู้เข้าพัก</span><input type="text" value="2" style="width:100%;height:40px;padding:0 12px;border:1px solid #7f8c95;border-radius:10px;background:#ffffff;font-size:15px;color:#14212b"></label>
+<label style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:13px;line-height:20px;font-weight:500;color:#55626c">วันที่เช็คอิน *</span><input type="text" value="24/09/2026" style="width:100%;height:40px;padding:0 12px;border:1px solid #7f8c95;border-radius:10px;background:#ffffff;font-size:15px;color:#14212b"></label>
+<label style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:13px;line-height:20px;font-weight:500;color:#55626c">วันที่เช็คเอาท์ *</span><input type="text" value="26/09/2026" style="width:100%;height:40px;padding:0 12px;border:1px solid #7f8c95;border-radius:10px;background:#ffffff;font-size:15px;color:#14212b"></label>
+<label style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:13px;line-height:20px;font-weight:500;color:#55626c">จำนวนคืน</span><input type="text" value="2 คืน" readonly="" style="width:100%;height:40px;padding:0 12px;border:1px solid #7f8c95;border-radius:10px;background:#eef2f4;font-size:15px;color:#14212b"><span style="font-size:12px;line-height:18px;color:#55626c">คำนวณอัตโนมัติ</span></label>
+</div>
+
+<p style="margin: 0; font-size: 13px; line-height: 20px; font-weight: 600; color: #0d7068; display: flex; align-items: center; gap: 8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="9" r="6"></circle><path d="M18.1 10.4A6 6 0 1 1 10.4 18.1"></path><path d="M9 7v4"></path></svg>ราคาและการชำระเงิน</p>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px">
+<label style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:13px;line-height:20px;font-weight:500;color:#55626c">ราคาต่อคืน (บาท)</span><input type="text" value="1,800.00" style="width:100%;height:40px;padding:0 12px;border:1px solid #7f8c95;border-radius:10px;background:#ffffff;font-size:15px;color:#14212b"><span style="font-size:12px;line-height:18px;color:#55626c">ดึงจากประเภทห้อง แก้ไขได้</span></label>
+<label style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:13px;line-height:20px;font-weight:500;color:#55626c">ส่วนลด (บาท)</span><input type="text" value="0.00" style="width:100%;height:40px;padding:0 12px;border:1px solid #7f8c95;border-radius:10px;background:#ffffff;font-size:15px;color:#14212b"></label>
+<div style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:13px;line-height:20px;font-weight:500;color:#55626c">ช่องทางการจอง</span><button type="button" aria-label="ช่องทางการจอง" style="display:flex;align-items:center;justify-content:space-between;width:100%;height:40px;padding:0 12px;border:1px solid #7f8c95;border-radius:10px;background:#ffffff;font-size:15px;color:#14212b;cursor:pointer"><span>Walk-in</span><span style="display:flex;color:#55626c"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></span></button></div>
+<div style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:13px;line-height:20px;font-weight:500;color:#55626c">วิธีชำระเงิน</span><button type="button" aria-label="วิธีชำระเงิน" style="display:flex;align-items:center;justify-content:space-between;width:100%;height:40px;padding:0 12px;border:1px solid #7f8c95;border-radius:10px;background:#ffffff;font-size:15px;color:#14212b;cursor:pointer"><span>โอนเงิน</span><span style="display:flex;color:#55626c"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></span></button></div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 13px; line-height: 20px; font-weight: 500; color: #55626c">สถานะการชำระ</span>
+<div role="radiogroup" aria-label="สถานะการชำระ" style="display: flex; gap: 2px; padding: 3px; border-radius: 10px; background: #eef2f4">
+<button type="button" role="radio" aria-checked="false" style="flex: 1; height: 34px; border: 0; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; background: transparent; color: #55626c">ชำระแล้ว</button>
+<button type="button" role="radio" aria-checked="true" style="flex: 1; height: 34px; border: 0; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; background: #ffffff; color: #2257c9; box-shadow: 0 1px 2px #14212b0d">มัดจำ</button>
+<button type="button" role="radio" aria-checked="false" style="flex: 1; height: 34px; border: 0; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; background: transparent; color: #55626c">ค้างชำระ</button>
+</div>
+</div>
+<label style="display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 13px; line-height: 20px; font-weight: 500; color: #55626c; color: #c02626">ยอดมัดจำ (บาท) *</span>
+<span style="position: relative; display: flex; align-items: center"><input type="text" value="5,000.00" aria-invalid="true" aria-describedby="dep-err" style="width: 100%; height: 40px; padding: 0 40px 0 12px; border: 1.5px solid #c02626; border-radius: 10px; background: #fce9e9; font-size: 15px; color: #14212b"><span style="position: absolute; right: 12px; display: flex; color: #c02626"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9 2.4 17.5A2 2 0 0 0 4.1 20.5h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg></span></span>
+<span id="dep-err" style="font-size: 12px; line-height: 18px; color: #c02626">ยอดมัดจำต้องไม่เกินยอดสุทธิ ฿3,600.00</span>
+</label>
+</div>
+
+<div style="display: flex; align-items: center; gap: 16px; padding: 14px 16px; border-radius: 10px; background: #eef2f4">
+<div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px; font-size: 13px; line-height: 20px; color: #55626c">
+<span>ค่าห้อง 2 คืน × ฿1,800.00 = ฿3,600.00 · ส่วนลด ฿0.00</span>
+<span>รวมภาษีมูลค่าเพิ่ม 7% จำนวน ฿235.51</span>
+</div>
+<div style="display: flex; flex-direction: column; align-items: flex-end"><span style="font-size: 12px; line-height: 18px; color: #55626c">ยอดสุทธิ</span><span style="font-size: 24px; line-height: 32px; font-weight: 600; color: #0d7068; font-variant-numeric: tabular-nums">฿3,600.00</span></div>
+</div>
+
+<p style="margin: 0; font-size: 13px; line-height: 20px; font-weight: 600; color: #0d7068; display: flex; align-items: center; gap: 8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 11-8.5 8.5a5.5 5.5 0 0 1-7.8-7.8l9-9a3.7 3.7 0 0 1 5.2 5.2l-9 9a1.8 1.8 0 0 1-2.6-2.6l8.3-8.3"></path></svg>เอกสารแนบ</p>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; border: 1.5px dashed #7f8c95; border-radius: 14px; background: #f5f7f8">
+<span style="display: flex; color: #0d7068"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 13v8"></path><path d="m8 17 4-4 4 4"></path><path d="M20 16.6A5 5 0 0 0 18 7h-1.3A8 8 0 1 0 4 15.3"></path></svg></span>
+<span style="flex-grow: 1; font-size: 14px; line-height: 22px">ลากไฟล์มาวาง หรือ <a href="#" style="font-weight: 500">เลือกไฟล์</a><span style="display: block; font-size: 12px; line-height: 18px; color: #55626c">รองรับไฟล์ใหญ่ด้วยการอัปโหลดแบบแบ่งส่วน (Resumable Chunk) · สูงสุด 50 MB ต่อไฟล์</span></span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid #e1e7ea; border-radius: 10px">
+<span style="width: 36px; height: 36px; border-radius: 8px; background: #e8effc; color: #2257c9; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-5-5L5 21"></path></svg></span>
+<div style="flex-grow: 1; display: flex; flex-direction: column; gap: 4px">
+<div style="display: flex; justify-content: space-between; font-size: 13px; line-height: 20px"><span style="font-weight: 500">slip_transfer_240926.jpg</span><span style="color: #55626c">2.9 / 4.8 MB · ส่วนที่ 3/5</span></div>
+<div role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100" aria-label="ความคืบหน้าการอัปโหลด" style="height: 6px; border-radius: 9999px; background: #eef2f4"><div style="width: 60%; height: 6px; border-radius: 9999px; background: #0d7068"></div></div>
+</div>
+<button type="button" aria-label="หยุดชั่วคราว" style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border:0;border-radius:6px;background:transparent;color:#55626c;cursor:pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5v14"></path><path d="M15 5v14"></path></svg></button>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid #e1e7ea; border-radius: 10px">
+<span style="width: 36px; height: 36px; border-radius: 8px; background: #e5f5ea; color: #157a3a; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"></path><path d="M14 3v6h6"></path></svg></span>
+<div style="flex-grow: 1; display: flex; flex-direction: column"><span style="font-size: 13px; line-height: 20px; font-weight: 500">booking_confirmation.pdf</span><span style="font-size: 12px; line-height: 18px; color: #157a3a">12.6 MB · อัปโหลดสำเร็จ</span></div>
+<button type="button" aria-label="ลบไฟล์" style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border:0;border-radius:6px;background:transparent;color:#55626c;cursor:pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"></path><path d="M9 7V4h6v3"></path></svg></button>
+</div>
+</div>
+</div>
+
+<div style="display: flex; align-items: center; gap: 8px; padding: 16px 24px; border-top: 1px solid #e1e7ea">
+<span style="flex-grow: 1; font-size: 12px; line-height: 18px; color: #55626c"><span style="color: #c02626">*</span> จำเป็นต้องกรอก · ตรวจสอบข้อมูล 3 ชั้น: หน้าจอ → Server → ฐานข้อมูล</span>
+<a href="Income-Rooms.dc.html" style="display: inline-flex; align-items: center; height: 40px; padding: 0 16px; border: 1px solid #7f8c95; border-radius: 10px; background: #ffffff; color: #14212b; font-size: 14px; font-weight: 500; text-decoration: none">ยกเลิก</a>
+<button type="button" style="display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 16px;border-radius:10px;font-size:14px;line-height:22px;font-weight:500;cursor:pointer;white-space:nowrap;text-decoration:none;border:1px solid #0d7068;background:#0d7068;color:#ffffff"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg>บันทึก</button>
+</div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1080}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

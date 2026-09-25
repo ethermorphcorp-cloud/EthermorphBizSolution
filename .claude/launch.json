@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "hotel-preview",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["tools/preview-server.js", "8123"],
+      "port": 8123
+    }
+  ]
+}

@@ -1,0 +1,110 @@
+<script>
+/* page-roomtypes.html — ประเภทห้องพัก (design/RoomTypes.dc.html): one card per room type (prices, capacity, this
+ * month's occupancy) and the room list. "มีผู้เข้าพัก" comes from the bookings; people set ว่าง / ทำความสะอาด /
+ * ปิดปรับปรุง (front desk too, by clicking the status badge). */
+const ROOM_STATUS_SET=[['free','ว่าง'],['clean','ทำความสะอาด'],['off','ปิดปรับปรุง']];
+
+Pages.roomtypes={render(el,params){
+  const st=el._rt||(el._rt={q:'',type:'',status:'',page:1});
+  const load=async()=>{let d;
+    try{d=await api('room.overview',{},{loading:'กำลังโหลดข้อมูลห้องพัก'})}catch(e){el.innerHTML=pageHead('ประเภทห้องพัก','')+`<section class="card">${UI.empty('โหลดข้อมูลไม่สำเร็จ',e.message)}</section>`;return}
+    draw(d)};
+  const draw=d=>{const edit=can('room.edit'),mon=TH_MON[+d.month.slice(5,7)-1];
+    el.innerHTML=pageHead('ประเภทห้องพัก',`${d.types.length} ประเภท · ${d.rooms.length} ห้อง · ราคาจะเติมอัตโนมัติเมื่อบันทึกรายได้ห้องพัก`,
+        edit?`<button type="button" class="btn" id="rmAdd">${icon('plus')}<span>เพิ่มห้อง</span></button><button type="button" class="btn primary" id="rtAdd">${icon('plus')}<span>เพิ่มประเภทห้อง</span></button>`:'')+
+      (d.types.length?`<div class="rt-grid">${d.types.map(t=>`<article class="card rt-card ${t.active?'':'off'}">
+        <div class="top"><div><h3>${esc(t.name)}</h3><span class="mono muted">${esc(t.code)}</span></div><span class="badge ${t.active?'success':''}">${t.active?'เปิดขาย':'ปิดขาย'}</span></div>
+        <div class="price">${fmtM(t.price)} <small>/ คืน</small></div>
+        <div class="kv"><span>ศุกร์–เสาร์</span><b class="num">${fmtM(t.weekendPrice||t.price)}</b><span>จำนวนห้อง</span><b>${t.rooms} ห้อง</b><span>ผู้เข้าพักสูงสุด</span><b>${t.maxGuests} คน</b><span>เตียง</span><b>${esc(t.bedType||'-')}</b></div>
+        ${t.amenities?`<div class="tags">${t.amenities.split(',').map(a=>`<span class="tag">${esc(a)}</span>`).join('')}</div>`:''}
+        <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span class="muted">อัตราเข้าพัก${mon}</span><b class="num">${t.occupancy.toFixed(1)}%</b></div>
+          <div class="progress" role="progressbar" aria-label="อัตราเข้าพัก ${esc(t.name)}" aria-valuenow="${t.occupancy}" aria-valuemin="0" aria-valuemax="100"><div style="width:${Math.min(100,t.occupancy)}%"></div></div></div>
+        ${edit?`<div class="acts"><button type="button" class="btn sm" data-tedit="${esc(t.code)}">${icon('edit','s16')}แก้ไข</button><button type="button" class="btn sm icon" data-tdel="${esc(t.code)}" aria-label="ลบ ${esc(t.name)}" style="color:var(--danger)">${icon('trash','s16')}</button></div>`:''}
+        </article>`).join('')}</div>`:`<section class="card">${UI.empty('ยังไม่มีประเภทห้อง','เริ่มจากเพิ่มประเภทห้อง แล้วเพิ่มห้องในแต่ละประเภท')}</section>`)+
+      `<section class="card" id="rmCard"><div class="card-head"><div><h3>รายการห้องพัก</h3><div class="cap">สถานะอัปเดตจากการเช็คอิน/เช็คเอาท์${can('room.status')?' · กดที่สถานะเพื่อเปลี่ยน':''}</div></div></div>
+        <div class="filterbar"><div class="iw search" style="width:200px"><span class="lead">${icon('search','s16')}</span><input class="input sm" id="rmQ" type="search" placeholder="ค้นหาเลขห้อง" aria-label="ค้นหาเลขห้อง" value="${esc(st.q)}"></div>
+          <select class="select sm" id="rmType" aria-label="ประเภทห้อง" style="width:auto"></select><select class="select sm" id="rmStatus" aria-label="สถานะห้อง" style="width:auto"></select></div>
+        <div class="tbl-wrap" id="rmTable"></div><div class="pager" id="rmPager"></div></section>`;
+    /* filter choices: only values that rooms have, with counts */
+    const count=(k,v)=>d.rooms.filter(r=>r[k]===v).length;
+    const types=d.types.filter(t=>count('typeCode',t.code));
+    $('#rmType',el).innerHTML=`<option value="">ประเภท: ทั้งหมด (${types.length})</option>`+types.map(t=>`<option value="${esc(t.code)}" ${t.code===st.type?'selected':''}>${esc(t.name)} (${count('typeCode',t.code)})</option>`).join('');
+    const sts=Object.keys(STATUS.room).filter(s=>count('status',s));
+    $('#rmStatus',el).innerHTML=`<option value="">สถานะ: ทั้งหมด (${sts.length})</option>`+sts.map(s=>`<option value="${s}" ${s===st.status?'selected':''}>${STATUS.room[s][0]} (${count('status',s)})</option>`).join('');
+    const ps=UI.pageSizeFor($('#rmCard',el),{header:58+58+44,rowHeight:47,min:6});
+    const drawRooms=()=>{const q=st.q.toLowerCase(),rows=d.rooms.filter(r=>(!q||String(r.roomNo).toLowerCase().includes(q))&&(!st.type||r.typeCode===st.type)&&(!st.status||r.status===st.status));
+      const pages=Math.max(1,Math.ceil(rows.length/ps));st.page=Math.min(st.page,pages);const slice=rows.slice((st.page-1)*ps,st.page*ps);
+      const tname=c=>(d.types.find(t=>t.code===c)||{}).name||c;
+      $('#rmTable',el).innerHTML=slice.length?`<table class="tbl stack"><thead><tr><th scope="col">เลขห้อง</th><th scope="col">ประเภท</th><th scope="col">ชั้น</th><th scope="col">สถานะ</th><th scope="col">ผู้เข้าพักปัจจุบัน</th><th scope="col">หมายเหตุ</th>${edit?'<th scope="col" class="r act">จัดการ</th>':''}</tr></thead><tbody>
+        ${slice.map(r=>`<tr><td data-label="เลขห้อง"><span class="mono">${esc(r.roomNo)}</span></td><td data-label="ประเภท">${esc(tname(r.typeCode))}</td><td data-label="ชั้น">${r.floor?'ชั้น '+r.floor:'-'}</td>
+          <td data-label="สถานะ">${can('room.status')&&r.status!=='occ'?`<button type="button" class="st-btn" data-st="${esc(r.roomNo)}" aria-label="เปลี่ยนสถานะห้อง ${esc(r.roomNo)}">${UI.badge('room',r.status)}</button>`:UI.badge('room',r.status)}</td>
+          <td data-label="ผู้เข้าพักปัจจุบัน">${r.guest?`<span>${esc(r.guest)}<span class="cap" style="display:block">ถึง ${fmtD(r.checkOut)} · <span class="mono">${esc(r.bookingNo)}</span></span></span>`:'<span class="muted">-</span>'}</td>
+          <td data-label="หมายเหตุ" class="wrap">${esc(r.note||'-')}</td>
+          ${edit?`<td class="r nolabel act"><button type="button" class="btn plain icon sm" data-redit="${esc(r.roomNo)}" aria-label="แก้ไขห้อง ${esc(r.roomNo)}">${icon('edit','s16')}</button><button type="button" class="btn plain icon sm" data-rdel="${esc(r.roomNo)}" aria-label="ลบห้อง ${esc(r.roomNo)}" style="color:var(--danger)">${icon('trash','s16')}</button></td>`:''}</tr>`).join('')}</tbody></table>`
+        :UI.empty(d.rooms.length?'ไม่พบห้องที่ตรงกับตัวกรอง':'ยังไม่มีห้อง',d.rooms.length?'ลองเปลี่ยนคำค้นหาหรือตัวกรอง':'กดปุ่ม เพิ่มห้อง เพื่อเริ่มต้น');
+      UI.pager($('#rmPager',el),{page:st.page,pageSize:ps,total:rows.length,onPage:p=>{st.page=p;drawRooms()}});
+      $$('[data-redit]',el).forEach(b=>b.onclick=()=>roomModal_(d,d.rooms.find(r=>r.roomNo===b.dataset.redit),load));
+      $$('[data-rdel]',el).forEach(b=>b.onclick=()=>roomDelete_(d.rooms.find(r=>r.roomNo===b.dataset.rdel),load));
+      $$('[data-st]',el).forEach(b=>b.onclick=()=>{const r=d.rooms.find(x=>x.roomNo===b.dataset.st);
+        UI.openMenu(b,ROOM_STATUS_SET.filter(s=>s[0]!==r.status).map(s=>({icon:{free:'check',clean:'tool',off:'ban'}[s[0]],label:'เปลี่ยนเป็น '+s[1],onClick:()=>roomStatus_(r,s,load)})),{align:'left',header:`<b>ห้อง ${esc(r.roomNo)}</b>${STATUS.room[r.status][0]}`})})};
+    $('#rmQ',el).oninput=UI.debounce(e=>{st.q=e.target.value.trim();st.page=1;drawRooms()},200);
+    $('#rmType',el).onchange=e=>{st.type=e.target.value;st.page=1;drawRooms()};
+    $('#rmStatus',el).onchange=e=>{st.status=e.target.value;st.page=1;drawRooms()};
+    if(edit){$('#rtAdd',el).onclick=()=>typeModal_(null,load);$('#rmAdd',el).onclick=()=>roomModal_(d,null,load);
+      $$('[data-tedit]',el).forEach(b=>b.onclick=()=>typeModal_(d.types.find(t=>t.code===b.dataset.tedit),load));
+      $$('[data-tdel]',el).forEach(b=>b.onclick=()=>typeDelete_(d.types.find(t=>t.code===b.dataset.tdel),load))}
+    drawRooms()};
+  load()}};
+
+function typeModal_(t,done){
+  const isNew=!t;
+  const body=`<form id="rtForm" novalidate class="grid2">${V.field('name','ชื่อประเภทห้อง',{value:t?t.name:'',req:true,ph:'เช่น Deluxe'})}
+    ${V.field('code','รหัสประเภทห้อง',{value:t?t.code:'',req:true,mono:true,ro:!isNew,help:isNew?'2–6 ตัว เช่น DLX · แก้ไขภายหลังไม่ได้':'รหัสแก้ไขไม่ได้',attrs:'autocapitalize="characters"'})}
+    ${V.field('price','ราคาปกติ / คืน',{value:t?t.price:'',type:'money',req:true,mono:true,lead:'wallet'})}${V.field('weekendPrice','ราคาศุกร์–เสาร์ / คืน',{value:t?t.weekendPrice:'',type:'money',mono:true,help:'เว้นว่าง = ราคาเดียวกับราคาปกติ'})}
+    ${V.field('maxGuests','ผู้เข้าพักสูงสุด (คน)',{value:t?t.maxGuests:2,type:'int',req:true})}${V.field('bedType','ประเภทเตียง',{value:t?t.bedType:'',ph:'เช่น King / Twin'})}
+    ${V.field('amenities','สิ่งอำนวยความสะดวก',{value:t?t.amenities.split(',').join(', '):'',span:true,ph:'Wi-Fi, แอร์, ทีวี',help:'คั่นแต่ละรายการด้วยเครื่องหมายจุลภาค (,)'})}
+    ${V.toggle('active','เปิดขาย',t?t.active:true,{help:'ปิดขาย = ไม่แสดงในหน้าบันทึกการจองใหม่'})}<button type="submit" hidden></button></form>`;
+  const m=UI.openModal({title:isNew?'เพิ่มประเภทห้อง':'แก้ไขประเภทห้อง · '+t.name,iconName:'door',body,
+    foot:`<span class="grow"></span><button type="button" class="btn" data-close>ยกเลิก</button><button type="button" class="btn primary" id="rtSave">${icon('check')}บันทึก</button>`});
+  const f=$('#rtForm',m.el);V.live(f);
+  if(isNew)$('#f-code',f).addEventListener('input',e=>{e.target.value=e.target.value.toUpperCase()});
+  const save=async()=>{const v=V.form(f,{name:{label:'ชื่อประเภทห้อง',req:true,max:80},code:{label:'รหัสประเภทห้อง',req:true,pattern:/^[A-Z0-9]{2,6}$/,hint:'ใช้ตัวพิมพ์ใหญ่หรือตัวเลข 2–6 ตัว เช่น DLX'},
+      price:{label:'ราคาปกติ',type:'money',req:true,min:0},weekendPrice:{label:'ราคาศุกร์–เสาร์',type:'money',min:0},maxGuests:{label:'ผู้เข้าพักสูงสุด',type:'int',req:true,min:1,max:20},
+      bedType:{label:'ประเภทเตียง',max:60},amenities:{label:'สิ่งอำนวยความสะดวก',max:400}});if(!v)return;
+    v.active=V.on(f,'active');
+    try{await api('roomType.save',{data:v,isNew},{loading:'กำลังบันทึก'});m.close();UI.toast(isNew?'เพิ่มประเภทห้องแล้ว':'บันทึกประเภทห้องแล้ว','success',v.name+' · '+fmtM(v.price)+' / คืน');done()}
+    catch(e){if(e.field)V.setErr(f,e.field,e.message);else UI.swalError('บันทึกไม่สำเร็จ',e.message)}};
+  $('#rtSave',m.el).onclick=save;f.onsubmit=e=>{e.preventDefault();save()}}
+
+async function typeDelete_(t,done){
+  if(!await UI.swalConfirm('ลบประเภทห้อง?',`ลบ ${t.name} (${t.code}) · ประเภทที่มีประวัติการจองจะเปลี่ยนเป็นปิดขายแทนการลบ`,'ลบประเภทห้อง'))return;
+  try{const r=await api('roomType.delete',{code:t.code},{loading:'กำลังบันทึก'});
+    r.deactivated?UI.toast('เปลี่ยนเป็นปิดขายแล้ว','warning',`มีประวัติการจอง ${fmtN(r.used)} รายการ จึงไม่ลบ`):UI.toast('ลบประเภทห้องแล้ว','success',t.name);done()}
+  catch(e){UI.swalError('ลบไม่สำเร็จ',e.message)}}
+
+function roomModal_(d,r,done){
+  const isNew=!r,types=d.types.filter(t=>t.active||(r&&t.code===r.typeCode)).map(t=>[t.code,t.name+' ('+t.code+')']);
+  if(!types.length){UI.swalInfo('ยังไม่มีประเภทห้องที่เปิดขาย','เพิ่มหรือเปิดขายประเภทห้องก่อน แล้วจึงเพิ่มห้อง');return}
+  const set=r?(r.statusSet==='occ'?'free':r.statusSet):'free';
+  const body=`<form id="rmForm" novalidate class="grid2">${V.field('roomNo','เลขที่ห้อง',{value:r?r.roomNo:'',req:true,mono:true,ro:!isNew,help:isNew?'เก็บเป็นข้อความ เช่น 101 หรือ A-01':'เลขห้องแก้ไขไม่ได้'})}
+    ${V.select('typeCode','ประเภทห้อง',types,r?r.typeCode:types[0][0],{req:true})}
+    ${V.field('floor','ชั้น',{value:r?r.floor:'',type:'int'})}${V.select('status','สถานะ',ROOM_STATUS_SET,set,{help:'มีผู้เข้าพัก = คำนวณจากการจองอัตโนมัติ'})}
+    ${V.textarea('note','หมายเหตุ',{value:r?r.note:'',span:true,ph:'เช่น ซ่อมเครื่องปรับอากาศ ถึง 27/09/2026'})}<button type="submit" hidden></button></form>`;
+  const m=UI.openModal({title:isNew?'เพิ่มห้อง':'แก้ไขห้อง '+r.roomNo,iconName:'bed',body,
+    foot:`<span class="grow"></span><button type="button" class="btn" data-close>ยกเลิก</button><button type="button" class="btn primary" id="rmSave">${icon('check')}บันทึก</button>`});
+  const f=$('#rmForm',m.el);V.live(f);
+  const save=async()=>{const v=V.form(f,{roomNo:{label:'เลขที่ห้อง',req:true,pattern:/^[0-9A-Za-z-]{1,10}$/,hint:'ใช้ตัวเลข ตัวอักษร หรือขีด ไม่เกิน 10 ตัว'},floor:{label:'ชั้น',type:'int',min:-5,max:200},note:{label:'หมายเหตุ',max:300}});if(!v)return;
+    Object.assign(v,{typeCode:V.val(f,'typeCode'),status:V.val(f,'status')});
+    try{await api('room.save',{data:v,isNew},{loading:'กำลังบันทึก'});m.close();UI.toast(isNew?'เพิ่มห้องแล้ว':'บันทึกห้องแล้ว','success','ห้อง '+v.roomNo);done()}
+    catch(e){if(e.field)V.setErr(f,e.field,e.message);else UI.swalError('บันทึกไม่สำเร็จ',e.message)}};
+  $('#rmSave',m.el).onclick=save;f.onsubmit=e=>{e.preventDefault();save()}}
+
+async function roomDelete_(r,done){
+  if(!await UI.swalConfirm('ลบห้อง?',`ลบห้อง ${r.roomNo} · ห้องที่มีประวัติการจองจะลบไม่ได้ ให้เปลี่ยนสถานะเป็นปิดปรับปรุงแทน`,'ลบห้อง'))return;
+  try{await api('room.delete',{roomNo:r.roomNo},{loading:'กำลังลบ'});UI.toast('ลบห้องแล้ว','success','ห้อง '+r.roomNo);done()}
+  catch(e){UI.swalError('ลบห้องไม่สำเร็จ',e.message)}}
+
+async function roomStatus_(r,s,done){
+  try{await api('room.status',{roomNo:r.roomNo,status:s[0]},{loading:'กำลังบันทึกสถานะ'});UI.toast(`ห้อง ${r.roomNo}: ${s[1]}`);done()}
+  catch(e){UI.swalError('เปลี่ยนสถานะไม่สำเร็จ',e.message)}}
+</script>

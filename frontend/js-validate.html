@@ -1,0 +1,51 @@
+<script>
+/* js-validate.html — validation layer 1 (in the browser, under each field). The same rule shape and messages as
+ * backend/Validator.gs, which checks again on the server (layer 2); the repository checks keys (layer 3).
+ * Rule: {label, req, type: text|phone|email|taxId|money|num|int|date|time, min, max, pattern, hint}. */
+const V={};
+
+/* form field markup: data-f is the field name the server's fieldError_ refers to */
+V.field=function(id,label,{value='',type='text',req=false,help='',ph='',mono=false,span=false,lead='',attrs='',ro=false,trailBtn=''}={}){
+  const inputType=type==='phone'?'tel':type==='email'?'email':['money','num','int','taxId'].includes(type)?'text':type;
+  const mode=type==='money'||type==='num'?'decimal':type==='int'||type==='taxId'?'numeric':'';
+  return`<div class="field ${span?'span2':''}" data-f="${id}"><label for="f-${id}">${esc(label)}${req?' <span class="req" aria-hidden="true">*</span>':''}</label><div class="iw">${lead?`<span class="lead">${icon(lead)}</span>`:''}<input class="input ${mono?'mono':''} ${trailBtn?'has-trail':''}" id="f-${id}" name="${id}" type="${inputType}" ${mode?`inputmode="${mode}"`:''} value="${esc(value)}" placeholder="${esc(ph)}" ${req?'aria-required="true"':''} ${ro?'readonly':''} aria-describedby="e-${id}" ${attrs}>${trailBtn}</div><div class="err" id="e-${id}" role="alert">${icon('alert','s16')}<span></span></div>${help?`<div class="help">${esc(help)}</div>`:''}</div>`};
+
+/* options: [[value,label]] or ['x'] */
+V.select=function(id,label,options,value,{req=false,span=false,help='',attrs=''}={}){
+  return`<div class="field ${span?'span2':''}" data-f="${id}"><label for="f-${id}">${esc(label)}${req?' <span class="req" aria-hidden="true">*</span>':''}</label><select class="select" id="f-${id}" name="${id}" aria-describedby="e-${id}" ${attrs}>${options.map(o=>{const[v,t]=Array.isArray(o)?o:[o,o];return`<option value="${esc(v)}" ${String(v)===String(value)?'selected':''}>${esc(t)}</option>`}).join('')}</select><div class="err" id="e-${id}" role="alert">${icon('alert','s16')}<span></span></div>${help?`<div class="help">${esc(help)}</div>`:''}</div>`};
+V.textarea=function(id,label,{value='',req=false,span=false,rows=2,help='',ph=''}={}){
+  return`<div class="field ${span?'span2':''}" data-f="${id}"><label for="f-${id}">${esc(label)}${req?' <span class="req" aria-hidden="true">*</span>':''}</label><textarea class="input" id="f-${id}" name="${id}" rows="${rows}" placeholder="${esc(ph)}" aria-describedby="e-${id}">${esc(value)}</textarea><div class="err" id="e-${id}" role="alert">${icon('alert','s16')}<span></span></div>${help?`<div class="help">${esc(help)}</div>`:''}</div>`};
+/* on/off switch; read with V.on(root,id) */
+V.toggle=function(id,label,on,{help=''}={}){
+  return`<div class="field" data-f="${id}"><span class="lbl" id="l-${id}">${esc(label)}</span><div style="display:flex;align-items:center;gap:10px;min-height:40px"><button type="button" class="switch" role="switch" id="f-${id}" aria-checked="${!!on}" aria-labelledby="l-${id}" onclick="this.setAttribute('aria-checked',this.getAttribute('aria-checked')!=='true')"></button>${help?`<span class="help">${esc(help)}</span>`:''}</div><div class="err" role="alert">${icon('alert','s16')}<span></span></div></div>`};
+V.on=(root,id)=>root.querySelector('#f-'+id).getAttribute('aria-checked')==='true';
+V.val=(root,id)=>{const el=root.querySelector('#f-'+id);return el?el.value:''};
+
+V.setErr=function(root,field,msg){const f=root.querySelector(`[data-f="${field}"]`);const e=f&&f.querySelector('.err span');
+  if(!e){UI.toast(msg,'danger');return}f.classList.add('invalid');e.textContent=msg;const el=f.querySelector('input,select,textarea');el&&el.setAttribute('aria-invalid','true');el&&el.focus()};
+V.clearErr=function(root){$$('.field.invalid',root).forEach(f=>{f.classList.remove('invalid');const el=f.querySelector('[aria-invalid]');el&&el.removeAttribute('aria-invalid')})};
+/* a field's error clears as soon as the user edits it */
+V.live=function(root){root.addEventListener('input',e=>{const f=e.target.closest('.field.invalid');if(f){f.classList.remove('invalid');e.target.removeAttribute('aria-invalid')}})};
+
+V.check=function(value,r){const label=r.label||'',type=r.type||'text';let s=String(value??'').trim();
+  if(!s){if(r.req)return{err:(type==='date'?'กรุณาเลือก':'กรุณากรอก')+label};return{val:type==='money'||type==='num'||type==='int'?0:''}}
+  switch(type){
+    case'phone':{s=s.replace(/\s+/g,'');const d=s.replace(/-/g,'');if(!/^\+?[0-9-]+$/.test(s)||!/^(0[0-9]{8,9}|\+[0-9]{8,15})$/.test(d))return{err:label+'ต้องเป็นตัวเลข 9–10 หลักขึ้นต้นด้วย 0 เช่น 081-234-5678 หรือเบอร์ต่างประเทศขึ้นต้นด้วย +'};return{val:s}}
+    case'email':if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s))return{err:label+'ไม่ถูกต้อง เช่น name@example.com'};return{val:s.toLowerCase()};
+    case'taxId':s=s.replace(/[\s-]/g,'');if(!/^[0-9]{13}$/.test(s))return{err:label+'ต้องเป็นตัวเลข 13 หลัก'};return{val:s};
+    case'money':case'num':case'int':{const n=Number(s.replace(/[,฿\s]/g,''));if(!isFinite(n))return{err:label+'ต้องเป็นตัวเลข'};
+      if(type==='int'&&Math.floor(n)!==n)return{err:label+'ต้องเป็นจำนวนเต็ม'};
+      if(r.min!==undefined&&n<r.min)return{err:label+'ต้องไม่น้อยกว่า '+r.min};if(r.max!==undefined&&n>r.max)return{err:label+'ต้องไม่เกิน '+r.max};
+      return{val:type==='money'?Math.round(n*100)/100:n}}
+    case'date':if(!/^\d{4}-\d{2}-\d{2}$/.test(s))return{err:label+'ไม่ถูกต้อง กรุณาเลือกวันที่'};return{val:s};
+    case'time':if(!/^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(s))return{err:label+'ต้องอยู่ในรูปแบบ HH:mm เช่น 14:00'};return{val:s};
+    default:if(r.max&&s.length>r.max)return{err:label+'ยาวเกิน '+r.max+' ตัวอักษร กรุณาย่อให้สั้นลง'};
+      if(r.pattern&&!r.pattern.test(s))return{err:label+'ไม่ถูกต้อง — '+(r.hint||'กรุณาตรวจสอบรูปแบบ')};return{val:s}}};
+
+/* reads #f-<name> for every rule; shows the first problem under its field. Returns the clean object or null.
+ * phone and tax id stay strings, so a leading 0 is never lost. */
+V.form=function(root,rules){V.clearErr(root);const out={};
+  for(const k of Object.keys(rules)){const el=root.querySelector('#f-'+k);const r=V.check(el?el.value:'',rules[k]);
+    if(r.err){V.setErr(root,k,r.err);return null}out[k]=r.val}
+  return out};
+</script>

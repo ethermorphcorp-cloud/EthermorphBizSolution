@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>ข้อมูลลูกค้า</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:"Noto Sans Thai","Noto Sans",system-ui,sans-serif;color:#14212b;background:#f5f7f8}
+*{box-sizing:border-box}
+button,input,select,textarea{font-family:inherit;color:inherit}
+a{color:#0d7068;text-decoration:none}a:hover{color:#0a5a54}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:13px;font-weight:500}
+.thead{display:grid;align-items:center;background:#eef2f4;border-bottom:1px solid #e1e7ea;font-size:12px;line-height:18px;font-weight:500;color:#55626c}
+.thead>div{padding:10px 12px;white-space:nowrap}
+.trow{display:grid;align-items:center;border-bottom:1px solid #e1e7ea;font-size:14px;line-height:22px}
+.trow:hover{background:#f2f6f7}
+.trow>div{padding:10px 12px;min-width:0}
+button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{outline:none;box-shadow:0 0 0 2px #ffffff,0 0 0 4px #0d7068}
+input::placeholder,textarea::placeholder{color:#55626c}
+
+</style>
+</helmet>
+
+
+
+
+<div style="width: 1440px; height: 1000px; display: flex; background: #f5f7f8">
+<div style="width:248px;flex-shrink:0;align-self:stretch;background:#10232a"><dc-import name="Sidebar" active="cust" hint-size="248px,900px"></dc-import></div>
+<div style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0">
+<dc-import name="Topbar" heading="ข้อมูลลูกค้า" crumb="ตั้งค่า" hint-size="1192px,60px"></dc-import>
+<main style="padding: 24px; display: flex; flex-direction: column; gap: 20px">
+<div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<h1 style="margin: 0; font-size: 22px; line-height: 32px; font-weight: 600">ข้อมูลลูกค้า</h1>
+<p style="margin: 0; font-size: 12px; line-height: 18px; color: #55626c">214 ราย · ใช้เลือกผู้เข้าพักในหน้าบันทึกรายได้และออกใบเสร็จ</p>
+</div>
+<div style="display: flex; gap: 8px"><button type="button" style="display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 16px;border-radius:10px;font-size:14px;line-height:22px;font-weight:500;cursor:pointer;white-space:nowrap;text-decoration:none;border:1px solid #7f8c95;background:#ffffff;color:#14212b"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 13v8"></path><path d="m8 17 4-4 4 4"></path><path d="M20 16.6A5 5 0 0 0 18 7h-1.3A8 8 0 1 0 4 15.3"></path></svg>นำเข้า Excel</button><button type="button" style="display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 16px;border-radius:10px;font-size:14px;line-height:22px;font-weight:500;cursor:pointer;white-space:nowrap;text-decoration:none;border:1px solid #7f8c95;background:#ffffff;color:#14212b"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 21h14"></path></svg>ส่งออก Excel</button><button type="button" style="display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 16px;border-radius:10px;font-size:14px;line-height:22px;font-weight:500;cursor:pointer;white-space:nowrap;text-decoration:none;border:1px solid #0d7068;background:#0d7068;color:#ffffff"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>เพิ่มลูกค้า</button></div>
+</div>
+<section style="background:#ffffff;border:1px solid #e1e7ea;border-radius:14px;box-shadow:0 1px 2px #14212b0d">
+<div style="display: flex; align-items: center; gap: 8px; padding: 12px 16px; background: #eef2f4; border-bottom: 1px solid #e1e7ea; border-radius: 14px 14px 0 0; flex-wrap: wrap">
+<label style="position:relative;display:flex;align-items:center;width:320px"><span style="position:absolute;left:12px;display:flex;color:#55626c"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg></span><input type="search" placeholder="ค้นหาชื่อ เบอร์โทร หรือรหัสลูกค้า" aria-label="ค้นหาชื่อ เบอร์โทร หรือรหัสลูกค้า" style="width:100%;height:40px;padding:0 12px 0 40px;border:1px solid #7f8c95;border-radius:10px;background:#ffffff;font-size:14px"></label>
+<button type="button" aria-label="ประเภทลูกค้า" style="display:inline-flex;align-items:center;justify-content:space-between;gap:8px;width:200px;height:40px;padding:0 12px;border:1px solid #7f8c95;border-radius:10px;background:#ffffff;font-size:14px;color:#14212b;cursor:pointer;white-space:nowrap"><span style="overflow:hidden;text-overflow:ellipsis">ประเภท: ทั้งหมด (4)</span><span style="display:flex;color:#55626c"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></span></button>
+<button type="button" aria-label="สัญชาติ" style="display:inline-flex;align-items:center;justify-content:space-between;gap:8px;width:190px;height:40px;padding:0 12px;border:1px solid #7f8c95;border-radius:10px;background:#ffffff;font-size:14px;color:#14212b;cursor:pointer;white-space:nowrap"><span style="overflow:hidden;text-overflow:ellipsis">สัญชาติ: ทั้งหมด (6)</span><span style="display:flex;color:#55626c"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></span></button>
+<button type="button" aria-label="เข้าพักล่าสุด" style="display:inline-flex;align-items:center;justify-content:space-between;gap:8px;width:210px;height:40px;padding:0 12px;border:1px solid #7f8c95;border-radius:10px;background:#ffffff;font-size:14px;color:#14212b;cursor:pointer;white-space:nowrap"><span style="overflow:hidden;text-overflow:ellipsis">เข้าพักล่าสุด: ทุกช่วง</span><span style="display:flex;color:#55626c"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></span></button>
+<span style="flex-grow: 1"></span>
+<span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; line-height: 18px; color: #55626c"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18l-7 8.5V19l-4 2v-7.5Z"></path></svg>ตัวเลือกแสดงเฉพาะค่าที่มีข้อมูล</span>
+</div>
+<div class="thead" style="grid-template-columns: 100px minmax(0,1.6fr) 130px 110px 100px 80px 130px 110px 56px"><div>รหัส</div><div>ชื่อ-นามสกุล / บริษัท</div><div>โทรศัพท์</div><div>ประเภท</div><div>สัญชาติ</div><div style="text-align: right">เข้าพัก</div><div style="text-align: right">ยอดใช้จ่ายรวม</div><div>ล่าสุด</div><div></div></div>
+<sc-for list="{{rows}}" as="r" hint-placeholder-count="8">
+<div class="trow" style="grid-template-columns: 100px minmax(0,1.6fr) 130px 110px 100px 80px 130px 110px 56px; background: {{r.rowBg}}">
+<div class="mono">{{r.code}}</div>
+<div style="display: flex; flex-direction: column"><span style="font-weight: 500">{{r.n}}</span><span style="font-size: 12px; line-height: 18px; color: #55626c">{{r.mail}}</span></div>
+<div class="mono">{{r.phone}}</div>
+<div><span style="display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:9999px;font-size:12px;line-height:18px;font-weight:500;white-space:nowrap;border-radius:6px;background:{{r.type.bg}};color:{{r.type.fg}}">{{r.type.t}}</span></div>
+<div>{{r.nat}}</div>
+<div class="num">{{r.stays}}</div>
+<div class="num" style="font-weight: 500">{{r.total}}</div>
+<div style="color: #55626c">{{r.last}}</div>
+<div style="position: relative">
+<button type="button" aria-label="จัดการ {{r.n}}" aria-expanded="{{r.open}}" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border: 1px solid {{r.btnBorder}}; border-radius: 6px; background: #ffffff; color: #55626c; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="1.3"></circle><circle cx="12" cy="12" r="1.3"></circle><circle cx="12" cy="19" r="1.3"></circle></svg></button>
+<sc-if value="{{r.open}}" hint-placeholder-val="{{false}}">
+<div role="menu" style="position: absolute; top: 40px; right: 12px; z-index: 1070; width: 208px; padding: 4px; background: #ffffff; border: 1px solid #e1e7ea; border-radius: 10px; box-shadow: 0 4px 12px #14212b1f, 0 1px 3px #14212b14">
+<button type="button" role="menuitem" style="display: flex; align-items: center; gap: 10px; width: 100%; height: 36px; padding: 0 10px; border: 0; border-radius: 6px; background: transparent; font-size: 14px; color: #14212b; text-align: left; cursor: pointer"><span style="display: flex; color: #55626c"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg></span>ประวัติการเข้าพัก</button>
+<button type="button" role="menuitem" style="display: flex; align-items: center; gap: 10px; width: 100%; height: 36px; padding: 0 10px; border: 0; border-radius: 6px; background: transparent; font-size: 14px; color: #14212b; text-align: left; cursor: pointer; background: #f2f6f7"><span style="display: flex; color: #55626c"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16Z"></path><path d="m13.5 6.5 4 4"></path></svg></span>แก้ไขข้อมูล</button>
+<button type="button" role="menuitem" style="display: flex; align-items: center; gap: 10px; width: 100%; height: 36px; padding: 0 10px; border: 0; border-radius: 6px; background: transparent; font-size: 14px; color: #14212b; text-align: left; cursor: pointer"><span style="display: flex; color: #55626c"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h14v18l-2.5-1.5L14 21l-2-1.5L10 21l-2.5-1.5L5 21Z"></path><path d="M9 8h6"></path><path d="M9 12h6"></path><path d="M9 16h4"></path></svg></span>ออกใบเสร็จ</button>
+<div style="height: 1px; margin: 4px 0; background: #e1e7ea"></div>
+<button type="button" role="menuitem" style="display: flex; align-items: center; gap: 10px; width: 100%; height: 36px; padding: 0 10px; border: 0; border-radius: 6px; background: transparent; font-size: 14px; color: #14212b; text-align: left; cursor: pointer; color: #c02626"><span style="display: flex"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"></path><path d="M9 7V4h6v3"></path></svg></span>ลบลูกค้า</button>
+</div>
+</sc-if>
+</div>
+</div>
+</sc-for>
+<div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 16px;font-size:13px;line-height:20px;color:#55626c"><span>แสดง 1–8 จาก 214 รายการ · 8 รายการต่อหน้า (ปรับตามความสูงการ์ด)</span><nav aria-label="เลขหน้า" style="display:flex;align-items:center;gap:4px"><button type="button" aria-label="หน้าก่อนหน้า" style="width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #e1e7ea;border-radius:6px;background:#ffffff;color:#55626c;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg></button><button type="button" style="min-width:32px;height:32px;padding:0 8px;border-radius:6px;font-size:13px;cursor:pointer;border:1px solid #0d7068;background:#0d7068;color:#ffffff;font-weight:600">1</button><button type="button" style="min-width:32px;height:32px;padding:0 8px;border-radius:6px;font-size:13px;cursor:pointer;border:1px solid #e1e7ea;background:#ffffff;color:#14212b">2</button><button type="button" style="min-width:32px;height:32px;padding:0 8px;border-radius:6px;font-size:13px;cursor:pointer;border:1px solid #e1e7ea;background:#ffffff;color:#14212b">3</button><span style="width:24px;text-align:center;color:#55626c">…</span><button type="button" style="min-width:32px;height:32px;padding:0 8px;border-radius:6px;font-size:13px;cursor:pointer;border:1px solid #e1e7ea;background:#ffffff;color:#14212b">27</button><button type="button" aria-label="หน้าถัดไป" style="width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #e1e7ea;border-radius:6px;background:#ffffff;color:#55626c;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></button></nav></div>
+</section>
+</main>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const TONE={success:['#e5f5ea','#157a3a'],warning:['#fdf1dc','#9a5806'],danger:['#fce9e9','#c02626'],info:['#e8effc','#2257c9'],primary:['#e3f3f1','#0d7068'],neutral:['#eef2f4','#55626c']};
+const T=(t,x)=>({t:x,bg:TONE[t][0],fg:TONE[t][1]});
+const num=n=>Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const int=n=>Number(n).toLocaleString('en-US');
+const baht=n=>'฿'+num(n);
+    const TY = { GEN: ['neutral', 'ทั่วไป'], VIP: ['primary', 'VIP'], CORP: ['info', 'บริษัท'], OTA: ['warning', 'OTA'] };
+    const R = [
+      ['CU-0214', 'คุณวรรณา ศรีสุข', 'wanna.s@gmail.com', '089-765-4321', 'VIP', 'ไทย', 9, 38400, '24/09/2026'],
+      ['CU-0213', 'Mr. James Carter', 'j.carter@outlook.com', '061-220-4478', 'OTA', 'อังกฤษ', 1, 7800, '24/09/2026'],
+      ['CU-0212', 'บริษัท ไทยทัวร์ จำกัด', 'booking@thaitour.co.th', '02-345-6789', 'CORP', 'ไทย', 14, 96250, '24/09/2026'],
+      ['CU-0208', 'คุณประเสริฐ มั่นคง', 'prasert.m@hotmail.com', '081-234-5678', 'GEN', 'ไทย', 3, 10800, '22/09/2026'],
+      ['CU-0205', 'คุณอรทัย แก้วใส', '-', '086-111-0923', 'GEN', 'ไทย', 2, 8600, '21/09/2026'],
+      ['CU-0201', 'Ms. Lena Hoffmann', 'lena.h@web.de', '095-876-1032', 'OTA', 'เยอรมนี', 1, 3600, '20/09/2026'],
+      ['CU-0197', 'คุณกิตติ พรหมมา', 'kitti.p@gmail.com', '080-009-1122', 'VIP', 'ไทย', 11, 52600, '18/09/2026'],
+      ['CU-0190', 'Mr. Kenji Tanaka', 'k.tanaka@yahoo.co.jp', '093-551-2040', 'GEN', 'ญี่ปุ่น', 2, 9100, '15/09/2026']
+    ];
+    const rows = R.map((r, i) => {
+      const open = i === 2;
+      return { code: r[0], n: r[1], mail: r[2], phone: r[3], type: T(TY[r[4]][0], TY[r[4]][1]), nat: r[5], stays: int(r[6]), total: baht(r[7]), last: r[8], open, rowBg: open ? '#f2f6f7' : '', btnBorder: open ? '#0d7068' : '#e1e7ea' };
+    });
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,77 @@
+<script>
+/* js-api.html — the only way pages talk to the server.
+ *   api(action, payload, {loading, retry}) -> Promise(data)
+ *     google.script.run.api(shop, action, token, payload) -> {ok, data} | {ok:false, code, message, field}
+ *   Every call shows the loading overlay (loading: 'label', or false for a background call). A read is retried once
+ *   when the connection drops; a write never is (it may have gone through). SESSION_EXPIRED signs the user out.
+ *   Demo mode needs nothing here: the server keeps a demo session's writes in its own sandbox.
+ * App holds the session; Master holds the master data (dropdowns, room types, rooms, company) by version. */
+const App={shop:BOOT.shop,demo:BOOT.demo,token:null,user:null,perms:[],features:{},ttl:1800,info:null};
+const TOKEN_KEY='hotel-token:'+BOOT.shop, MASTER_KEY='hotel-master:'+BOOT.shop;
+class ApiError extends Error{constructor(code,message,field){super(message);this.code=code||'ERROR';this.field=field||null}}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const WRITE_ACTION=/\.(save|delete|reorder|cancel|login|logout|demo|changePassword|resetPassword|status|logo|import|export|create\w*|init|append|finalize|clearCache)$/;
+
+function call_(action,payload){return new Promise((resolve,reject)=>{
+  google.script.run
+    .withSuccessHandler(res=>{if(!res)return reject(new ApiError('ERROR','ไม่ได้รับคำตอบจากเซิร์ฟเวอร์ กรุณาลองใหม่อีกครั้ง'));
+      if(res.master)Master.accept(res.master);   /* master data changed: the new bundle rides along */
+      if(res.ok)return resolve(res.data);reject(new ApiError(res.code,res.message,res.field))})
+    .withFailureHandler(()=>reject(new ApiError('NETWORK','เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่')))
+    .api(App.shop,action,App.token,Object.assign({_mv:Master.version()},payload||{}))})}
+
+async function api(action,payload,opt={}){
+  const label=opt.loading===undefined?'กำลังโหลดข้อมูล':opt.loading;
+  let tries=opt.retry!==undefined?opt.retry:WRITE_ACTION.test(action)?0:1;
+  if(label!==false)UI.showLoading(label);
+  try{
+    for(;;){try{const d=await call_(action,payload);Session.touch();return d}
+      catch(e){if(e.code==='NETWORK'&&tries-->0){await sleep(800);continue}throw e}}
+  }catch(e){
+    if(e.code==='SESSION_EXPIRED'&&App.user)Session.expired();
+    else if(e.code==='SHOP')Shell.fatal(e.message);
+    throw e;
+  }finally{if(label!==false)UI.hideLoading()}}
+
+/* ---------- session ---------- */
+const can=perm=>App.perms.includes('*')||App.perms.includes(perm)||App.perms.includes(perm.split('.')[0]+'.*');
+const feat=flag=>App.features[flag]!==false;
+let idleTimer=null;
+const Session={
+  /* s = {token?, user, perms, features, demo, ttl} from auth.login / auth.demo / app.boot */
+  start(s,remember){if(s.token){App.token=s.token;store.del(TOKEN_KEY);store.set(TOKEN_KEY,s.token,!remember)}
+    App.user=s.user;App.perms=s.perms||[];App.features=s.features||{};App.demo=!!s.demo;App.ttl=s.ttl||1800;Session.touch()},
+  saved(){return store.get(TOKEN_KEY)||store.get(TOKEN_KEY,true)},
+  /* the server refreshes the session on every call; the browser signs out after the same idle time */
+  touch(){clearTimeout(idleTimer);if(App.user)idleTimer=setTimeout(()=>Session.end('idle'),App.ttl*1000)},
+  clear(){clearTimeout(idleTimer);App.token=null;App.user=null;App.perms=[];store.del(TOKEN_KEY);UI.closeMenu();UI.closeCbx();$$('.backdrop').forEach(b=>b.remove())},
+  expired(){Session.clear();Shell.login();UI.swalInfo('หมดเวลาการใช้งาน','กรุณาเข้าสู่ระบบอีกครั้ง')},
+  async end(why){const idle=why==='idle',mins=Math.round(App.ttl/60);
+    if(App.token)call_('auth.logout',{}).catch(()=>{});
+    Session.clear();Shell.login();
+    if(idle)UI.swalInfo('หมดเวลาการใช้งาน',`ไม่มีการใช้งานเกิน ${mins} นาที กรุณาเข้าสู่ระบบอีกครั้ง`)}
+};
+['click','keydown','touchstart'].forEach(ev=>document.addEventListener(ev,()=>{if(App.user)Session.touch()},{passive:true}));
+
+/* ---------- master data (MasterCache on the server, localStorage copy here) ---------- */
+const Master={
+  data:null,
+  version(){const d=Master.data||store.get(MASTER_KEY);return d&&d.version||''},
+  /* bundle = master.get result: {version, changed:false} or the full data */
+  listeners:[],
+  /* a full bundle (changed:true): keep it and tell the shell and the open page */
+  accept(bundle){if(!bundle||!bundle.changed)return;Master.data=bundle;store.set(MASTER_KEY,bundle);Master.listeners.forEach(f=>{try{f(bundle)}catch(e){}})},
+  onChange(f){Master.listeners.push(f)},
+  async apply(bundle){if(!bundle)return;
+    if(bundle.changed){Master.accept(bundle);return}
+    Master.data=Master.data||store.get(MASTER_KEY);
+    if(!Master.data||Master.data.version!==bundle.version){store.del(MASTER_KEY);Master.data=null;await Master.refresh(true)}},
+  async refresh(force){const b=await api('master.get',{version:force?'':Master.version()},{loading:false});await Master.apply(b);return Master.data},
+  company(){return(Master.data&&Master.data.company)||{}},
+  roomTypes(all){return((Master.data&&Master.data.roomTypes)||[]).filter(t=>all||t.active)},
+  rooms(){return(Master.data&&Master.data.rooms)||[]},
+  /* options of a dropdown group; inactive ones stay readable (label) but are not offered for new entries */
+  options(group,all){return((Master.data&&Master.data.dropdowns)||[]).filter(d=>d.group===group&&(all||d.active))},
+  label(group,code){const d=Master.options(group,true).find(x=>x.code===code);return d?d.label:code}
+};
+</script>

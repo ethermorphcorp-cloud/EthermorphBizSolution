@@ -1,0 +1,185 @@
+<script>
+/* page-settings.html — ตั้งค่าทั่วไป (design/Settings.dc.html): Dropdown / ข้อมูลบริษัท / ผู้ใช้งาน.
+ * Dropdown: options in groups, drag (or the grip + arrow keys) to reorder; an option in use is deactivated
+ * instead of deleted. Every change to master data comes back with the next api() answer (Master.accept). */
+const ROLE_TONE={Owner:'info',Admin:'primary',Accounting:'warning',FrontDesk:''};
+const ROLE_HELP={Owner:'เจ้าของ — ทุกเมนู',Admin:'ผู้ดูแลระบบ — ทุกเมนู',Accounting:'บัญชี — รายได้อื่น รายจ่าย ใบเสร็จ รายงาน',FrontDesk:'ฟรอนต์ — จองห้อง รายได้อื่น ลูกค้า สถานะห้อง'};
+const TABS_SET=[['dd','Dropdown / ตัวเลือก'],['co','ข้อมูลบริษัท'],['us','ผู้ใช้งาน']];
+
+Pages.settings={render(el,params){
+  const tab=TABS_SET.some(t=>t[0]===params.tab)?params.tab:'dd';
+  el.innerHTML=pageHead('ตั้งค่าทั่วไป','จัดการตัวเลือกในระบบ ข้อมูลบริษัท และผู้ใช้งาน')+
+    `<div class="tabs flush" role="tablist" aria-label="หมวดการตั้งค่า">${TABS_SET.map(t=>`<button type="button" role="tab" id="tab-${t[0]}" aria-selected="${t[0]===tab}" aria-controls="setPanel" data-tab="${t[0]}">${t[1]}</button>`).join('')}</div>
+    <div id="setPanel" role="tabpanel" aria-labelledby="tab-${tab}"></div>`;
+  $$('[data-tab]',el).forEach(b=>b.onclick=()=>go('settings',{tab:b.dataset.tab},true));
+  ({dd:setDropdowns_,co:setCompany_,us:setUsers_})[tab]($('#setPanel',el))}};
+
+/* ---------- Dropdown ---------- */
+async function setDropdowns_(host,keep){
+  let groups;
+  try{groups=await api('settings.dropdown.list')}catch(e){host.innerHTML=UI.empty('โหลดตัวเลือกไม่สำเร็จ',e.message);return}
+  const st=host._st||(host._st={g:groups[0].group,q:''});if(keep&&keep.g)st.g=keep.g;
+  const draw=()=>{const g=groups.find(x=>x.group===st.g)||groups[0],q=st.q.toLowerCase();
+    const items=g.items.filter(i=>!q||i.label.toLowerCase().includes(q)||i.code.toLowerCase().includes(q)),canDrag=!q&&can('settings.edit');
+    host.innerHTML=`<div class="set-dd"><nav class="card grp-list" aria-label="กลุ่มตัวเลือก"><span class="cap">กลุ่มตัวเลือก</span>${groups.map(x=>`<button type="button" data-g="${x.group}" aria-current="${x.group===g.group}">${esc(x.label)}<span class="n">${x.items.length}</span></button>`).join('')}</nav>
+      <section class="card"><div class="card-head"><div><h3>${esc(g.label)}</h3><div class="cap">${esc(g.hint)}</div></div>
+        <div class="actions"><div class="iw"><span class="lead">${icon('search','s16')}</span><input class="input sm" id="ddQ" type="search" placeholder="ค้นหาตัวเลือก" aria-label="ค้นหาตัวเลือก" value="${esc(st.q)}" style="width:200px"></div>
+        ${can('settings.edit')?`<button type="button" class="btn primary sm" id="ddAdd">${icon('plus','s16')}เพิ่มตัวเลือก</button>`:''}</div></div>
+      <div class="tbl-wrap">${items.length?`<table class="tbl stack"><thead><tr><th scope="col" style="width:44px"><span class="sr-only">ลำดับ</span></th><th scope="col">ชื่อตัวเลือก</th><th scope="col">รหัส</th><th scope="col">ถูกใช้งาน</th><th scope="col">สถานะ</th><th scope="col" class="r act">จัดการ</th></tr></thead>
+        <tbody>${items.map(i=>`<tr data-code="${esc(i.code)}" ${canDrag?'draggable="true"':''}><td class="nolabel"><button type="button" class="grip" data-grip="${esc(i.code)}" ${canDrag?'':'disabled'} aria-label="ลากหรือกดลูกศรขึ้นลงเพื่อเรียงลำดับ ${esc(i.label)}">${icon('grip','s16')}</button></td>
+          <td data-label="ชื่อตัวเลือก">${esc(i.label)}</td><td data-label="รหัส"><span class="mono">${esc(i.code)}</span></td>
+          <td data-label="ถูกใช้งาน" class="muted">${i.used?'ใช้ใน '+fmtN(i.used)+' รายการ':'ยังไม่ถูกใช้'}</td><td data-label="สถานะ">${UI.badge('active',i.active)}</td>
+          <td class="r nolabel act">${can('settings.edit')?`<button type="button" class="btn plain icon sm" data-edit="${esc(i.code)}" aria-label="แก้ไข ${esc(i.label)}">${icon('edit','s16')}</button><button type="button" class="btn plain icon sm" data-del="${esc(i.code)}" aria-label="ลบ ${esc(i.label)}" style="color:var(--danger)">${icon('trash','s16')}</button>`:''}</td></tr>`).join('')}</tbody></table>`
+        :UI.empty(q?'ไม่พบตัวเลือกที่ค้นหา':'ยังไม่มีตัวเลือก',q?'ลองเปลี่ยนคำค้นหา':'กดปุ่ม เพิ่มตัวเลือก เพื่อเริ่มต้น')}</div>
+      <div class="note">${icon('info','s16')}<span>ตัวเลือกที่ถูกใช้งานแล้วจะเปลี่ยนเป็น “ปิดใช้งาน” แทนการลบ เพื่อรักษาข้อมูลเดิม · ลากเพื่อเรียงลำดับการแสดงในหน้าบันทึก</span></div></section></div>`;
+    $$('[data-g]',host).forEach(b=>b.onclick=()=>{st.g=b.dataset.g;st.q='';draw()});
+    $('#ddQ',host).oninput=UI.debounce(e=>{st.q=e.target.value.trim();draw();const i=$('#ddQ',host);i.focus();i.setSelectionRange(i.value.length,i.value.length)},250);
+    if($('#ddAdd',host))$('#ddAdd',host).onclick=()=>ddModal_(g,null,reload);
+    $$('[data-edit]',host).forEach(b=>b.onclick=()=>ddModal_(g,g.items.find(i=>i.code===b.dataset.edit),reload));
+    $$('[data-del]',host).forEach(b=>b.onclick=()=>ddDelete_(g,g.items.find(i=>i.code===b.dataset.del),reload));
+    if(canDrag)ddDrag_(host,g,reload)};
+  const reload=()=>setDropdowns_(host,{g:st.g});
+  draw()}
+
+/* drag & drop, and ArrowUp / ArrowDown on the grip for keyboards */
+function ddDrag_(host,g,reload){
+  const tbody=$('tbody',host);if(!tbody)return;let dragged=null;
+  const save=async codes=>{try{await api('settings.dropdown.reorder',{group:g.group,codes},{loading:'กำลังบันทึกลำดับ'});UI.toast('บันทึกลำดับแล้ว')}
+    catch(e){UI.swalError('บันทึกลำดับไม่สำเร็จ',e.message)}reload()};
+  const order=()=>$$('tr[data-code]',tbody).map(tr=>tr.dataset.code);
+  tbody.addEventListener('dragstart',e=>{dragged=e.target.closest('tr');if(!dragged)return;dragged.classList.add('dragging');e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',dragged.dataset.code)});
+  tbody.addEventListener('dragover',e=>{const tr=e.target.closest('tr');if(!dragged||!tr||tr===dragged)return;e.preventDefault();
+    $$('.drop-above,.drop-below',tbody).forEach(x=>x.classList.remove('drop-above','drop-below'));const r=tr.getBoundingClientRect();tr.classList.add(e.clientY<r.top+r.height/2?'drop-above':'drop-below')});
+  tbody.addEventListener('drop',e=>{e.preventDefault();const tr=e.target.closest('tr');if(!dragged||!tr||tr===dragged)return;
+    tr.classList.contains('drop-above')?tr.before(dragged):tr.after(dragged);save(order())});
+  tbody.addEventListener('dragend',()=>{if(dragged)dragged.classList.remove('dragging');$$('.drop-above,.drop-below',tbody).forEach(x=>x.classList.remove('drop-above','drop-below'));dragged=null});
+  $$('[data-grip]',tbody).forEach(b=>b.onkeydown=e=>{if(e.key!=='ArrowUp'&&e.key!=='ArrowDown')return;e.preventDefault();
+    const tr=b.closest('tr'),to=e.key==='ArrowUp'?tr.previousElementSibling:tr.nextElementSibling;if(!to)return;
+    e.key==='ArrowUp'?to.before(tr):to.after(tr);b.focus();save(order())})}
+
+function ddModal_(g,item,done){
+  const isNew=!item;
+  const body=`<form id="ddForm" novalidate class="grid2">${V.field('label','ชื่อที่แสดง',{value:item?item.label:'',req:true,span:true,ph:'เช่น Trip.com'})}
+    ${V.field('code','รหัส',{value:item?item.code:'',req:true,mono:true,ro:!isNew,help:isNew?'ตัวพิมพ์ใหญ่ A-Z, 0-9 หรือ _ · แก้ไขภายหลังไม่ได้':'รหัสแก้ไขไม่ได้ เพราะถูกอ้างอิงในข้อมูลเดิม',attrs:'autocapitalize="characters"'})}
+    ${V.toggle('active','ใช้งาน',item?item.active:true,{help:'ปิดไว้ = ไม่แสดงในหน้าบันทึกใหม่'})}<button type="submit" hidden></button></form>`;
+  const m=UI.openModal({title:(isNew?'เพิ่มตัวเลือก · ':'แก้ไขตัวเลือก · ')+g.label,iconName:'sliders',size:'sm',body,
+    foot:`<span class="grow"></span><button type="button" class="btn" data-close>ยกเลิก</button><button type="button" class="btn primary" id="ddSave">${icon('check')}บันทึก</button>`});
+  const f=$('#ddForm',m.el);V.live(f);
+  if(isNew)$('#f-label',f).addEventListener('input',e=>{const c=$('#f-code',f);if(!c.dataset.touched)c.value=e.target.value.toUpperCase().replace(/[^A-Z0-9]+/g,'_').replace(/^_|_$/g,'').slice(0,20)});
+  if(isNew)$('#f-code',f).addEventListener('input',e=>{e.target.dataset.touched=1;e.target.value=e.target.value.toUpperCase()});
+  const save=async()=>{const v=V.form(f,{label:{label:'ชื่อที่แสดง',req:true,max:80},code:{label:'รหัส',req:true,pattern:/^[A-Z0-9_]{1,20}$/,hint:'ใช้ตัวพิมพ์ใหญ่ A-Z, 0-9 หรือ _ ไม่เกิน 20 ตัว'}});if(!v)return;
+    const data=isNew?{group:g.group,code:v.code,label:v.label,active:V.on(f,'active')}:{key:item.key,label:v.label,active:V.on(f,'active')};
+    try{await api('settings.dropdown.save',{data},{loading:'กำลังบันทึก'});m.close();UI.toast(isNew?'เพิ่มตัวเลือกแล้ว':'บันทึกตัวเลือกแล้ว','success',v.label);done()}
+    catch(e){if(e.field)V.setErr(f,e.field,e.message);else UI.swalError('บันทึกไม่สำเร็จ',e.message)}};
+  $('#ddSave',m.el).onclick=save;f.onsubmit=e=>{e.preventDefault();save()}}
+
+async function ddDelete_(g,item,done){
+  const used=item.used>0;
+  if(!await UI.swalConfirm(used?'ปิดใช้งานตัวเลือกนี้?':'ลบตัวเลือกนี้?',used?`"${item.label}" ถูกใช้ใน ${fmtN(item.used)} รายการ ระบบจะเปลี่ยนเป็นปิดใช้งานแทนการลบ`:`ลบ "${item.label}" ออกจาก${g.label}`,used?'ปิดใช้งาน':'ลบตัวเลือก'))return;
+  try{const r=await api('settings.dropdown.delete',{key:item.key},{loading:'กำลังบันทึก'});
+    r.deactivated?UI.toast('เปลี่ยนเป็นปิดใช้งานแล้ว','warning',`ถูกใช้ใน ${fmtN(r.used)} รายการ จึงไม่ลบ`):UI.toast('ลบตัวเลือกแล้ว','success',item.label);done()}
+  catch(e){UI.swalError('ทำรายการไม่สำเร็จ',e.message)}}
+
+/* ---------- ข้อมูลบริษัท ---------- */
+async function setCompany_(host){
+  let c;try{c=await api('settings.company.get')}catch(e){host.innerHTML=UI.empty('โหลดข้อมูลบริษัทไม่สำเร็จ',e.message);return}
+  const edit=can('settings.edit');
+  const vat=c.vatRate?`${c.vatRate}:${c.vatMode}`:'0:included';
+  const vatOpts=[['7:included','VAT 7% (รวมในราคา)'],['7:excluded','VAT 7% (แยกนอกราคา)'],['0:included','ไม่คิด VAT']];
+  if(!vatOpts.some(o=>o[0]===vat))vatOpts.unshift([vat,`VAT ${c.vatRate}% (${c.vatMode==='excluded'?'แยกนอกราคา':'รวมในราคา'})`]);
+  host.innerHTML=`<form class="card" id="coForm" novalidate>
+    <div class="form-sec"><h3>โลโก้บริษัท</h3><div class="logo-row"><span class="logo-box" id="logoBox">${c.logoFileId?`<img src="${UI.driveImage(c.logoFileId,160)}" alt="โลโก้ปัจจุบัน">`:esc((c.hotelName||'H').replace(/^โรงแรม\s*/,'').charAt(0))}</span>
+      ${edit?`<label class="drop" id="logoDrop">${icon('upload')}<span><span>ลากไฟล์มาวาง หรือ <a href="#" id="logoPick">เลือกไฟล์</a></span><span class="cap" style="display:block">PNG, JPG ไม่เกิน 5 MB · ระบบย่อเหลือ 256 px ให้อัตโนมัติ</span></span><input type="file" id="logoFile" accept="image/png,image/jpeg,image/webp" hidden></label>`:''}</div>
+      <p class="cap" style="margin:0">โลโก้จะแสดงที่เมนูด้านซ้ายและหัวใบเสร็จ</p></div>
+    <div class="form-sec"><h3>ข้อมูลบริษัท</h3><div class="grid2">
+      ${V.field('companyName','ชื่อบริษัท (ตามจดทะเบียน)',{value:c.companyName,req:true})}${V.field('hotelName','ชื่อโรงแรม',{value:c.hotelName,req:true})}
+      ${V.field('taxId','เลขประจำตัวผู้เสียภาษี',{value:c.taxId,type:'taxId',mono:true,help:'13 หลัก · เก็บเป็นข้อความ'})}${V.field('branch','สาขา',{value:c.branch,ph:'สำนักงานใหญ่ หรือ สาขาที่ 00001',attrs:'list="branchList"'})}
+      ${V.textarea('address','ที่อยู่',{value:c.address,span:true})}</div>
+      <div class="grid3">${V.field('phone','โทรศัพท์',{value:c.phone,type:'phone',mono:true,help:'รักษาเลข 0 นำหน้าอัตโนมัติ'})}${V.field('email','อีเมล',{value:c.email,type:'email'})}${V.field('website','เว็บไซต์',{value:c.website})}</div></div>
+    <div class="form-sec"><h3>ค่าเริ่มต้นเอกสารและการเข้าพัก</h3><div class="grid3">
+      ${V.select('vat','ภาษีมูลค่าเพิ่ม',vatOpts,vat)}${V.field('receiptPattern','รูปแบบเลขที่ใบเสร็จ',{value:c.receiptPattern,mono:true,help:'{YYYYMM} = ปีเดือน · {####} = เลขลำดับ'})}${V.select('currency','สกุลเงิน',[['THB','บาท (฿)']],c.currency||'THB')}
+      ${V.field('checkInTime','เวลาเช็คอิน',{value:c.checkInTime,type:'time'})}${V.field('checkOutTime','เวลาเช็คเอาท์',{value:c.checkOutTime,type:'time'})}</div></div>
+    ${edit?`<div class="modal-foot"><span class="grow"></span><button type="button" class="btn" id="coReset">ยกเลิก</button><button type="submit" class="btn primary">${icon('check')}บันทึกข้อมูลบริษัท</button></div>`:''}
+    <datalist id="branchList"><option value="สำนักงานใหญ่"></datalist></form>`;
+  const f=$('#coForm',host);V.live(f);
+  if(!edit){$$('input,textarea,select',f).forEach(x=>x.disabled=true);return}
+  $('#coReset',f).onclick=()=>setCompany_(host);
+  f.onsubmit=async e=>{e.preventDefault();
+    const v=V.form(f,{companyName:{label:'ชื่อบริษัท',req:true,max:150},hotelName:{label:'ชื่อโรงแรม',req:true,max:150},taxId:{label:'เลขประจำตัวผู้เสียภาษี',type:'taxId'},
+      branch:{label:'สาขา',max:60},address:{label:'ที่อยู่',max:400},phone:{label:'โทรศัพท์',type:'phone'},email:{label:'อีเมล',type:'email'},website:{label:'เว็บไซต์',max:150},
+      receiptPattern:{label:'รูปแบบเลขที่ใบเสร็จ',req:true,pattern:/^[A-Z]{2,4}-(\{YYYYMM\}-)?\{#{3,6}\}$/,hint:'ใช้รูปแบบ RC-{YYYYMM}-{####}'},
+      checkInTime:{label:'เวลาเช็คอิน',type:'time'},checkOutTime:{label:'เวลาเช็คเอาท์',type:'time'}});if(!v)return;
+    const [rate,mode]=V.val(f,'vat').split(':');Object.assign(v,{vatRate:Number(rate),vatMode:mode,currency:V.val(f,'currency')});
+    try{await api('settings.company.save',{data:v},{loading:'กำลังบันทึกข้อมูลบริษัท'});UI.swalSuccess('บันทึกข้อมูลบริษัทแล้ว','ข้อมูลใหม่จะใช้กับใบเสร็จที่ออกหลังจากนี้')}
+    catch(err){if(err.field)V.setErr(f,err.field,err.message);else UI.swalError('บันทึกไม่สำเร็จ',err.message)}};
+  const drop=$('#logoDrop',f),input=$('#logoFile',f);
+  $('#logoPick',f).onclick=e=>{e.preventDefault();input.click()};
+  drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('over')});drop.addEventListener('dragleave',()=>drop.classList.remove('over'));
+  drop.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('over');e.dataTransfer.files[0]&&upload(e.dataTransfer.files[0])});
+  input.onchange=()=>input.files[0]&&upload(input.files[0]);
+  async function upload(file){
+    if(!/^image\/(png|jpeg|webp)$/.test(file.type))return UI.swalError('ไฟล์ไม่ถูกต้อง','โลโก้ต้องเป็นไฟล์ PNG หรือ JPG');
+    if(file.size>5*1024*1024)return UI.swalError('ไฟล์ใหญ่เกินไป','โลโก้ต้องไม่เกิน 5 MB');
+    if(App.demo)return UI.swalInfo('โหมดทดลองไม่บันทึกไฟล์','การอัปโหลดโลโก้ใช้ได้เมื่อติดตั้งระบบจริง');
+    try{UI.showLoading('กำลังอัปโหลดโลโก้');const img=await UI.imageToBase64(file,256);const r=await api('settings.company.logo',{file:img},{loading:false});
+      $('#logoBox',f).innerHTML=`<img src="data:${img.mime};base64,${img.data}" alt="โลโก้ใหม่">`;UI.toast('อัปโหลดโลโก้แล้ว','success',r.logoFileId?'แสดงที่เมนูและใบเสร็จ':'')}
+    catch(e){UI.swalError('อัปโหลดไม่สำเร็จ',e.message)}finally{UI.hideLoading();input.value=''}}}
+
+/* ---------- ผู้ใช้งาน ---------- */
+async function setUsers_(host){
+  let users;try{users=await api('user.list')}catch(e){host.innerHTML=UI.empty('โหลดผู้ใช้งานไม่สำเร็จ',e.message);return}
+  const st=host._st||(host._st={q:'',page:1});
+  const draw=()=>{const q=st.q.toLowerCase(),rows=users.filter(u=>!q||(u.fullName+' '+u.username+' '+u.email).toLowerCase().includes(q));
+    const ps=10,pages=Math.max(1,Math.ceil(rows.length/ps));st.page=Math.min(st.page,pages);const slice=rows.slice((st.page-1)*ps,st.page*ps);
+    host.innerHTML=`<section class="card"><div class="card-head"><div><h3>ผู้ใช้งานระบบ</h3><div class="cap">${users.length} บัญชี · สิทธิ์ตามบทบาท</div></div>
+      <div class="actions"><div class="iw"><span class="lead">${icon('search','s16')}</span><input class="input sm" id="usQ" type="search" placeholder="ค้นหาชื่อหรือชื่อผู้ใช้" aria-label="ค้นหาชื่อหรือชื่อผู้ใช้" value="${esc(st.q)}" style="width:220px"></div>
+      ${can('user.edit')?`<button type="button" class="btn primary sm" id="usAdd">${icon('plus','s16')}เพิ่มผู้ใช้</button>`:''}</div></div>
+      <div class="tbl-wrap">${slice.length?`<table class="tbl stack"><thead><tr><th scope="col">ชื่อ-นามสกุล</th><th scope="col">ชื่อผู้ใช้</th><th scope="col">บทบาท</th><th scope="col">โทรศัพท์</th><th scope="col">เข้าใช้ล่าสุด</th><th scope="col">สถานะ</th><th scope="col" class="act"><span class="sr-only">จัดการ</span></th></tr></thead><tbody>${slice.map(u=>`<tr>
+        <td data-label="ชื่อ-นามสกุล" class="nolabel"><span class="who-cell"><span class="avatar" aria-hidden="true">${esc(initials(u.fullName))}</span><span><b>${esc(u.fullName)}</b><span class="cap">${esc(u.email||'-')}</span></span></span></td>
+        <td data-label="ชื่อผู้ใช้"><span class="mono">${esc(u.username)}</span>${u.userId===App.user.userId?' <span class="cap">(คุณ)</span>':''}</td>
+        <td data-label="บทบาท"><span class="badge ${ROLE_TONE[u.role]||''}">${esc(ROLE_LABEL[u.role]||u.role)}</span></td>
+        <td data-label="โทรศัพท์"><span class="mono">${esc(u.phone||'-')}</span></td><td data-label="เข้าใช้ล่าสุด">${u.lastLoginAt?fmtDT(u.lastLoginAt):'<span class="muted">ยังไม่เคยเข้าใช้</span>'}</td>
+        <td data-label="สถานะ">${UI.badge('user',u.status)}</td>
+        <td class="r nolabel act">${can('user.edit')?`<button type="button" class="btn plain icon sm" data-act="${esc(u.userId)}" aria-label="จัดการผู้ใช้ ${esc(u.fullName)}">${icon('more')}</button>`:''}</td></tr>`).join('')}</tbody></table>`
+        :UI.empty('ไม่พบผู้ใช้ที่ค้นหา','ลองเปลี่ยนคำค้นหา')}</div><div class="pager" id="usPager"></div></section>`;
+    UI.pager($('#usPager',host),{page:st.page,pageSize:ps,total:rows.length,onPage:p=>{st.page=p;draw()}});
+    $('#usQ',host).oninput=UI.debounce(e=>{st.q=e.target.value.trim();st.page=1;draw();const i=$('#usQ',host);i.focus();i.setSelectionRange(i.value.length,i.value.length)},250);
+    if($('#usAdd',host))$('#usAdd',host).onclick=()=>userModal_(null,reload);
+    $$('[data-act]',host).forEach(b=>b.onclick=()=>{const u=users.find(x=>x.userId===b.dataset.act),self=u.userId===App.user.userId;
+      UI.openMenu(b,[{icon:'edit',label:'แก้ไขข้อมูล',onClick:()=>userModal_(u,reload)},
+        {icon:'key',label:'รีเซ็ตรหัสผ่าน',onClick:()=>userReset_(u)},
+        ...(self?[]:['-',u.status==='active'?{icon:'ban',label:'ระงับการใช้งาน',danger:true,onClick:()=>userStatus_(u,'suspended',reload)}:{icon:'check',label:'เปิดใช้งาน',onClick:()=>userStatus_(u,'active',reload)}])])})};
+  const reload=()=>setUsers_(host);
+  draw()}
+
+function userModal_(u,done){
+  const isNew=!u,self=u&&u.userId===App.user.userId;
+  const body=`<form id="usForm" novalidate class="grid2">${V.field('fullName','ชื่อ-นามสกุล',{value:u?u.fullName:'',req:true,span:true})}
+    ${V.field('username','ชื่อผู้ใช้',{value:u?u.username:'',req:true,mono:true,help:'a-z, 0-9, จุด, ขีด 3–30 ตัว',attrs:'autocapitalize="none" spellcheck="false"'})}${V.field('phone','โทรศัพท์',{value:u?u.phone:'',type:'phone',mono:true})}
+    ${V.field('email','อีเมล',{value:u?u.email:'',type:'email',span:true})}
+    ${V.select('role','บทบาท',ROLES_OPTS_(),u?u.role:'FrontDesk',{help:self?'เปลี่ยนบทบาทของตัวเองไม่ได้':'',attrs:self?'disabled':''})}
+    ${isNew?'':V.select('status','สถานะ',[['active','ใช้งาน'],['suspended','ระงับ']],u.status,{attrs:self?'disabled':''})}<button type="submit" hidden></button></form>
+    ${isNew?`<div class="banner info">${icon('key')}<span class="grow">รหัสผ่านเริ่มต้นคือ <strong>1234</strong> ให้ผู้ใช้เปลี่ยนรหัสผ่านหลังเข้าสู่ระบบครั้งแรก</span></div>`:''}`;
+  const m=UI.openModal({title:isNew?'เพิ่มผู้ใช้':'แก้ไขผู้ใช้ · '+u.fullName,iconName:'user',body,
+    foot:`<span class="grow"></span><button type="button" class="btn" data-close>ยกเลิก</button><button type="button" class="btn primary" id="usSave">${icon('check')}บันทึก</button>`});
+  const f=$('#usForm',m.el);V.live(f);
+  const save=async()=>{const v=V.form(f,{fullName:{label:'ชื่อ-นามสกุล',req:true,max:120},username:{label:'ชื่อผู้ใช้',req:true,pattern:/^[a-z0-9._-]{3,30}$/i,hint:'ใช้ a-z, 0-9, จุด, ขีด ความยาว 3–30 ตัว'},
+      phone:{label:'โทรศัพท์',type:'phone'},email:{label:'อีเมล',type:'email'}});if(!v)return;
+    const data=Object.assign(v,{userId:u?u.userId:'',role:V.val(f,'role'),status:isNew?'active':V.val(f,'status')});
+    try{const r=await api('user.save',{data},{loading:'กำลังบันทึก'});m.close();
+      isNew?UI.swalSuccess('เพิ่มผู้ใช้แล้ว',`ชื่อผู้ใช้ ${v.username.toLowerCase()} · รหัสผ่านเริ่มต้น ${r.password}`):UI.toast('บันทึกผู้ใช้แล้ว','success',v.fullName);done()}
+    catch(e){if(e.field)V.setErr(f,e.field,e.message);else UI.swalError('บันทึกไม่สำเร็จ',e.message)}};
+  $('#usSave',m.el).onclick=save;f.onsubmit=e=>{e.preventDefault();save()}}
+const ROLES_OPTS_=()=>['Owner','Admin','Accounting','FrontDesk'].map(r=>[r,ROLE_LABEL[r]+' — '+ROLE_HELP[r].split(' — ')[1]]);
+
+async function userReset_(u){
+  if(!await UI.swalConfirm('รีเซ็ตรหัสผ่าน?',`รหัสผ่านของ ${u.fullName} จะกลับเป็นค่าเริ่มต้น`,'รีเซ็ตรหัสผ่าน',false))return;
+  try{const r=await api('user.resetPassword',{userId:u.userId},{loading:'กำลังรีเซ็ต'});UI.swalSuccess('รีเซ็ตรหัสผ่านแล้ว',`รหัสผ่านใหม่ของ ${u.username} คือ ${r.password} ให้เปลี่ยนหลังเข้าสู่ระบบ`)}
+  catch(e){UI.swalError('รีเซ็ตไม่สำเร็จ',e.message)}}
+
+async function userStatus_(u,status,done){
+  const off=status==='suspended';
+  if(off&&!await UI.swalConfirm('ระงับการใช้งาน?',`${u.fullName} จะเข้าสู่ระบบไม่ได้ทันที (ประวัติการใช้งานยังอยู่ครบ)`,'ระงับการใช้งาน'))return;
+  try{await api('user.save',{data:Object.assign({},u,{status})},{loading:'กำลังบันทึก'});UI.toast(off?'ระงับการใช้งานแล้ว':'เปิดใช้งานแล้ว',off?'warning':'success',u.fullName);done()}
+  catch(e){UI.swalError('ทำรายการไม่สำเร็จ',e.message)}}
+</script>

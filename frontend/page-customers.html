@@ -1,0 +1,143 @@
+<script>
+/* page-customers.html — ข้อมูลลูกค้า (design/Customers.dc.html).
+ * Server-side list: search, filters that exist in the data (with counts), sort, page size from the card height.
+ * Row actions in the portal dropdown. Excel import / export with SheetJS in the browser; phone and tax id are
+ * written and read as text so a leading 0 survives. */
+const CU_HEAD={'รหัส':'customerId','ชื่อ-นามสกุล / บริษัท':'name','ชื่อ-นามสกุล':'name','ชื่อ':'name','ชื่อลูกค้า':'name','ประเภท':'type','ประเภทลูกค้า':'type',
+  'สัญชาติ':'nationality','โทรศัพท์':'phone','เบอร์โทร':'phone','อีเมล':'email','เลขประจำตัวผู้เสียภาษี':'taxId','ที่อยู่':'address','หมายเหตุ':'note'};
+const CU_TEMPLATE=['ชื่อ-นามสกุล / บริษัท','ประเภท','สัญชาติ','โทรศัพท์','อีเมล','เลขประจำตัวผู้เสียภาษี','ที่อยู่','หมายเหตุ'];
+const NATIONALITIES=['ไทย','จีน','ญี่ปุ่น','เกาหลีใต้','อังกฤษ','อเมริกา','เยอรมนี','ฝรั่งเศส','ออสเตรเลีย','มาเลเซีย','สิงคโปร์','ลาว','เมียนมา'];
+
+Pages.customers={render(el,params){
+  const st={q:'',filters:{},sort:{},page:1,pageSize:10};
+  el.innerHTML=pageHead('ข้อมูลลูกค้า','<span id="cuCount">&nbsp;</span>',
+      (can('customer.import')?`<button type="button" class="btn" id="cuImport">${icon('upload')}<span>นำเข้า Excel</span></button>`:'')+
+      (can('customer.export')?`<button type="button" class="btn" id="cuExport">${icon('download')}<span>ส่งออก Excel</span></button>`:'')+
+      (can('customer.edit')?`<button type="button" class="btn primary" id="cuAdd">${icon('plus')}<span>เพิ่มลูกค้า</span></button>`:''))+
+    `<section class="card" id="cuCard"><div class="filterbar"><div class="iw search"><span class="lead">${icon('search','s16')}</span><input class="input sm" id="cuQ" type="search" placeholder="ค้นหาชื่อ เบอร์โทร หรือรหัสลูกค้า" aria-label="ค้นหาชื่อ เบอร์โทร หรือรหัสลูกค้า"></div>
+      <select class="select sm" id="cuType" aria-label="ประเภทลูกค้า" style="width:auto"></select><select class="select sm" id="cuNat" aria-label="สัญชาติ" style="width:auto"></select><select class="select sm" id="cuLast" aria-label="เข้าพักล่าสุด" style="width:auto"></select>
+      <span class="grow"></span><span class="cap">ตัวเลือกแสดงเฉพาะค่าที่มีข้อมูล</span></div>
+      <div class="tbl-wrap" id="cuTable"></div><div class="pager" id="cuPager"></div></section>`;
+  const load=async()=>{let r;
+    try{r=await api('customer.list',{q:st.q,filters:st.filters,sort:st.sort,page:st.page,pageSize:st.pageSize},{loading:'กำลังโหลดรายชื่อลูกค้า'})}
+    catch(e){$('#cuTable',el).innerHTML=UI.empty('โหลดรายชื่อลูกค้าไม่สำเร็จ',e.message);return}
+    st.page=r.page;$('#cuCount',el).textContent=`${fmtN(r.count)} ราย · ใช้เลือกผู้เข้าพักในหน้าบันทึกรายได้และออกใบเสร็จ`;
+    const opt=(sel,label,list,cur)=>{sel.innerHTML=`<option value="">${label}: ทั้งหมด (${list.length})</option>`+list.map(o=>`<option value="${esc(o.value)}" ${o.value===cur?'selected':''}>${esc(o.label)} (${fmtN(o.count)})</option>`).join('')};
+    opt($('#cuType',el),'ประเภท',r.options.type,st.filters.type);opt($('#cuNat',el),'สัญชาติ',r.options.nationality,st.filters.nationality);
+    $('#cuLast',el).innerHTML=`<option value="">เข้าพักล่าสุด: ทุกช่วง</option>`+r.options.lastStay.map(o=>`<option value="${o.value}" ${o.value===st.filters.lastStay?'selected':''}>${esc(o.label)} (${fmtN(o.count)})</option>`).join('');
+    drawTable(r)};
+  const th=(key,label,cls='')=>{const on=st.sort.key===key;return`<th scope="col" class="${cls}" ${on?`aria-sort="${st.sort.dir==='asc'?'ascending':'descending'}"`:''}><button type="button" class="sort-btn" data-sort="${key}">${label}${on?icon(st.sort.dir==='asc'?'chevu':'chevd','s16'):''}</button></th>`};
+  const drawTable=r=>{const host=$('#cuTable',el);
+    if(!r.rows.length){host.innerHTML=r.count?UI.empty('ไม่พบลูกค้าที่ตรงกับตัวกรอง','ลองเปลี่ยนคำค้นหาหรือล้างตัวกรอง',`<button type="button" class="btn" id="cuClear">ล้างตัวกรอง</button>`)
+      :UI.empty('ยังไม่มีข้อมูลลูกค้า','เพิ่มลูกค้าทีละราย หรือนำเข้าจากไฟล์ Excel');$('#cuPager',el).innerHTML='';
+      if($('#cuClear',el))$('#cuClear',el).onclick=()=>{st.q='';st.filters={};$('#cuQ',el).value='';st.page=1;load()};return}
+    host.innerHTML=`<table class="tbl stack"><thead><tr>${th('customerId','รหัส')}${th('name','ชื่อ-นามสกุล / บริษัท')}<th scope="col">โทรศัพท์</th><th scope="col">ประเภท</th><th scope="col">สัญชาติ</th>${th('stays','เข้าพัก','r')}${th('spent','ยอดใช้จ่ายรวม','r')}${th('lastStay','ล่าสุด')}<th scope="col" class="act"><span class="sr-only">จัดการ</span></th></tr></thead>
+      <tbody>${r.rows.map((c,i)=>`<tr><td data-label="รหัส"><span class="mono">${esc(c.customerId)}</span></td>
+        <td data-label="ชื่อ" class="wrap"><span><b style="font-weight:500">${esc(c.name)}</b>${c.email?`<span class="cap" style="display:block">${esc(c.email)}</span>`:''}</span></td>
+        <td data-label="โทรศัพท์"><span class="mono">${esc(c.phone||'-')}</span></td><td data-label="ประเภท">${custTypeBadge_(c.type)}</td><td data-label="สัญชาติ">${esc(c.nationality||'-')}</td>
+        <td data-label="เข้าพัก" class="r">${fmtN(c.stays)}</td><td data-label="ยอดใช้จ่ายรวม" class="r">${fmtM(c.spent)}</td><td data-label="ล่าสุด">${c.lastStay?fmtD(c.lastStay):'<span class="muted">-</span>'}</td>
+        <td class="r nolabel act"><button type="button" class="btn plain icon sm" data-i="${i}" aria-haspopup="menu" aria-label="จัดการ ${esc(c.name)}">${icon('more')}</button></td></tr>`).join('')}</tbody></table>`;
+    UI.pager($('#cuPager',el),{page:r.page,pageSize:r.pageSize,total:r.total,onPage:p=>{st.page=p;load()}});
+    $$('[data-sort]',host).forEach(b=>b.onclick=()=>{const k=b.dataset.sort;st.sort=st.sort.key===k?{key:k,dir:st.sort.dir==='asc'?'desc':'asc'}:{key:k,dir:k==='name'?'asc':'desc'};st.page=1;load()});
+    $$('[data-i]',host).forEach(b=>b.onclick=()=>{const c=r.rows[+b.dataset.i];UI.openMenu(b,[
+      {icon:'history',label:'ประวัติการเข้าพัก',onClick:()=>custHistory_(c)},
+      ...(can('customer.edit')?[{icon:'edit',label:'แก้ไขข้อมูล',onClick:()=>custModal_(c,load)}]:[]),
+      ...(can('receipt.create')?[{icon:'receipt',label:'ออกใบเสร็จ',onClick:()=>go('receipts',{customerId:c.customerId})}]:[]),
+      ...(can('customer.delete')?['-',{icon:'trash',label:'ลบลูกค้า',danger:true,onClick:()=>custDelete_(c,load)}]:[])])})};
+  $('#cuQ',el).oninput=UI.debounce(e=>{st.q=e.target.value.trim();st.page=1;load()},400);
+  $('#cuType',el).onchange=e=>{st.filters.type=e.target.value;st.page=1;load()};
+  $('#cuNat',el).onchange=e=>{st.filters.nationality=e.target.value;st.page=1;load()};
+  $('#cuLast',el).onchange=e=>{st.filters.lastStay=e.target.value;st.page=1;load()};
+  if($('#cuAdd',el))$('#cuAdd',el).onclick=()=>custModal_(null,load);
+  if($('#cuExport',el))$('#cuExport',el).onclick=custExport_;
+  if($('#cuImport',el))$('#cuImport',el).onclick=()=>custImport_(load);
+  st.pageSize=UI.pageSizeFor($('#cuCard',el),{header:58+44,rowHeight:61});
+  load();
+  if(params.add&&can('customer.edit'))custModal_(null,load)}};
+
+const CUST_TONE={GEN:'',VIP:'primary',CORP:'info',OTA:'warning'};
+const custTypeBadge_=t=>`<span class="badge ${CUST_TONE[t]??''}">${esc(Master.label('custtype',t)||'-')}</span>`;
+
+function custModal_(c,done){
+  const isNew=!c,types=Master.options('custtype').map(o=>[o.code,o.label]);
+  if(c&&!types.some(t=>t[0]===c.type))types.push([c.type,Master.label('custtype',c.type)]);
+  const body=`<form id="cuForm" novalidate class="grid2">${V.field('name','ชื่อ-นามสกุล / บริษัท',{value:c?c.name:'',req:true,span:true,ph:'เช่น คุณสมชาย ใจดี หรือ บริษัท ตัวอย่าง จำกัด'})}
+    ${V.select('type','ประเภทลูกค้า',types,c?c.type:'GEN')}${V.field('nationality','สัญชาติ',{value:c?c.nationality:'ไทย',attrs:'list="natList"'})}
+    ${V.field('phone','โทรศัพท์',{value:c?c.phone:'',type:'phone',mono:true,ph:'081-234-5678',help:'รักษาเลข 0 นำหน้าอัตโนมัติ'})}${V.field('email','อีเมล',{value:c?c.email:'',type:'email'})}
+    ${V.field('taxId','เลขประจำตัวผู้เสียภาษี',{value:c?c.taxId:'',type:'taxId',mono:true,help:'13 หลัก · ใช้ออกใบกำกับภาษีเต็มรูป',span:true})}
+    ${V.textarea('address','ที่อยู่',{value:c?c.address:'',span:true})}${V.textarea('note','หมายเหตุ',{value:c?c.note:'',span:true,ph:'เช่น ชอบห้องชั้นบน แพ้อาหารทะเล'})}
+    <datalist id="natList">${NATIONALITIES.map(n=>`<option value="${n}">`).join('')}</datalist><button type="submit" hidden></button></form>`;
+  const m=UI.openModal({title:isNew?'เพิ่มลูกค้า':'แก้ไขลูกค้า · '+c.customerId,iconName:'users',body,
+    foot:`<span class="grow"></span><button type="button" class="btn" data-close>ยกเลิก</button><button type="button" class="btn primary" id="cuSave">${icon('check')}บันทึก</button>`});
+  const f=$('#cuForm',m.el);V.live(f);
+  const save=async()=>{const v=V.form(f,{name:{label:'ชื่อลูกค้า',req:true,max:150},nationality:{label:'สัญชาติ',max:60},phone:{label:'โทรศัพท์',type:'phone'},
+      email:{label:'อีเมล',type:'email'},taxId:{label:'เลขประจำตัวผู้เสียภาษี',type:'taxId'},address:{label:'ที่อยู่',max:400},note:{label:'หมายเหตุ',max:500}});if(!v)return;
+    v.type=V.val(f,'type');if(c)v.customerId=c.customerId;
+    try{const r=await api('customer.save',{data:v},{loading:'กำลังบันทึกข้อมูลลูกค้า'});m.close();
+      UI.swalSuccess(isNew?'เพิ่มลูกค้าแล้ว':'บันทึกข้อมูลลูกค้าแล้ว',`รหัสลูกค้า ${r.customerId} · ${r.name}`);done&&done(r)}
+    catch(e){if(e.field)V.setErr(f,e.field,e.message);else UI.swalError('บันทึกไม่สำเร็จ',e.message)}};
+  $('#cuSave',m.el).onclick=save;f.onsubmit=e=>{e.preventDefault();save()}}
+
+async function custHistory_(c){
+  let d;try{d=await api('customer.get',{customerId:c.customerId},{loading:'กำลังโหลดประวัติ'})}catch(e){UI.swalError('โหลดประวัติไม่สำเร็จ',e.message);return}
+  const body=`<div class="summary"><div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap"><span><b style="font-weight:600">${esc(d.name)}</b> · <span class="mono">${esc(d.customerId)}</span></span><span class="mono">${esc(d.phone||'')}</span></div>
+      <div class="cap">เข้าพัก ${fmtN(d.stays)} ครั้ง · ยอดรวม ${fmtM(d.spent)}${d.lastStay?' · ล่าสุด '+fmtD(d.lastStay):''}</div></div>
+    ${d.history.length?`<div class="tbl-wrap"><table class="tbl stack"><thead><tr><th scope="col">เลขที่</th><th scope="col">ห้อง</th><th scope="col">เข้าพัก</th><th scope="col" class="r">คืน</th><th scope="col" class="r">ยอดรวม</th><th scope="col">สถานะ</th></tr></thead><tbody>
+      ${d.history.map(h=>`<tr><td data-label="เลขที่"><span class="mono">${esc(h.docNo)}</span></td><td data-label="ห้อง">${esc(h.typeCode)} ${esc(h.roomNo)}</td><td data-label="เข้าพัก">${fmtD(h.checkIn)} – ${fmtD(h.checkOut)}</td>
+        <td data-label="คืน" class="r">${h.nights}</td><td data-label="ยอดรวม" class="r">${fmtM(h.total)}</td><td data-label="สถานะ">${UI.badge('pay',h.payStatus)}</td></tr>`).join('')}</tbody></table></div>`
+      :UI.empty('ยังไม่มีประวัติการเข้าพัก','การจองของลูกค้ารายนี้จะแสดงที่นี่')}`;
+  UI.openModal({title:'ประวัติการเข้าพัก',iconName:'history',size:'lg',body,foot:`<span class="grow"></span><button type="button" class="btn" data-close>ปิด</button>`})}
+
+async function custDelete_(c,done){
+  if(!await UI.swalConfirm('ลบลูกค้า?',`ลบ ${c.name} (${c.customerId}) ออกจากระบบ ลูกค้าที่มีประวัติการเข้าพักจะลบไม่ได้`,'ลบลูกค้า'))return;
+  try{await api('customer.delete',{customerId:c.customerId},{loading:'กำลังลบ'});UI.toast('ลบลูกค้าแล้ว','success',c.name);done()}
+  catch(e){UI.swalError('ลบลูกค้าไม่สำเร็จ',e.message)}}
+
+/* ---------- Excel ---------- */
+/* phone and tax id cells are written as text (t:'s'), so Excel keeps the leading 0 */
+function xlsxSheet_(XLSX,headers,rows,textCols){
+  const ws=XLSX.utils.aoa_to_sheet([headers].concat(rows));
+  rows.forEach((r,i)=>textCols.forEach(c=>{const ref=XLSX.utils.encode_cell({r:i+1,c});if(ws[ref]&&r[c]!==''&&r[c]!=null){ws[ref].t='s';ws[ref].v=String(r[c]);ws[ref].z='@'}}));
+  ws['!cols']=headers.map(h=>({wch:Math.max(10,String(h).length+4)}));return ws}
+
+async function custExport_(){
+  try{UI.showLoading('กำลังเตรียมไฟล์ Excel');
+    const [d,XLSX]=await Promise.all([api('customer.export',{},{loading:false}),UI.xlsx()]);
+    const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,xlsxSheet_(XLSX,d.headers,d.rows,[4,6]),'ลูกค้า');
+    XLSX.writeFile(wb,`customers-${TODAY.replace(/-/g,'')}.xlsx`);UI.toast('ส่งออกไฟล์แล้ว','success',`${fmtN(d.rows.length)} รายการ · customers-${TODAY.replace(/-/g,'')}.xlsx`)}
+  catch(e){UI.swalError('ส่งออกไม่สำเร็จ',e.message)}finally{UI.hideLoading()}}
+
+function custImport_(done){
+  const m=UI.openModal({title:'นำเข้าลูกค้าจาก Excel',iconName:'upload',body:`
+    <ol style="margin:0;padding-left:20px;font-size:14px;display:flex;flex-direction:column;gap:6px">
+      <li>ดาวน์โหลดแบบฟอร์ม แล้วกรอกลูกค้าหนึ่งรายต่อหนึ่งแถว (ชื่อจำเป็นต้องมี)</li>
+      <li>ตั้งคอลัมน์ โทรศัพท์ และ เลขประจำตัวผู้เสียภาษี เป็นข้อความ (Text) เพื่อรักษาเลข 0 นำหน้า</li>
+      <li>ลูกค้าที่เบอร์โทรซ้ำกับที่มีอยู่แล้วจะถูกข้าม ไม่สร้างซ้ำ</li></ol>
+    <div class="actions"><button type="button" class="btn" id="imTpl">${icon('download')}ดาวน์โหลดแบบฟอร์ม</button>
+      <label class="btn primary" style="cursor:pointer">${icon('file')}เลือกไฟล์ Excel<input type="file" id="imFile" accept=".xlsx,.xls,.csv" hidden></label></div>
+    <div id="imResult"></div>`,foot:`<span class="grow"></span><button type="button" class="btn" data-close>ยกเลิก</button><button type="button" class="btn primary" id="imGo" disabled>${icon('check')}นำเข้า</button>`});
+  let rows=null;
+  $('#imTpl',m.el).onclick=async()=>{try{UI.showLoading('กำลังเตรียมแบบฟอร์ม');const XLSX=await UI.xlsx(),wb=XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb,xlsxSheet_(XLSX,CU_TEMPLATE,[['คุณสมชาย ใจดี','ทั่วไป','ไทย','0812345678','somchai@example.com','','เชียงใหม่','']],[3,5]),'ลูกค้า');
+      XLSX.writeFile(wb,'customer-import-template.xlsx')}catch(e){UI.swalError('ดาวน์โหลดไม่สำเร็จ',e.message)}finally{UI.hideLoading()}};
+  $('#imFile',m.el).onchange=async e=>{const file=e.target.files[0];if(!file)return;
+    try{UI.showLoading('กำลังอ่านไฟล์');const XLSX=await UI.xlsx(),wb=XLSX.read(await file.arrayBuffer(),{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]],grid=XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:''});
+      const head=(grid[0]||[]).map(h=>CU_HEAD[String(h).trim()]||'');
+      if(!head.includes('name'))throw new Error('ไม่พบคอลัมน์ "ชื่อ-นามสกุล / บริษัท" — กรุณาใช้แบบฟอร์มนำเข้า');
+      rows=grid.slice(1).filter(r=>r.some(x=>String(x).trim())).map(r=>{const o={};head.forEach((k,i)=>{if(k&&k!=='customerId')o[k]=String(r[i]??'').trim()});
+        /* Excel dropped the leading 0 of a phone stored as a number */
+        if(/^[689][0-9]{7,8}$/.test(o.phone||''))o.phone='0'+o.phone;return o});
+      const r=await api('customer.import',{rows,check:true},{loading:'กำลังตรวจสอบข้อมูล'});showResult(r)}
+    catch(err){$('#imResult',m.el).innerHTML=`<div class="banner warning">${icon('alert')}<span class="grow">${esc(err.message)}</span></div>`;$('#imGo',m.el).disabled=true}
+    finally{UI.hideLoading();e.target.value=''}};
+  const showResult=r=>{const probs=r.errors.map(x=>`<div><b>แถว ${x.row}</b> — ${esc(x.message)}</div>`).concat(r.skipped.map(x=>`<div class="muted"><b>แถว ${x.row}</b> — ข้าม: ${esc(x.message)}</div>`));
+    $('#imResult',m.el).innerHTML=`<div class="import-sum"><div><b class="num" style="color:var(--success)">${fmtN(r.valid)}</b>พร้อมนำเข้า</div><div><b class="num" style="color:var(--danger)">${fmtN(r.errors.length)}</b>ข้อมูลไม่ถูกต้อง</div><div><b class="num">${fmtN(r.skipped.length)}</b>ซ้ำ ข้าม</div></div>
+      ${probs.length?`<div class="err-list" style="margin-top:12px">${probs.slice(0,50).join('')}${probs.length>50?`<div class="muted">และอีก ${probs.length-50} รายการ</div>`:''}</div>`:''}
+      ${r.errors.length&&r.valid?`<p class="cap" style="margin:8px 0 0">แถวที่ไม่ถูกต้องจะไม่ถูกนำเข้า แก้ไขในไฟล์แล้วนำเข้าเฉพาะแถวนั้นอีกครั้งได้</p>`:''}`;
+    const go=$('#imGo',m.el);go.disabled=!r.valid;go.innerHTML=icon('check')+(r.valid?`นำเข้า ${fmtN(r.valid)} รายการ`:'นำเข้า')};
+  $('#imGo',m.el).onclick=async()=>{if(!rows)return;
+    try{const r=await api('customer.import',{rows},{loading:'กำลังนำเข้าข้อมูล'});m.close();
+      UI.swalSuccess(`นำเข้าลูกค้าแล้ว ${fmtN(r.added)} ราย`,r.added?`รหัส ${r.first} ถึง ${r.last}`+(r.errors.length?` · ไม่ถูกต้อง ${r.errors.length} แถว`:''):'ไม่มีแถวที่นำเข้าได้');done()}
+    catch(e){UI.swalError('นำเข้าไม่สำเร็จ',e.message)}}}
+</script>

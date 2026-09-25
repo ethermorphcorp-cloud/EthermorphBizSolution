@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ระบบบริหารโรงแรม</title>
+<?!= include('frontend/css'); ?>
+</head>
+<body>
+<div id="root"></div>
+<div id="toasts" class="toasts" aria-live="polite"></div>
+<script>var BOOT = <?!= JSON.stringify(boot).replace(/</g, '\\u003c') ?>;   /* shop, demo, hotelName, url — set by doGet */</script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.14.5/dist/sweetalert2.all.min.js"></script>
+<?!= include('frontend/js-core'); ?>
+<?!= include('frontend/js-validate'); ?>
+<?!= include('frontend/js-api'); ?>
+<?!= include('frontend/js-app'); ?>
+<?!= include('frontend/page-stub'); ?>
+<?!= include('frontend/page-settings'); ?>
+<?!= include('frontend/page-customers'); ?>
+<?!= include('frontend/page-roomtypes'); ?>
+<script>Shell.boot();</script>
+</body>
+</html>

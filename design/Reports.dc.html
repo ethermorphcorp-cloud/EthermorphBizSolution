@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>รายงาน</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:"Noto Sans Thai","Noto Sans",system-ui,sans-serif;color:#14212b;background:#f5f7f8}
+*{box-sizing:border-box}
+button,input,select,textarea{font-family:inherit;color:inherit}
+a{color:#0d7068;text-decoration:none}a:hover{color:#0a5a54}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:13px;font-weight:500}
+.thead{display:grid;align-items:center;background:#eef2f4;border-bottom:1px solid #e1e7ea;font-size:12px;line-height:18px;font-weight:500;color:#55626c}
+.thead>div{padding:10px 12px;white-space:nowrap}
+.trow{display:grid;align-items:center;border-bottom:1px solid #e1e7ea;font-size:14px;line-height:22px}
+.trow:hover{background:#f2f6f7}
+.trow>div{padding:10px 12px;min-width:0}
+button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{outline:none;box-shadow:0 0 0 2px #ffffff,0 0 0 4px #0d7068}
+input::placeholder,textarea::placeholder{color:#55626c}
+
+</style>
+</helmet>
+
+
+
+
+
+
+
+
+
+
+
+<div style="width: 1440px; height: 1240px; display: flex; background: #f5f7f8">
+<div style="width:248px;flex-shrink:0;align-self:stretch;background:#10232a"><dc-import name="Sidebar" active="rep" hint-size="248px,900px"></dc-import></div>
+<div style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0">
+<dc-import name="Topbar" heading="รายงาน" crumb="เอกสารและรายงาน" hint-size="1192px,60px"></dc-import>
+<main style="padding: 24px; display: flex; flex-direction: column; gap: 20px">
+<div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<h1 style="margin: 0; font-size: 22px; line-height: 32px; font-weight: 600">รายงาน</h1>
+<p style="margin: 0; font-size: 12px; line-height: 18px; color: #55626c">ช่วงข้อมูล 01/04/2026 – 30/09/2026 · ตัวเลือกช่วงเวลาแสดงเฉพาะเดือนที่มีข้อมูล</p>
+</div>
+<div style="display: flex; gap: 8px"><button type="button" aria-label="ช่วงเวลา" style="display:inline-flex;align-items:center;justify-content:space-between;gap:8px;width:200px;height:40px;padding:0 12px;border:1px solid #7f8c95;border-radius:10px;background:#ffffff;font-size:14px;color:#14212b;cursor:pointer;white-space:nowrap"><span style="overflow:hidden;text-overflow:ellipsis">เม.ย. – ก.ย. 2026</span><span style="display:flex;color:#55626c"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></span></button><button type="button" style="display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 16px;border-radius:10px;font-size:14px;line-height:22px;font-weight:500;cursor:pointer;white-space:nowrap;text-decoration:none;border:1px solid #7f8c95;background:#ffffff;color:#14212b"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6"></path><rect x="3" y="9" width="18" height="8" rx="2"></rect><path d="M6 14h12v7H6Z"></path></svg>พิมพ์ / PDF</button><button type="button" style="display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 16px;border-radius:10px;font-size:14px;line-height:22px;font-weight:500;cursor:pointer;white-space:nowrap;text-decoration:none;border:1px solid #7f8c95;background:#ffffff;color:#14212b"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 21h14"></path></svg>ส่งออก Excel</button></div>
+</div>
+<div role="tablist" aria-label="ประเภทรายงาน" style="display: flex; gap: 4px; border-bottom: 1px solid #e1e7ea">
+<button type="button" role="tab" onClick="{{goPL}}" style="display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px; border: 0; background: transparent; font-size: 14px; cursor: pointer; margin-bottom: -1px; color: {{tb.pl.fg}}; font-weight: {{tb.pl.w}}; border-bottom: 2px solid {{tb.pl.bar}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"></path><rect x="7" y="12" width="3" height="5" rx="0.5"></rect><rect x="12" y="8" width="3" height="9" rx="0.5"></rect><rect x="17" y="5" width="3" height="12" rx="0.5"></rect></svg>รายได้ VS ค่าใช้จ่ายรายเดือน</button>
+<button type="button" role="tab" onClick="{{goRM}}" style="display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px; border: 0; background: transparent; font-size: 14px; cursor: pointer; margin-bottom: -1px; color: {{tb.rm.fg}}; font-weight: {{tb.rm.w}}; border-bottom: 2px solid {{tb.rm.bar}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 20v-8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v8"></path><path d="M4 10V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4"></path><path d="M12 4v6"></path><path d="M2 17h20"></path></svg>รายได้รายประเภทห้องพัก</button>
+<button type="button" role="tab" onClick="{{goEX}}" style="display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px; border: 0; background: transparent; font-size: 14px; cursor: pointer; margin-bottom: -1px; color: {{tb.ex.fg}}; font-weight: {{tb.ex.w}}; border-bottom: 2px solid {{tb.ex.bar}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h13v4"></path><path d="M3 7v11a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5a2 2 0 0 1-2-2Z"></path><circle cx="16.5" cy="14" r="1.2"></circle></svg>ค่าใช้จ่ายรายหมวดหมู่</button>
+</div>
+
+<sc-if value="{{isPL}}" hint-placeholder-val="{{true}}">
+<div style="display: flex; flex-direction: column; gap: 16px">
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px">
+<div style="background:#ffffff;border:1px solid #e1e7ea;border-radius:14px;box-shadow:0 1px 2px #14212b0d; padding: 16px 20px; display: flex; flex-direction: column"><span style="font-size: 12px; line-height: 18px; color: #55626c">รายได้รวม 6 เดือน</span><span style="font-size: 22px; line-height: 32px; font-weight: 600; font-variant-numeric: tabular-nums">{{pl.rev}}</span></div>
+<div style="background:#ffffff;border:1px solid #e1e7ea;border-radius:14px;box-shadow:0 1px 2px #14212b0d; padding: 16px 20px; display: flex; flex-direction: column"><span style="font-size: 12px; line-height: 18px; color: #55626c">ค่าใช้จ่ายรวม</span><span style="font-size: 22px; line-height: 32px; font-weight: 600; font-variant-numeric: tabular-nums">{{pl.exp}}</span></div>
+<div style="background:#ffffff;border:1px solid #e1e7ea;border-radius:14px;box-shadow:0 1px 2px #14212b0d; padding: 16px 20px; display: flex; flex-direction: column"><span style="font-size: 12px; line-height: 18px; color: #55626c">กำไรสุทธิ</span><span style="font-size: 22px; line-height: 32px; font-weight: 600; font-variant-numeric: tabular-nums; color: #157a3a">{{pl.pro}}</span></div>
+<div style="background:#ffffff;border:1px solid #e1e7ea;border-radius:14px;box-shadow:0 1px 2px #14212b0d; padding: 16px 20px; display: flex; flex-direction: column"><span style="font-size: 12px; line-height: 18px; color: #55626c">อัตรากำไรเฉลี่ย</span><span style="font-size: 22px; line-height: 32px; font-weight: 600; font-variant-numeric: tabular-nums">{{pl.margin}}</span></div>
+</div>
+<section style="background:#ffffff;border:1px solid #e1e7ea;border-radius:14px;box-shadow:0 1px 2px #14212b0d; padding: 20px; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; align-items: center; justify-content: space-between">
+<div><h3 style="margin: 0; font-size: 16px; line-height: 24px; font-weight: 600">รายได้ VS ค่าใช้จ่ายรายเดือน</h3><p style="margin: 0; font-size: 12px; line-height: 18px; color: #55626c">แกนซ้าย: จำนวนเงิน · แกนขวา: อัตรากำไร (%) · ตัวเลขเหนือแท่งคือกำไรสุทธิ</p></div>
+<div style="display: flex; gap: 16px; font-size: 13px; color: #55626c">
+<span style="display: flex; align-items: center; gap: 6px"><span style="width: 12px; height: 12px; border-radius: 3px; background: #0d7068"></span>รายได้ห้องพัก</span>
+<span style="display: flex; align-items: center; gap: 6px"><span style="width: 12px; height: 12px; border-radius: 3px; background: #5cc2b3"></span>รายได้อื่น</span>
+<span style="display: flex; align-items: center; gap: 6px"><span style="width: 12px; height: 12px; border-radius: 3px; background: #e0a04a"></span>ค่าใช้จ่าย</span>
+<span style="display: flex; align-items: center; gap: 6px"><span style="position: relative; width: 18px; height: 12px; display: inline-flex; align-items: center; justify-content: center"><span style="position: absolute; left: 0; right: 0; height: 2px; background: #2257c9"></span><span style="position: relative; width: 8px; height: 8px; border-radius: 9999px; background: #ffffff; border: 2px solid #2257c9"></span></span>อัตรากำไร % (แกนขวา)</span>
+</div>
+</div>
+<div style="display: flex; gap: 12px; height: 280px">
+<div style="width: 44px; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; padding: 26px 0 34px; font-size: 12px; line-height: 12px; color: #55626c"><span>500K</span><span>375K</span><span>250K</span><span>125K</span><span>0</span></div>
+<div style="position: relative; flex-grow: 1; display: flex">
+<div style="position: absolute; left: 0; right: 0; top: 32px; bottom: 40px; display: flex; flex-direction: column; justify-content: space-between"><span style="height: 1px; background: #e1e7ea"></span><span style="height: 1px; background: #e1e7ea"></span><span style="height: 1px; background: #e1e7ea"></span><span style="height: 1px; background: #e1e7ea"></span><span style="height: 1px; background: #7f8c95"></span></div>
+<svg aria-hidden="true" viewBox="0 0 600 240" preserveAspectRatio="none" style="position: absolute; left: 0; top: 0; width: 100%; height: 240px; z-index: 1; pointer-events: none; overflow: visible"><polyline points="{{pl.linePts}}" fill="none" stroke="#2257c9" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"></polyline></svg>
+<sc-for list="{{pl.months}}" as="m" hint-placeholder-count="6">
+<div style="position: relative; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px">
+<div style="height: 240px; display: flex; align-items: flex-end; gap: 8px">
+<div style="display: flex; flex-direction: column; align-items: center; gap: 4px">
+<span style="font-size: 11px; line-height: 14px; font-weight: 600; color: #157a3a; white-space: nowrap">+{{m.proK}}</span>
+<div style="width: 34px; display: flex; flex-direction: column; border-radius: 4px 4px 0 0; overflow: hidden"><div title="รายได้อื่น {{m.othT}}" style="height: {{m.oh}}; background: #5cc2b3"></div><div title="รายได้ห้องพัก {{m.roomT}}" style="height: {{m.rh}}; background: #0d7068"></div></div>
+</div>
+<div title="ค่าใช้จ่าย {{m.expT}}" style="width: 34px; height: {{m.eh}}; background: #e0a04a; border-radius: 4px 4px 0 0"></div>
+</div>
+<span style="font-size: 12px; line-height: 18px; color: #55626c">{{m.label}}</span>
+<div title="อัตรากำไร {{m.mg}}" style="position: absolute; left: 50%; top: {{m.my}}; z-index: 2; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 9999px; background: #ffffff; border: 2px solid #2257c9; box-sizing: border-box"></div>
+<span style="position: absolute; left: 50%; top: {{m.my}}; z-index: 2; margin: -26px 0 0 -22px; width: 44px; text-align: center; font-size: 11px; line-height: 14px; font-weight: 600; color: #2257c9; background: #ffffff; border-radius: 4px">{{m.mg}}</span>
+</div>
+</sc-for>
+</div>
+<div style="width: 40px; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; padding: 26px 0 34px; font-size: 12px; line-height: 12px; color: #2257c9; font-variant-numeric: tabular-nums"><span>100%</span><span>75%</span><span>50%</span><span>25%</span><span>0%</span></div>
+</div>
+</section>
+<section style="background:#ffffff;border:1px solid #e1e7ea;border-radius:14px;box-shadow:0 1px 2px #14212b0d; overflow: hidden">
+<div class="thead" style="grid-template-columns: minmax(0,1fr) 140px 140px 150px 140px 150px 100px"><div>เดือน</div><div style="text-align: right">รายได้ห้องพัก</div><div style="text-align: right">รายได้อื่น</div><div style="text-align: right">รวมรายได้</div><div style="text-align: right">ค่าใช้จ่าย</div><div style="text-align: right">กำไรสุทธิ</div><div style="text-align: right">อัตรากำไร</div></div>
+<sc-for list="{{pl.months}}" as="m" hint-placeholder-count="6">
+<div class="trow" style="grid-template-columns: minmax(0,1fr) 140px 140px 150px 140px 150px 100px"><div style="font-weight: 500">{{m.full}}</div><div class="num">{{m.roomT}}</div><div class="num">{{m.othT}}</div><div class="num" style="font-weight: 500">{{m.revT}}</div><div class="num">{{m.expT}}</div><div class="num" style="font-weight: 600; color: #157a3a">{{m.proT}}</div><div class="num">{{m.mg}}</div></div>
+</sc-for>
+<div style="display: grid; grid-template-columns: minmax(0,1fr) 140px 140px 150px 140px 150px 100px; background: #eef2f4; font-size: 14px; line-height: 22px; font-weight: 600"><div style="padding: 10px 12px">รวม 6 เดือน</div><div class="num" style="padding: 10px 12px">{{pl.room}}</div><div class="num" style="padding: 10px 12px">{{pl.oth}}</div><div class="num" style="padding: 10px 12px">{{pl.rev}}</div><div class="num" style="padding: 10px 12px">{{pl.exp}}</div><div class="num" style="padding: 10px 12px; color: #157a3a">{{pl.pro}}</div><div class="num" style="padding: 10px 12px">{{pl.margin}}</div></div>
+</section>
+</div>
+</sc-if>
+
+<sc-if value="{{isRM}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; flex-direction: column; gap: 16px">
+<div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 16px; align-items: start">
+<section style="background:#ffffff;border:1px solid #e1e7ea;border-radius:14px;box-shadow:0 1px 2px #14212b0d; padding: 20px; display: flex; flex-direction: column; gap: 16px">
+<div><h3 style="margin: 0; font-size: 16px; line-height: 24px; font-weight: 600">สัดส่วนรายได้ตามประเภทห้อง</h3><p style="margin: 0; font-size: 12px; line-height: 18px; color: #55626c">รวม เม.ย. – ก.ย. 2026 · {{rm.total}}</p></div>
+<sc-for list="{{rm.types}}" as="t" hint-placeholder-count="4">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; align-items: center; gap: 8px; font-size: 14px; line-height: 22px"><span style="width: 12px; height: 12px; border-radius: 3px; background: {{t.c}}"></span><span style="flex-grow: 1; font-weight: 500">{{t.n}}</span><span style="color: #55626c">{{t.share}}</span><span class="num" style="width: 120px; font-weight: 600">{{t.revT}}</span></div>
+<div style="height: 10px; border-radius: 9999px; background: #eef2f4"><div style="height: 10px; border-radius: 9999px; background: {{t.c}}; width: {{t.bw}}"></div></div>
+</div>
+</sc-for>
+</section>
+<section style="background:#ffffff;border:1px solid #e1e7ea;border-radius:14px;box-shadow:0 1px 2px #14212b0d; padding: 20px; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; align-items: center; justify-content: space-between"><div><h3 style="margin: 0; font-size: 16px; line-height: 24px; font-weight: 600">รายได้รายเดือนแยกประเภทห้อง</h3><p style="margin: 0; font-size: 12px; line-height: 18px; color: #55626c">กราฟแท่งซ้อน (Stacked)</p></div>
+<div style="display: flex; gap: 12px; font-size: 12px; color: #55626c"><sc-for list="{{rm.types}}" as="t" hint-placeholder-count="4"><span style="display: flex; align-items: center; gap: 6px"><span style="width: 12px; height: 12px; border-radius: 3px; background: {{t.c}}"></span>{{t.n}}</span></sc-for></div></div>
+<div style="display: flex; align-items: flex-end; gap: 16px; height: 220px; padding: 0 8px; border-bottom: 1px solid #7f8c95">
+<sc-for list="{{rm.months}}" as="m" hint-placeholder-count="6">
+<div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px">
+<span style="font-size: 11px; line-height: 14px; color: #55626c; white-space: nowrap">{{m.k}}</span>
+<div style="width: 44px; display: flex; flex-direction: column; border-radius: 4px 4px 0 0; overflow: hidden">
+<sc-for list="{{m.segs}}" as="s" hint-placeholder-count="4"><div title="{{s.t}}" style="height: {{s.h}}; background: {{s.c}}"></div></sc-for>
+</div>
+</div>
+</sc-for>
+</div>
+<div style="display: flex; gap: 16px; padding: 0 8px"><sc-for list="{{rm.months}}" as="m" hint-placeholder-count="6"><span style="flex: 1; text-align: center; font-size: 12px; line-height: 18px; color: #55626c">{{m.label}}</span></sc-for></div>
+</section>
+</div>
+<section style="background:#ffffff;border:1px solid #e1e7ea;border-radius:14px;box-shadow:0 1px 2px #14212b0d; overflow: hidden">
+<div class="thead" style="grid-template-columns: minmax(0,1fr) 90px 110px 120px 130px 150px 110px"><div>ประเภทห้อง</div><div style="text-align: right">จำนวนห้อง</div><div style="text-align: right">คืนที่ขายได้</div><div style="text-align: right">อัตราเข้าพัก</div><div style="text-align: right">ADR</div><div style="text-align: right">รายได้</div><div style="text-align: right">สัดส่วน</div></div>
+<sc-for list="{{rm.types}}" as="t" hint-placeholder-count="4">
+<div class="trow" style="grid-template-columns: minmax(0,1fr) 90px 110px 120px 130px 150px 110px"><div style="display: flex; align-items: center; gap: 8px; font-weight: 500"><span style="width: 12px; height: 12px; border-radius: 3px; background: {{t.c}}"></span>{{t.n}}</div><div class="num">{{t.rooms}}</div><div class="num">{{t.nights}}</div><div class="num">{{t.occ}}</div><div class="num">{{t.adr}}</div><div class="num" style="font-weight: 600">{{t.revT}}</div><div class="num">{{t.share}}</div></div>
+</sc-for>
+<div style="display: grid; grid-template-columns: minmax(0,1fr) 90px 110px 120px 130px 150px 110px; background: #eef2f4; font-size: 14px; line-height: 22px; font-weight: 600"><div style="padding: 10px 12px">รวม</div><div class="num" style="padding: 10px 12px">12</div><div class="num" style="padding: 10px 12px">{{rm.nights}}</div><div class="num" style="padding: 10px 12px">{{rm.occ}}</div><div class="num" style="padding: 10px 12px">{{rm.adr}}</div><div class="num" style="padding: 10px 12px">{{rm.total}}</div><div class="num" style="padding: 10px 12px">100%</div></div>
+</section>
+</div>
+</sc-if>
+
+<sc-if value="{{isEX}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; align-items: center; justify-content: space-between">
+<div role="group" aria-label="มุมมองค่าใช้จ่าย" style="display: flex; gap: 2px; padding: 3px; background: #eef2f4; border-radius: 10px">
+<button type="button" onClick="{{goMonthly}}" aria-pressed="{{ex.isM}}" style="display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 14px; border: 0; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; background: {{ex.mBg}}; color: {{ex.mFg}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16.5" rx="2"></rect><path d="M3 9.5h18"></path><path d="M8 2.5v4"></path><path d="M16 2.5v4"></path></svg>รายเดือน</button>
+<button type="button" onClick="{{goDaily}}" aria-pressed="{{ex.isD}}" style="display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 14px; border: 0; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; background: {{ex.dBg}}; color: {{ex.dFg}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"></path><rect x="7" y="12" width="3" height="5" rx="0.5"></rect><rect x="12" y="8" width="3" height="9" rx="0.5"></rect><rect x="17" y="5" width="3" height="12" rx="0.5"></rect></svg>รายวัน (ก.ย. 2026)</button>
+</div>
+<span style="font-size: 13px; color: #55626c">ค่าใช้จ่ายรวม <b style="color: #14212b; font-weight: 600">{{ex.scopeTotal}}</b></span>
+</div>
+<sc-if value="{{ex.isM}}" hint-placeholder-val="{{true}}">
+<section style="background:#ffffff;border:1px solid #e1e7ea;border-radius:14px;box-shadow:0 1px 2px #14212b0d; overflow: hidden">
+<div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 20px"><div><h3 style="margin: 0; font-size: 16px; line-height: 24px; font-weight: 600">ค่าใช้จ่ายรายหมวดหมู่ × รายเดือน</h3><p style="margin: 0; font-size: 12px; line-height: 18px; color: #55626c">แถบสีแสดงสัดส่วนเทียบกับหมวดทั้งหมด · แสดงเฉพาะหมวดที่มีรายการ</p></div></div>
+<div class="thead" style="grid-template-columns: {{ex.cols}}"><div>หมวดหมู่</div><sc-for list="{{ex.mlabels}}" as="l" hint-placeholder-count="6"><div style="text-align: right">{{l}}</div></sc-for><div style="text-align: right">รวม</div><div>สัดส่วน</div></div>
+<sc-for list="{{ex.rows}}" as="r" hint-placeholder-count="8">
+<div class="trow" style="grid-template-columns: {{ex.cols}}">
+<div style="font-weight: 500">{{r.n}}</div>
+<sc-for list="{{r.vals}}" as="v" hint-placeholder-count="6"><div class="num">{{v}}</div></sc-for>
+<div class="num" style="font-weight: 600">{{r.total}}</div>
+<div style="display: flex; align-items: center; gap: 8px"><div style="flex-grow: 1; height: 6px; border-radius: 9999px; background: #eef2f4"><div style="height: 6px; border-radius: 9999px; background: #e0a04a; width: {{r.bw}}"></div></div><span style="font-size: 12px; color: #55626c; width: 44px; text-align: right">{{r.share}}</span></div>
+</div>
+</sc-for>
+<div style="display: grid; grid-template-columns: {{ex.cols}}; background: #eef2f4; font-size: 14px; line-height: 22px; font-weight: 600"><div style="padding: 10px 12px">รวม</div><sc-for list="{{ex.mtotals}}" as="v" hint-placeholder-count="6"><div class="num" style="padding: 10px 12px">{{v}}</div></sc-for><div class="num" style="padding: 10px 12px">{{ex.grand}}</div><div></div></div>
+</section>
+</sc-if>
+<sc-if value="{{ex.isD}}" hint-placeholder-val="{{false}}">
+<div style="display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start">
+<section style="background:#ffffff;border:1px solid #e1e7ea;border-radius:14px;box-shadow:0 1px 2px #14212b0d; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+<div><h3 style="margin: 0; font-size: 16px; line-height: 24px; font-weight: 600">ค่าใช้จ่ายรายวัน</h3><p style="margin: 0; font-size: 12px; line-height: 18px; color: #55626c">01 – 24/09/2026 · วันที่มีรายการใหญ่แสดงชื่อรายการ</p></div>
+<div style="display: flex; align-items: flex-end; gap: 6px; height: 300px; border-bottom: 1px solid #7f8c95">
+<sc-for list="{{ex.days}}" as="d" hint-placeholder-count="24">
+<div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; height: 100%">
+<span style="font-size: 11px; line-height: 14px; color: #55626c; white-space: nowrap">{{d.k}}</span>
+<div title="{{d.t}}" style="width: 100%; max-width: 26px; height: {{d.h}}; background: {{d.c}}; border-radius: 3px 3px 0 0"></div>
+</div>
+</sc-for>
+</div>
+<div style="display: flex; gap: 6px"><sc-for list="{{ex.days}}" as="d" hint-placeholder-count="24"><span style="flex: 1; text-align: center; font-size: 11px; line-height: 16px; color: #55626c">{{d.d}}</span></sc-for></div>
+<div style="display: flex; gap: 16px; font-size: 12px; color: #55626c"><span style="display: flex; align-items: center; gap: 6px"><span style="width: 12px; height: 12px; border-radius: 3px; background: #e0a04a"></span>ค่าใช้จ่ายประจำวัน</span><span style="display: flex; align-items: center; gap: 6px"><span style="width: 12px; height: 12px; border-radius: 3px; background: #9a5806"></span>รายการใหญ่ (เงินเดือน ค่าไฟ คอมมิชชั่น)</span></div>
+</section>
+<section style="background:#ffffff;border:1px solid #e1e7ea;border-radius:14px;box-shadow:0 1px 2px #14212b0d; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+<h3 style="margin: 0; font-size: 16px; line-height: 24px; font-weight: 600">หมวดหมู่เดือนนี้</h3>
+<sc-for list="{{ex.sep}}" as="c" hint-placeholder-count="8">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<div style="display: flex; justify-content: space-between; font-size: 13px; line-height: 20px"><span>{{c.n}}</span><span class="num" style="font-weight: 500">{{c.v}}</span></div>
+<div style="height: 6px; border-radius: 9999px; background: #eef2f4"><div style="height: 6px; border-radius: 9999px; background: #e0a04a; width: {{c.w}}"></div></div>
+</div>
+</sc-for>
+</section>
+</div>
+</sc-if>
+</div>
+</sc-if>
+</main>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1240}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const TONE={success:['#e5f5ea','#157a3a'],warning:['#fdf1dc','#9a5806'],danger:['#fce9e9','#c02626'],info:['#e8effc','#2257c9'],primary:['#e3f3f1','#0d7068'],neutral:['#eef2f4','#55626c']};
+const T=(t,x)=>({t:x,bg:TONE[t][0],fg:TONE[t][1]});
+const num=n=>Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const int=n=>Number(n).toLocaleString('en-US');
+const baht=n=>'฿'+num(n);
+    const K = (n) => (n / 1000).toFixed(1) + 'K';
+    const st = this.state || {};
+    const tab = st.tab || 'pl'; const mode = st.mode || 'm';
+    const tb = {};
+    ['pl', 'rm', 'ex'].forEach((k) => { const on = k === tab; tb[k] = { fg: on ? '#0d7068' : '#55626c', w: on ? '600' : '400', bar: on ? '#0d7068' : 'transparent' }; });
+    const M = [['เม.ย.', 'เมษายน 2026', 352000, 148200, 30], ['พ.ค.', 'พฤษภาคม 2026', 318400, 151300, 31], ['มิ.ย.', 'มิถุนายน 2026', 296200, 139600, 30], ['ก.ค.', 'กรกฎาคม 2026', 402100, 160400, 31], ['ส.ค.', 'สิงหาคม 2026', 432600, 167600, 31], ['ก.ย.', 'กันยายน 2026', 486250, 172840, 30]];
+    const roomOf = (m, i) => i === 5 ? 402650 : Math.round(m[2] * 0.83 / 10) * 10;
+    const sc = (v) => Math.round(v / 500000 * 208) + 'px';
+    const months = M.map((m, i) => { const room = roomOf(m, i), oth = m[2] - room, pro = m[2] - m[3]; return { label: m[0], full: m[1], roomT: baht(room), othT: baht(oth), revT: baht(m[2]), expT: baht(m[3]), proT: baht(pro), proK: K(pro), mg: (pro / m[2] * 100).toFixed(1) + '%', my: (240 - pro / m[2] * 208).toFixed(1) + 'px', rh: sc(room), oh: sc(oth), eh: sc(m[3]) }; });
+    const sum = (f) => M.reduce((s, m, i) => s + f(m, i), 0);
+    const R = sum((m) => m[2]), E = sum((m) => m[3]), RM = sum(roomOf);
+    const linePts = M.map((m, i) => ((i + 0.5) * 100) + ',' + (240 - (m[2] - m[3]) / m[2] * 208).toFixed(1)).join(' ');
+    const pl = { months, linePts, rev: baht(R), exp: baht(E), pro: baht(R - E), room: baht(RM), oth: baht(R - RM), margin: ((R - E) / R * 100).toFixed(1) + '%' };
+
+    const TY = [['Superior', 4, 1200, 0.27, '#5cc2b3'], ['Deluxe', 4, 1800, 0.38, '#0d7068'], ['Family', 2, 2600, 0.14, '#f0c68a'], ['Suite', 2, 3900, 0.21, '#c77a1f']];
+    const wig = [[0.01, -0.01, 0.01, -0.01], [-0.02, 0.01, 0, 0.01], [0.01, 0, -0.02, 0.01], [0, 0.02, -0.01, -0.01], [-0.01, 0.01, 0.01, -0.01], [0, 0, 0, 0]];
+    const days = 183;
+    const perType = TY.map(() => 0);
+    const rmMonths = M.map((m, i) => { const room = roomOf(m, i); const vals = TY.map((t, j) => Math.round(room * (t[3] + wig[i][j]))); vals.forEach((v, j) => { perType[j] += v; }); return { label: m[0], k: K(room), segs: TY.map((t, j) => ({ h: Math.round(room / 420000 * 190) * (t[3] + wig[i][j]) + 'px', c: t[4], t: t[0] + ' ' + baht(vals[j]) })).reverse() }; });
+    const rmTotal = perType.reduce((s, v) => s + v, 0);
+    let nightsAll = 0;
+    const types = TY.map((t, j) => { const adr = t[2] * 0.985; const nights = Math.round(perType[j] / adr); nightsAll += nights; return { n: t[0], c: t[4], rooms: t[1], nights: int(nights), occ: (nights / (t[1] * days) * 100).toFixed(1) + '%', adr: baht(perType[j] / nights), revT: baht(perType[j]), share: (perType[j] / rmTotal * 100).toFixed(1) + '%', bw: (perType[j] / Math.max.apply(null, perType) * 100).toFixed(1) + '%' }; });
+    const rm = { types, months: rmMonths, total: baht(rmTotal), nights: int(nightsAll), occ: (nightsAll / (12 * days) * 100).toFixed(1) + '%', adr: baht(rmTotal / nightsAll) };
+
+    const EC = [['เงินเดือนพนักงาน', 0], ['ค่าน้ำ-ค่าไฟ', 32450], ['วัตถุดิบอาหาร/เครื่องดื่ม', 24880], ['คอมมิชชั่น OTA', 18610], ['ของใช้ในห้องพัก', 10900], ['ซ่อมบำรุง', 4700], ['การตลาด', 2300], ['ภาษีและค่าธรรมเนียม', 1000]];
+    const base = 94840;
+    const grid = M.map((m) => { const rest = m[3] - 78000; const vals = EC.map((c, j) => j === 0 ? 78000 : Math.round(rest * c[1] / base)); const drift = m[3] - vals.reduce((s, v) => s + v, 0); vals[2] += drift; return vals; });
+    const catTot = EC.map((c, j) => grid.reduce((s, row) => s + row[j], 0));
+    const maxCat = Math.max.apply(null, catTot);
+    const rows = EC.map((c, j) => ({ n: c[0], vals: grid.map((row) => int(row[j])), total: int(catTot[j]), share: (catTot[j] / E * 100).toFixed(1) + '%', bw: (catTot[j] / maxCat * 100).toFixed(1) + '%' }));
+    const big = { 1: [78000, 'เงินเดือนพนักงาน'], 21: [26380, 'ค่าไฟฟ้า ส.ค.'], 23: [11240, 'คอมมิชชั่น Booking.com'] };
+    const rest = 172840 - 78000 - 26380 - 11240; const wts = []; for (let d = 1; d <= 24; d++) wts.push(1 + ((d * 7) % 5) * 0.35);
+    const wsum = wts.reduce((s, w) => s + w, 0);
+    const dayVals = wts.map((w, i) => { const d = i + 1; return Math.round(rest * w / wsum) + (big[d] ? big[d][0] : 0); });
+    dayVals[23] += 172840 - dayVals.reduce((s, v) => s + v, 0);
+    const dmax = Math.max.apply(null, dayVals);
+    const dayList = dayVals.map((v, i) => { const d = i + 1; return { d: String(d), k: big[d] ? K(v) : '', h: Math.max(4, Math.round(v / dmax * 250)) + 'px', c: big[d] ? '#9a5806' : '#e0a04a', t: d + '/09/2026 ' + baht(v) + (big[d] ? ' · ' + big[d][1] : '') }; });
+    const sepVals = grid[5]; const sepMax = Math.max.apply(null, sepVals);
+    const sep = EC.map((c, j) => ({ n: c[0], v: baht(sepVals[j]), w: (sepVals[j] / sepMax * 100).toFixed(1) + '%' }));
+    const isM = mode === 'm';
+    const ex = {
+      isM, isD: !isM, mBg: isM ? '#ffffff' : 'transparent', mFg: isM ? '#0d7068' : '#55626c', dBg: isM ? 'transparent' : '#ffffff', dFg: isM ? '#55626c' : '#0d7068',
+      cols: 'minmax(0,1.3fr) repeat(6, 96px) 110px 150px', mlabels: M.map((m) => m[0] + ' 26'), rows, mtotals: M.map((m) => int(m[3])), grand: int(E),
+      scopeTotal: isM ? baht(E) + ' (6 เดือน)' : baht(172840) + ' (ก.ย. 2026)', days: dayList, sep
+    };
+    return {
+      tb, isPL: tab === 'pl', isRM: tab === 'rm', isEX: tab === 'ex',
+      goPL: () => this.setState({ tab: 'pl' }), goRM: () => this.setState({ tab: 'rm' }), goEX: () => this.setState({ tab: 'ex' }),
+      goMonthly: () => this.setState({ mode: 'm' }), goDaily: () => this.setState({ mode: 'd' }),
+      pl, rm, ex
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>ประเภทห้องพัก</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:"Noto Sans Thai","Noto Sans",system-ui,sans-serif;color:#14212b;background:#f5f7f8}
+*{box-sizing:border-box}
+button,input,select,textarea{font-family:inherit;color:inherit}
+a{color:#0d7068;text-decoration:none}a:hover{color:#0a5a54}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:13px;font-weight:500}
+.thead{display:grid;align-items:center;background:#eef2f4;border-bottom:1px solid #e1e7ea;font-size:12px;line-height:18px;font-weight:500;color:#55626c}
+.thead>div{padding:10px 12px;white-space:nowrap}
+.trow{display:grid;align-items:center;border-bottom:1px solid #e1e7ea;font-size:14px;line-height:22px}
+.trow:hover{background:#f2f6f7}
+.trow>div{padding:10px 12px;min-width:0}
+button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{outline:none;box-shadow:0 0 0 2px #ffffff,0 0 0 4px #0d7068}
+input::placeholder,textarea::placeholder{color:#55626c}
+
+</style>
+</helmet>
+
+
+
+
+<div style="width: 1440px; height: 1100px; display: flex; background: #f5f7f8">
+<div style="width:248px;flex-shrink:0;align-self:stretch;background:#10232a"><dc-import name="Sidebar" active="rtype" hint-size="248px,900px"></dc-import></div>
+<div style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0">
+<dc-import name="Topbar" heading="ประเภทห้องพัก" crumb="ตั้งค่า" hint-size="1192px,60px"></dc-import>
+<main style="padding: 24px; display: flex; flex-direction: column; gap: 20px">
+<div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<h1 style="margin: 0; font-size: 22px; line-height: 32px; font-weight: 600">ประเภทห้องพัก</h1>
+<p style="margin: 0; font-size: 12px; line-height: 18px; color: #55626c">4 ประเภท · 12 ห้อง · ราคาจะเติมอัตโนมัติเมื่อบันทึกรายได้ห้องพัก</p>
+</div>
+<div style="display: flex; gap: 8px"><button type="button" style="display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 16px;border-radius:10px;font-size:14px;line-height:22px;font-weight:500;cursor:pointer;white-space:nowrap;text-decoration:none;border:1px solid #7f8c95;background:#ffffff;color:#14212b"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>เพิ่มห้อง</button><button type="button" style="display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 16px;border-radius:10px;font-size:14px;line-height:22px;font-weight:500;cursor:pointer;white-space:nowrap;text-decoration:none;border:1px solid #0d7068;background:#0d7068;color:#ffffff"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>เพิ่มประเภทห้อง</button></div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px">
+<sc-for list="{{types}}" as="t" hint-placeholder-count="4">
+<article style="background:#ffffff;border:1px solid #e1e7ea;border-radius:14px;box-shadow:0 1px 2px #14212b0d; padding: 20px; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; align-items: flex-start; gap: 12px">
+<span style="width: 44px; height: 44px; border-radius: 10px; background: {{t.soft}}; color: {{t.c}}; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 20v-8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v8"></path><path d="M4 10V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4"></path><path d="M12 4v6"></path><path d="M2 17h20"></path></svg></span>
+<div style="display: flex; flex-direction: column; flex-grow: 1; min-width: 0">
+<h3 style="margin: 0; font-size: 16px; line-height: 24px; font-weight: 600">{{t.n}}</h3>
+<span class="mono" style="font-size: 12px; color: #55626c">{{t.code}}</span>
+</div>
+<span style="display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:9999px;font-size:12px;line-height:18px;font-weight:500;white-space:nowrap;background:{{t.st.bg}};color:{{t.st.fg}}"><span style="width:6px;height:6px;border-radius:9999px;background:currentColor"></span>{{t.st.t}}</span>
+</div>
+<div style="display: flex; align-items: baseline; gap: 6px"><span style="font-size: 24px; line-height: 32px; font-weight: 600; font-variant-numeric: tabular-nums">{{t.price}}</span><span style="font-size: 13px; color: #55626c">/ คืน</span></div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; font-size: 13px; line-height: 20px">
+<div style="display: flex; flex-direction: column"><span style="color: #55626c; font-size: 12px; line-height: 18px">ศุกร์–เสาร์</span><span style="font-weight: 500">{{t.weekend}}</span></div>
+<div style="display: flex; flex-direction: column"><span style="color: #55626c; font-size: 12px; line-height: 18px">จำนวนห้อง</span><span style="font-weight: 500">{{t.rooms}}</span></div>
+<div style="display: flex; flex-direction: column"><span style="color: #55626c; font-size: 12px; line-height: 18px">ผู้เข้าพักสูงสุด</span><span style="font-weight: 500">{{t.cap}}</span></div>
+<div style="display: flex; flex-direction: column"><span style="color: #55626c; font-size: 12px; line-height: 18px">เตียง</span><span style="font-weight: 500">{{t.bed}}</span></div>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 6px">
+<sc-for list="{{t.am}}" as="a" hint-placeholder-count="3"><span style="height: 24px; padding: 0 8px; border-radius: 6px; background: #eef2f4; color: #55626c; font-size: 12px; line-height: 24px">{{a}}</span></sc-for>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; justify-content: space-between; font-size: 12px; line-height: 18px; color: #55626c"><span>อัตราเข้าพักเดือนนี้</span><span style="font-weight: 600; color: #14212b">{{t.occ}}</span></div>
+<div style="height: 6px; border-radius: 9999px; background: #eef2f4"><div style="height: 6px; border-radius: 9999px; background: {{t.c}}; width: {{t.occ}}"></div></div>
+</div>
+<div style="display: flex; gap: 8px; border-top: 1px solid #e1e7ea; padding-top: 12px">
+<button type="button" style="flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 36px; border: 1px solid #7f8c95; border-radius: 10px; background: #ffffff; font-size: 13px; font-weight: 500; cursor: pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16Z"></path><path d="m13.5 6.5 4 4"></path></svg>แก้ไข</button>
+<button type="button" aria-label="ลบ {{t.n}}" style="width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid #e1e7ea; border-radius: 10px; background: #ffffff; color: #c02626; cursor: pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"></path><path d="M9 7V4h6v3"></path></svg></button>
+</div>
+</article>
+</sc-for>
+</div>
+
+<section style="background:#ffffff;border:1px solid #e1e7ea;border-radius:14px;box-shadow:0 1px 2px #14212b0d; overflow: hidden">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px">
+<div><h3 style="margin: 0; font-size: 16px; line-height: 24px; font-weight: 600">รายการห้องพัก</h3><p style="margin: 0; font-size: 12px; line-height: 18px; color: #55626c">สถานะอัปเดตจากการเช็คอิน/เช็คเอาท์</p></div>
+<div style="display: flex; gap: 8px"><label style="position:relative;display:flex;align-items:center;width:200px"><span style="position:absolute;left:12px;display:flex;color:#55626c"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg></span><input type="search" placeholder="ค้นหาเลขห้อง" aria-label="ค้นหาเลขห้อง" style="width:100%;height:40px;padding:0 12px 0 40px;border:1px solid #7f8c95;border-radius:10px;background:#ffffff;font-size:14px"></label><button type="button" aria-label="ประเภทห้อง" style="display:inline-flex;align-items:center;justify-content:space-between;gap:8px;width:190px;height:40px;padding:0 12px;border:1px solid #7f8c95;border-radius:10px;background:#ffffff;font-size:14px;color:#14212b;cursor:pointer;white-space:nowrap"><span style="overflow:hidden;text-overflow:ellipsis">ประเภท: ทั้งหมด (4)</span><span style="display:flex;color:#55626c"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></span></button><button type="button" aria-label="สถานะห้อง" style="display:inline-flex;align-items:center;justify-content:space-between;gap:8px;width:180px;height:40px;padding:0 12px;border:1px solid #7f8c95;border-radius:10px;background:#ffffff;font-size:14px;color:#14212b;cursor:pointer;white-space:nowrap"><span style="overflow:hidden;text-overflow:ellipsis">สถานะ: ทั้งหมด (4)</span><span style="display:flex;color:#55626c"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></span></button></div>
+</div>
+<div class="thead" style="grid-template-columns: 100px minmax(0,1fr) 90px 150px 150px minmax(0,1.2fr) 88px"><div>เลขห้อง</div><div>ประเภท</div><div>ชั้น</div><div>สถานะ</div><div>ผู้เข้าพักปัจจุบัน</div><div>หมายเหตุ</div><div style="text-align: right">จัดการ</div></div>
+<sc-for list="{{rooms}}" as="r" hint-placeholder-count="6">
+<div class="trow" style="grid-template-columns: 100px minmax(0,1fr) 90px 150px 150px minmax(0,1.2fr) 88px">
+<div class="mono" style="font-size: 14px">{{r.no}}</div>
+<div>{{r.type}}</div>
+<div>{{r.floor}}</div>
+<div><span style="display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:9999px;font-size:12px;line-height:18px;font-weight:500;white-space:nowrap;background:{{r.st.bg}};color:{{r.st.fg}}"><span style="width:6px;height:6px;border-radius:9999px;background:currentColor"></span>{{r.st.t}}</span></div>
+<div>{{r.guest}}</div>
+<div style="color: #55626c">{{r.note}}</div>
+<div style="display: flex; justify-content: flex-end; gap: 4px"><button type="button" aria-label="แก้ไขห้อง" style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border:0;border-radius:6px;background:transparent;color:#55626c;cursor:pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16Z"></path><path d="m13.5 6.5 4 4"></path></svg></button><button type="button" aria-label="ลบห้อง" style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border:0;border-radius:6px;background:transparent;color:#55626c;cursor:pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"></path><path d="M9 7V4h6v3"></path></svg></button></div>
+</div>
+</sc-for>
+<div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 16px;font-size:13px;line-height:20px;color:#55626c"><span>แสดง 1–6 จาก 12 ห้อง · 6 รายการต่อหน้า</span><nav aria-label="เลขหน้า" style="display:flex;align-items:center;gap:4px"><button type="button" aria-label="หน้าก่อนหน้า" style="width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #e1e7ea;border-radius:6px;background:#ffffff;color:#55626c;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg></button><button type="button" style="min-width:32px;height:32px;padding:0 8px;border-radius:6px;font-size:13px;cursor:pointer;border:1px solid #0d7068;background:#0d7068;color:#ffffff;font-weight:600">1</button><button type="button" style="min-width:32px;height:32px;padding:0 8px;border-radius:6px;font-size:13px;cursor:pointer;border:1px solid #e1e7ea;background:#ffffff;color:#14212b">2</button><button type="button" aria-label="หน้าถัดไป" style="width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #e1e7ea;border-radius:6px;background:#ffffff;color:#55626c;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></button></nav></div>
+</section>
+</main>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1100}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const TONE={success:['#e5f5ea','#157a3a'],warning:['#fdf1dc','#9a5806'],danger:['#fce9e9','#c02626'],info:['#e8effc','#2257c9'],primary:['#e3f3f1','#0d7068'],neutral:['#eef2f4','#55626c']};
+const T=(t,x)=>({t:x,bg:TONE[t][0],fg:TONE[t][1]});
+const num=n=>Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const int=n=>Number(n).toLocaleString('en-US');
+const baht=n=>'฿'+num(n);
+    const types = [
+      ['Superior', 'SUP', 1200, 1400, 4, '2 ผู้ใหญ่', 'Queen', ['Wi-Fi', 'แอร์', 'ทีวี'], '81%', '#0d7068', '#e3f3f1'],
+      ['Deluxe', 'DLX', 1800, 2100, 4, '2 ผู้ใหญ่ + 1 เด็ก', 'King / Twin', ['Wi-Fi', 'ระเบียง', 'Minibar'], '86%', '#0d7068', '#e3f3f1'],
+      ['Family', 'FAM', 2600, 2900, 2, '4 ผู้ใหญ่', '2 Queen', ['Wi-Fi', 'Minibar', 'โซฟาเบด'], '69%', '#9a5806', '#fdf1dc'],
+      ['Suite', 'STE', 3900, 4500, 2, '2 ผู้ใหญ่ + 2 เด็ก', 'King', ['วิวแม่น้ำ', 'อ่างอาบน้ำ', 'Minibar'], '65%', '#2257c9', '#e8effc']
+    ].map((t) => ({ n: t[0], code: t[1], price: baht(t[2]), weekend: baht(t[3]), rooms: t[4] + ' ห้อง', cap: t[5], bed: t[6], am: t[7], occ: t[8], c: t[9], soft: t[10], st: T('success', 'เปิดขาย') }));
+    const S = { occ: ['info', 'มีผู้เข้าพัก'], free: ['success', 'ว่าง'], clean: ['warning', 'ทำความสะอาด'], off: ['neutral', 'ปิดปรับปรุง'] };
+    const rooms = [
+      ['101', 'Superior', 'ชั้น 1', 'occ', 'คุณประเสริฐ มั่นคง', '-'],
+      ['102', 'Superior', 'ชั้น 1', 'clean', '-', 'เช็คเอาท์ 11:20 รอแม่บ้าน'],
+      ['103', 'Superior', 'ชั้น 1', 'free', '-', '-'],
+      ['104', 'Superior', 'ชั้น 1', 'off', '-', 'ซ่อมเครื่องปรับอากาศ ถึง 27/09/2026'],
+      ['201', 'Deluxe', 'ชั้น 2', 'occ', 'คุณกิตติ พรหมมา', 'ขอหมอนเพิ่ม 1 ใบ'],
+      ['204', 'Deluxe', 'ชั้น 2', 'occ', 'คุณวรรณา ศรีสุข', 'ลูกค้า VIP']
+    ].map((r) => ({ no: r[0], type: r[1], floor: r[2], st: T(S[r[3]][0], S[r[3]][1]), guest: r[4], note: r[5] }));
+    return { types, rooms };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,182 @@
+<script>
+/* js-core.html — utilities and UI primitives shared by every page (ported from the Retail Template's utils/ui).
+ * UI.* : Loading, Toast, Swal (success / confirm / error), Modal, Dropdown (portal), Combobox, Badge, Pagination.
+ * Remember: no two slashes or slash-star inside a string in frontend files (HtmlService strips them as comments). */
+
+/* ---------- icons (24px stroke set of the designs) ---------- */
+const ICONS={
+dashboard:'<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
+bed:'<path d="M2 20v-8a2 2 0 012-2h16a2 2 0 012 2v8"/><path d="M4 10V6a2 2 0 012-2h12a2 2 0 012 2v4"/><path d="M12 4v6M2 17h20"/>',
+cup:'<path d="M17 8h1a4 4 0 110 8h-1"/><path d="M3 8h14v9a4 4 0 01-4 4H7a4 4 0 01-4-4z"/><path d="M6 2v2M10 2v2M14 2v2"/>',
+wallet:'<path d="M3 7a2 2 0 012-2h13v4"/><path d="M3 7v11a2 2 0 002 2h15a1 1 0 001-1v-9a1 1 0 00-1-1H5a2 2 0 01-2-2z"/><circle cx="16.5" cy="14" r="1.2"/>',
+receipt:'<path d="M5 3h14v18l-2.5-1.5L14 21l-2-1.5L10 21l-2.5-1.5L5 21z"/><path d="M9 8h6M9 12h6M9 16h4"/>',
+chart:'<path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="5" rx=".5"/><rect x="12" y="8" width="3" height="9" rx=".5"/><rect x="17" y="5" width="3" height="12" rx=".5"/>',
+sliders:'<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
+users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0113 0M16 4.5a3.5 3.5 0 010 7M18 14.2a6.5 6.5 0 013.5 5.8"/>',
+door:'<path d="M4 21h16M6 21V4a1 1 0 011-1h10a1 1 0 011 1v17"/><circle cx="14.5" cy="12" r="1"/>',
+logout:'<path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>',
+panel:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/>',
+search:'<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>',plus:'<path d="M12 5v14M5 12h14"/>',
+menu:'<path d="M4 7h16M4 12h16M4 17h16"/>',bell:'<path d="M6 16v-5a6 6 0 1112 0v5l2 2H4z"/><path d="M10 21h4"/>',
+more:'<circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/>',
+edit:'<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',trash:'<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/>',
+eye:'<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+eyeoff:'<path d="M3 3l18 18"/><path d="M10.6 5.1A10 10 0 0112 5c6.4 0 10 7 10 7a17 17 0 01-3.2 4.1M6.6 6.6C3.8 8.4 2 12 2 12s3.6 7 10 7a9.7 9.7 0 005.4-1.6"/><path d="M9.9 9.9a3 3 0 004.2 4.2"/>',
+download:'<path d="M12 4v11M7 10l5 5 5-5M4 20h16"/>',upload:'<path d="M12 16V5M7 10l5-5 5 5M4 20h16"/>',
+calendar:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+chevd:'<path d="M6 9l6 6 6-6"/>',chevu:'<path d="M6 15l6-6 6 6"/>',chevl:'<path d="M15 6l-6 6 6 6"/>',chevr:'<path d="M9 6l6 6-6 6"/>',
+check:'<path d="M5 12.5l4.5 4.5L19 7"/>',x:'<path d="M6 6l12 12M18 6L6 18"/>',
+alert:'<path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17.5v.01"/>',info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.01"/>',
+lock:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 118 0v3"/>',key:'<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3M15 8l2 2"/>',
+user:'<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/>',printer:'<path d="M7 9V3h10v6M7 17H4v-7h16v7h-3"/><path d="M7 14h10v7H7z"/>',
+refresh:'<path d="M20 11a8 8 0 00-14.9-3M4 5v4h4M4 13a8 8 0 0014.9 3M20 19v-4h-4"/>',file:'<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/>',
+home:'<path d="M4 11l8-7 8 7v9a1 1 0 01-1 1h-4v-6h-6v6H5a1 1 0 01-1-1z"/>',grid:'<path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/>',
+sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+moon:'<path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z"/>',
+grip:'<circle cx="9" cy="6" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/>',
+history:'<path d="M3 12a9 9 0 103-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/>',ban:'<circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/>',tool:'<path d="M14.7 6.3a4 4 0 00-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 005.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/>'
+};
+const icon=(n,cls='')=>`<svg class="i ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n]||''}</svg>`;
+
+/* ---------- small helpers ---------- */
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtM=n=>'฿'+Number(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtN=n=>Number(n||0).toLocaleString('en-US');
+const fmtD=iso=>{if(!iso)return'';const[y,m,d]=String(iso).slice(0,10).split('-');return`${d}/${m}/${y}`};
+const fmtT=iso=>String(iso||'').slice(11,16);
+const fmtDT=iso=>iso?fmtD(iso)+' '+fmtT(iso):'';
+/* today in the hotel's time zone, yyyy-MM-dd */
+const TODAY=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Bangkok',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+const TH_DOW=['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+const TH_MON=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+const initials=name=>{const s=String(name||'').replace(/^(คุณ|Mr\.|Ms\.|Mrs\.)\s*/,'').trim();return s.slice(0,2)||'?'};
+/* per-viewer conveniences only (theme, sidebar, saved token) — never data */
+const store={
+  get(k,ses){try{return JSON.parse((ses?sessionStorage:localStorage).getItem(k))}catch(e){return null}},
+  set(k,v,ses){try{(ses?sessionStorage:localStorage).setItem(k,JSON.stringify(v))}catch(e){}},
+  del(k){try{localStorage.removeItem(k);sessionStorage.removeItem(k)}catch(e){}}
+};
+
+const UI={};
+
+/* ---------- Loading (counted, so nested calls keep it open) ---------- */
+let loadingCount=0,loadingEl=null;
+UI.showLoading=function(label){loadingCount++;label=label||'กำลังโหลดข้อมูล';
+  if(loadingEl){loadingEl.querySelector('.lt').textContent=label;return}
+  loadingEl=document.createElement('div');loadingEl.className='loading';loadingEl.setAttribute('role','status');loadingEl.setAttribute('aria-live','polite');
+  loadingEl.innerHTML=`<div class="loading-box"><div class="spinner" aria-hidden="true"></div><span class="lt">${esc(label)}</span><span class="cap" style="margin-top:-8px">กรุณารอสักครู่</span></div>`;
+  document.body.appendChild(loadingEl)};
+UI.hideLoading=function(){loadingCount=Math.max(0,loadingCount-1);if(!loadingCount&&loadingEl){loadingEl.remove();loadingEl=null}};
+
+/* ---------- Toast: small results ---------- */
+UI.toast=function(msg,tone='success',sub=''){const map={success:['check','var(--success-soft)','var(--success)'],info:['info','var(--info-soft)','var(--info)'],warning:['alert','var(--warning-soft)','var(--warning)'],danger:['x','var(--danger-soft)','var(--danger)']}[tone]||[];
+  const t=document.createElement('div');t.className='toast';t.setAttribute('role','status');
+  t.innerHTML=`<span class="ti" style="background:${map[1]};color:${map[2]}">${icon(map[0],'s16')}</span><div class="tx"><div style="font-weight:500">${esc(msg)}</div>${sub?`<div class="cap">${esc(sub)}</div>`:''}</div><button class="btn plain icon sm" aria-label="ปิดการแจ้งเตือน">${icon('x','s16')}</button>`;
+  t.querySelector('button').onclick=()=>t.remove();$('#toasts').appendChild(t);setTimeout(()=>t.remove(),3600)};
+
+/* ---------- SweetAlert2 (with a built-in fallback when the CDN is blocked) ---------- */
+function fallbackDialog({icon:ic='success',title,text,confirm='ตกลง',cancel=null,danger=false}){return new Promise(res=>{
+  const tone={success:['check','var(--success-soft)','var(--success)'],warning:['alert','var(--warning-soft)','var(--warning)'],error:['x','var(--danger-soft)','var(--danger)'],info:['info','var(--info-soft)','var(--info)'],question:['trash','var(--danger-soft)','var(--danger)']}[ic];
+  const d=document.createElement('div');d.className='fdlg';d.innerHTML=`<div class="box" role="alertdialog" aria-modal="true" aria-labelledby="fdt"><span class="ic" style="background:${tone[1]};color:${tone[2]}">${icon(tone[0])}</span><h2 id="fdt">${esc(title)}</h2><p>${esc(text||'')}</p><div class="acts">${cancel?`<button class="btn" data-v="0">${esc(cancel)}</button>`:''}<button class="btn ${danger?'danger':'primary'}" data-v="1">${esc(confirm)}</button></div></div>`;
+  d.addEventListener('click',e=>{const b=e.target.closest('[data-v]');if(b){d.remove();res(b.dataset.v==='1')}});document.body.appendChild(d);d.querySelector('[data-v="1"]').focus()})}
+const cssVar=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+/* success after a save: title + the document number */
+UI.swalSuccess=async function(title,text){if(window.Swal){await Swal.fire({icon:'success',title,text,confirmButtonText:'ตกลง',iconColor:cssVar('--success')});return}return fallbackDialog({icon:'success',title,text})};
+UI.swalError=async function(title,text){if(window.Swal){await Swal.fire({icon:'error',title,text,confirmButtonText:'ตกลง',iconColor:cssVar('--danger')});return}return fallbackDialog({icon:'error',title,text})};
+UI.swalInfo=async function(title,text){if(window.Swal){await Swal.fire({icon:'info',title,text,confirmButtonText:'ตกลง',iconColor:cssVar('--info')});return}return fallbackDialog({icon:'info',title,text})};
+/* confirm before delete (danger) or any irreversible step */
+UI.swalConfirm=async function(title,text,confirm='ยืนยัน',danger=true){if(window.Swal){const r=await Swal.fire({icon:'warning',title,text,showCancelButton:true,confirmButtonText:confirm,cancelButtonText:'ยกเลิก',reverseButtons:true,focusCancel:true,iconColor:cssVar(danger?'--danger':'--warning'),customClass:{confirmButton:danger?'is-danger':''}});return r.isConfirmed}
+  return fallbackDialog({icon:danger?'question':'warning',title,text,confirm,cancel:'ยกเลิก',danger})};
+
+/* ---------- Badge: status and document types, always with text ---------- */
+const STATUS={
+  pay:{paid:['ชำระแล้ว','success'],dep:['มัดจำ','info'],due:['ค้างชำระ','warning'],cxl:['ยกเลิก','danger']},
+  room:{free:['ว่าง','success'],occ:['มีผู้เข้าพัก','info'],clean:['ทำความสะอาด','warning'],off:['ปิดปรับปรุง','']},
+  user:{active:['ใช้งาน','success'],suspended:['ระงับ','']},
+  active:{true:['ใช้งาน','success'],false:['ปิดใช้งาน','']}
+};
+UI.badge=function(kind,value){const s=(STATUS[kind]||{})[String(value)]||[value,''];return`<span class="badge ${s[1]}">${esc(s[0])}</span>`};
+UI.docNo=no=>`<span class="doc">${esc(no)}</span>`;
+UI.empty=function(title,text,btn=''){return`<div class="empty"><span class="ei">${icon('search')}</span><h3>${esc(title)}</h3><p>${esc(text)}</p>${btn}</div>`};
+
+/* ---------- Dropdown (portal): one menu at a time, placed under <body> from the button's position ---------- */
+let openMenuEl=null;
+function closeMenu(){if(openMenuEl){openMenuEl.remove();openMenuEl=null;document.removeEventListener('mousedown',menuOutside,true)}}
+function menuOutside(e){if(openMenuEl&&!openMenuEl.contains(e.target))closeMenu()}
+UI.openMenu=function(anchor,items,{header='',align='right'}={}){closeMenu();const m=document.createElement('div');m.className='menu';m.setAttribute('role','menu');
+  m.innerHTML=(header?`<div class="mh">${header}</div><hr>`:'')+items.map((it,i)=>it==='-'?'<hr>':`<button type="button" role="menuitem" data-i="${i}" class="${it.danger?'danger':''}">${it.icon?icon(it.icon):''}${esc(it.label)}</button>`).join('');
+  document.body.appendChild(m);const r=anchor.getBoundingClientRect(),mw=m.offsetWidth,mh=m.offsetHeight;
+  let left=align==='left'?r.left:r.right-mw;left=Math.max(8,Math.min(left,window.innerWidth-mw-8));
+  let top=r.bottom+4;if(top+mh>window.innerHeight-8)top=Math.max(8,r.top-mh-4);
+  m.style.left=left+'px';m.style.top=top+'px';
+  m.addEventListener('click',e=>{const b=e.target.closest('[data-i]');if(b){const it=items[+b.dataset.i];closeMenu();it.onClick&&it.onClick()}});
+  m.addEventListener('keydown',e=>{const bs=$$('button',m),i=bs.indexOf(document.activeElement);if(e.key==='ArrowDown'){e.preventDefault();bs[(i+1)%bs.length].focus()}else if(e.key==='ArrowUp'){e.preventDefault();bs[(i-1+bs.length)%bs.length].focus()}});
+  openMenuEl=m;setTimeout(()=>document.addEventListener('mousedown',menuOutside,true));m.querySelector('button')?.focus()};
+UI.closeMenu=closeMenu;
+
+/* ---------- Combobox (auto-complete list, also a portal) ---------- */
+let cbxEl=null,cbxState=null;
+function closeCbx(){if(cbxEl){cbxEl.remove();cbxEl=null;cbxState&&cbxState.input.setAttribute('aria-expanded','false');cbxState=null}}
+UI.combobox=function(input,{source,render,onPick,minChars=0}){
+  input.setAttribute('role','combobox');input.setAttribute('aria-expanded','false');input.setAttribute('autocomplete','off');
+  const show=()=>{const q=input.value.trim().toLowerCase();if(q.length<minChars){closeCbx();return}const list=source(q).slice(0,8);
+    if(!cbxEl){cbxEl=document.createElement('div');cbxEl.className='cbx';cbxEl.setAttribute('role','listbox');document.body.appendChild(cbxEl);cbxEl.addEventListener('mousedown',e=>e.preventDefault())}
+    cbxState={input,list,active:0,onPick};input.setAttribute('aria-expanded','true');
+    cbxEl.innerHTML=list.length?list.map((it,i)=>`<button type="button" role="option" class="opt ${i===0?'active':''}" data-i="${i}">${render(it)}</button>`).join(''):'<div class="none">ไม่พบข้อมูลที่ตรงกับคำค้นหา</div>';
+    const r=input.getBoundingClientRect();cbxEl.style.left=r.left+'px';cbxEl.style.width=Math.max(r.width,280)+'px';
+    const below=window.innerHeight-r.bottom;if(below<220&&r.top>below){cbxEl.style.top='';cbxEl.style.bottom=(window.innerHeight-r.top+4)+'px'}else{cbxEl.style.bottom='';cbxEl.style.top=(r.bottom+4)+'px'}
+    cbxEl.onclick=e=>{const b=e.target.closest('[data-i]');if(b){const it=cbxState.list[+b.dataset.i];const cb=cbxState.onPick;closeCbx();cb(it)}}};
+  input.addEventListener('input',show);input.addEventListener('focus',show);
+  input.addEventListener('blur',()=>setTimeout(()=>{if(cbxState&&cbxState.input===input)closeCbx()},120));
+  input.addEventListener('keydown',e=>{if(!cbxState||cbxState.input!==input)return;const n=cbxState.list.length;
+    if((e.key==='ArrowDown'||e.key==='ArrowUp')&&n){e.preventDefault();cbxState.active=(cbxState.active+(e.key==='ArrowDown'?1:-1)+n)%n;$$('.opt',cbxEl).forEach((o,i)=>o.classList.toggle('active',i===cbxState.active))}
+    else if(e.key==='Enter'&&n){e.preventDefault();const it=cbxState.list[cbxState.active];const cb=cbxState.onPick;closeCbx();cb(it)}})};
+UI.closeCbx=closeCbx;
+window.addEventListener('scroll',()=>{closeMenu();closeCbx()},true);
+window.addEventListener('resize',()=>{closeMenu();closeCbx()});
+document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(openMenuEl)closeMenu();else if(cbxEl)closeCbx();else{const m=$$('.backdrop').pop();if(m&&m._close)m._close()}});
+
+/* ---------- Modal: add / edit forms (bottom sheet on phones) ---------- */
+UI.openModal=function({title,iconName='edit',body,foot,size=''}){closeMenu();const id='mt'+Date.now(),bd=document.createElement('div');bd.className='backdrop';
+  bd.innerHTML=`<div class="modal ${size}" role="dialog" aria-modal="true" aria-labelledby="${id}"><div class="modal-head"><span class="chip">${icon(iconName)}</span><h2 id="${id}">${esc(title)}</h2><button type="button" class="btn plain icon" data-close aria-label="ปิด">${icon('x')}</button></div><div class="modal-body">${body}</div>${foot?`<div class="modal-foot">${foot}</div>`:''}</div>`;
+  const back=document.activeElement,close=()=>{bd.remove();closeCbx();back&&back.focus&&back.focus()};bd._close=close;
+  bd.addEventListener('mousedown',e=>{bd._down=e.target===bd});
+  bd.addEventListener('click',e=>{if(e.target===bd&&bd._down)close();if(e.target.closest('[data-close]'))close()});
+  document.body.appendChild(bd);setTimeout(()=>{const f=bd.querySelector('input:not([type=hidden]):not([readonly]),select,textarea');f&&window.innerWidth>575&&f.focus()},30);
+  return{el:bd,close}};
+
+/* ---------- Pagination ---------- */
+/* rows that fit the card: floor((cardHeight − header − footer) / rowHeight), at least min */
+UI.pageSize=function(card,{header=0,footer=56,rowHeight=45,min=5}={}){const h=card?card.clientHeight:window.innerHeight-260;return Math.max(min,Math.floor((h-header-footer)/rowHeight))};
+/* a table card that runs to the bottom of the window: its height is the room left below its top edge */
+UI.pageSizeFor=function(el,{header=44,footer=56,rowHeight=47,min=5,max=50}={}){
+  if(window.innerWidth<768)return 8;   /* stacked cards on phones: a fixed, short page */
+  const top=el?el.getBoundingClientRect().top+window.scrollY:300;
+  const cardHeight=Math.max(0,window.innerHeight-top-24);
+  return Math.min(max,UI.pageSize({clientHeight:cardHeight},{header,footer,rowHeight,min}))};
+
+/* ---------- misc ---------- */
+/* a script from a CDN, once (e.g. SheetJS for Excel import / export) */
+const loaded_={};
+UI.loadScript=function(src){return loaded_[src]||(loaded_[src]=new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;
+  s.onerror=()=>{delete loaded_[src];rej(new Error('โหลดส่วนเสริมไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่'))};document.head.appendChild(s)}))};
+/* SheetJS: the slashes are escaped so HtmlService does not read the URL as a comment */
+const XLSX_SRC='https:\/\/cdn.jsdelivr.net\/npm\/xlsx@0.18.5\/dist\/xlsx.full.min.js';
+UI.xlsx=()=>UI.loadScript(XLSX_SRC).then(()=>window.XLSX);
+/* Drive file id → a small image URL (logo); the file is shared by link */
+UI.driveImage=(id,w=200)=>id?'https:\/\/drive.google.com\/thumbnail?id='+encodeURIComponent(id)+'&sz=w'+w:'';
+/* image file → {mime, data (base64)} resized to fit max×max, for small uploads such as the logo */
+UI.imageToBase64=function(file,max=256){return new Promise((res,rej)=>{const img=new Image(),url=URL.createObjectURL(file);
+  img.onload=()=>{const k=Math.min(1,max/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);
+    c.getContext('2d').drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);const mime=file.type==='image/jpeg'?'image/jpeg':'image/png';
+    res({mime,data:c.toDataURL(mime,.9).split(',')[1]})};
+  img.onerror=()=>{URL.revokeObjectURL(url);rej(new Error('อ่านไฟล์รูปไม่ได้ กรุณาเลือกไฟล์ PNG หรือ JPG'))};img.src=url})};
+/* debounce for search boxes */
+UI.debounce=(fn,ms=300)=>{let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms)}};
+/* pager bar for a server-side page: onPage(n) loads that page */
+UI.pager=function(host,{page,pageSize,total,onPage}){const pages=Math.max(1,Math.ceil(total/pageSize));const from=total?(page-1)*pageSize+1:0,to=Math.min(page*pageSize,total);
+  const nums=[];for(let p=1;p<=pages;p++){if(p===1||p===pages||Math.abs(p-page)<=1)nums.push(p);else if(nums[nums.length-1]!=='…')nums.push('…')}
+  host.innerHTML=`<span>แสดง ${from}–${to} จาก ${fmtN(total)} รายการ · ${pageSize} รายการต่อหน้า</span><nav aria-label="เปลี่ยนหน้า"><button type="button" data-p="${page-1}" ${page===1?'disabled':''} aria-label="หน้าก่อนหน้า">${icon('chevl','s16')}</button>${nums.map(n=>n==='…'?'<span style="width:24px;text-align:center">…</span>':`<button type="button" data-p="${n}" ${n===page?'aria-current="page"':''}>${n}</button>`).join('')}<button type="button" data-p="${page+1}" ${page===pages?'disabled':''} aria-label="หน้าถัดไป">${icon('chevr','s16')}</button></nav>`;
+  $$('[data-p]',host).forEach(b=>b.onclick=()=>onPage(+b.dataset.p))};
+</script>

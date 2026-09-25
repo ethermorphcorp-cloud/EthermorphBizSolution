@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>ตั้งค่าทั่วไป</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:"Noto Sans Thai","Noto Sans",system-ui,sans-serif;color:#14212b;background:#f5f7f8}
+*{box-sizing:border-box}
+button,input,select,textarea{font-family:inherit;color:inherit}
+a{color:#0d7068;text-decoration:none}a:hover{color:#0a5a54}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:13px;font-weight:500}
+.thead{display:grid;align-items:center;background:#eef2f4;border-bottom:1px solid #e1e7ea;font-size:12px;line-height:18px;font-weight:500;color:#55626c}
+.thead>div{padding:10px 12px;white-space:nowrap}
+.trow{display:grid;align-items:center;border-bottom:1px solid #e1e7ea;font-size:14px;line-height:22px}
+.trow:hover{background:#f2f6f7}
+.trow>div{padding:10px 12px;min-width:0}
+button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{outline:none;box-shadow:0 0 0 2px #ffffff,0 0 0 4px #0d7068}
+input::placeholder,textarea::placeholder{color:#55626c}
+
+</style>
+</helmet>
+
+
+
+
+
+
+<div style="width: 1440px; height: 1040px; display: flex; background: #f5f7f8">
+<div style="width:248px;flex-shrink:0;align-self:stretch;background:#10232a"><dc-import name="Sidebar" active="set" hint-size="248px,900px"></dc-import></div>
+<div style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0">
+<dc-import name="Topbar" heading="ตั้งค่าทั่วไป" crumb="ตั้งค่า" hint-size="1192px,60px"></dc-import>
+<main style="padding: 24px; display: flex; flex-direction: column; gap: 20px">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<h1 style="margin: 0; font-size: 22px; line-height: 32px; font-weight: 600">ตั้งค่าทั่วไป</h1>
+<p style="margin: 0; font-size: 12px; line-height: 18px; color: #55626c">จัดการตัวเลือกในระบบ ข้อมูลบริษัท และผู้ใช้งาน</p>
+</div>
+<div role="tablist" aria-label="หมวดการตั้งค่า" style="display: flex; gap: 4px; border-bottom: 1px solid #e1e7ea">
+<button type="button" role="tab" onClick="{{goDD}}" style="display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px; border: 0; background: transparent; font-size: 14px; cursor: pointer; margin-bottom: -1px; color: {{tb.dd.fg}}; font-weight: {{tb.dd.w}}; border-bottom: 2px solid {{tb.dd.bar}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11"></path><path d="M9 12h11"></path><path d="M9 18h11"></path><circle cx="4.5" cy="6" r="1"></circle><circle cx="4.5" cy="12" r="1"></circle><circle cx="4.5" cy="18" r="1"></circle></svg>Dropdown / ตัวเลือก</button>
+<button type="button" role="tab" onClick="{{goCO}}" style="display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px; border: 0; background: transparent; font-size: 14px; cursor: pointer; margin-bottom: -1px; color: {{tb.co.fg}}; font-weight: {{tb.co.w}}; border-bottom: 2px solid {{tb.co.bar}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16"></path><path d="M16 9h2a2 2 0 0 1 2 2v10"></path><path d="M2 21h20"></path><path d="M8 7h4"></path><path d="M8 11h4"></path><path d="M8 15h4"></path></svg>ข้อมูลบริษัท</button>
+<button type="button" role="tab" onClick="{{goUS}}" style="display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px; border: 0; background: transparent; font-size: 14px; cursor: pointer; margin-bottom: -1px; color: {{tb.us.fg}}; font-weight: {{tb.us.w}}; border-bottom: 2px solid {{tb.us.bar}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20a6.5 6.5 0 0 1 13 0"></path><path d="M16 4.5a3.5 3.5 0 0 1 0 7"></path><path d="M18 14.2a6.5 6.5 0 0 1 3.5 5.8"></path></svg>ผู้ใช้งาน</button>
+</div>
+
+<sc-if value="{{isDD}}" hint-placeholder-val="{{true}}">
+<div style="display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 16px; align-items: start">
+<section style="background:#ffffff;border:1px solid #e1e7ea;border-radius:14px;box-shadow:0 1px 2px #14212b0d; padding: 8px; display: flex; flex-direction: column; gap: 2px">
+<p style="margin: 0; font-size: 12px; line-height: 18px; color: #55626c; padding: 8px 12px">กลุ่มตัวเลือก</p>
+<sc-for list="{{groups}}" as="g" hint-placeholder-count="6">
+<button type="button" onClick="{{g.pick}}" style="display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 12px; border: 0; border-radius: 10px; background: {{g.bg}}; color: {{g.fg}}; font-size: 14px; font-weight: {{g.w}}; text-align: left; cursor: pointer">
+<span style="flex-grow: 1">{{g.n}}</span>
+<span style="min-width: 28px; height: 22px; padding: 0 8px; border-radius: 9999px; background: #ffffff; border: 1px solid #e1e7ea; color: #55626c; font-size: 12px; line-height: 20px; text-align: center">{{g.count}}</span>
+</button>
+</sc-for>
+</section>
+<section style="background:#ffffff;border:1px solid #e1e7ea;border-radius:14px;box-shadow:0 1px 2px #14212b0d; overflow: hidden">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px">
+<div><h3 style="margin: 0; font-size: 16px; line-height: 24px; font-weight: 600">{{cur.n}}</h3><p style="margin: 0; font-size: 12px; line-height: 18px; color: #55626c">{{cur.hint}}</p></div>
+<div style="display: flex; gap: 8px"><label style="position:relative;display:flex;align-items:center;width:220px"><span style="position:absolute;left:12px;display:flex;color:#55626c"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg></span><input type="search" placeholder="ค้นหาตัวเลือก" aria-label="ค้นหาตัวเลือก" style="width:100%;height:40px;padding:0 12px 0 40px;border:1px solid #7f8c95;border-radius:10px;background:#ffffff;font-size:14px"></label><button type="button" style="display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 16px;border-radius:10px;font-size:14px;line-height:22px;font-weight:500;cursor:pointer;white-space:nowrap;text-decoration:none;border:1px solid #0d7068;background:#0d7068;color:#ffffff"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>เพิ่มตัวเลือก</button></div>
+</div>
+<div class="thead" style="grid-template-columns: 48px minmax(0,1.6fr) 150px 150px 110px 88px"><div></div><div>ชื่อตัวเลือก</div><div>รหัส</div><div>ถูกใช้งาน</div><div>สถานะ</div><div style="text-align: right">จัดการ</div></div>
+<sc-for list="{{cur.items}}" as="it" hint-placeholder-count="6">
+<div class="trow" style="grid-template-columns: 48px minmax(0,1.6fr) 150px 150px 110px 88px">
+<div style="display: flex; color: #7f8c95; cursor: grab" aria-label="ลากเพื่อเรียงลำดับ"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="6" r="1"></circle><circle cx="15" cy="6" r="1"></circle><circle cx="9" cy="12" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="9" cy="18" r="1"></circle><circle cx="15" cy="18" r="1"></circle></svg></div>
+<div style="font-weight: 500">{{it.n}}</div>
+<div class="mono" style="color: #55626c">{{it.code}}</div>
+<div style="color: #55626c">{{it.used}}</div>
+<div><span style="display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:9999px;font-size:12px;line-height:18px;font-weight:500;white-space:nowrap;background:{{it.st.bg}};color:{{it.st.fg}}"><span style="width:6px;height:6px;border-radius:9999px;background:currentColor"></span>{{it.st.t}}</span></div>
+<div style="display: flex; justify-content: flex-end; gap: 4px"><button type="button" aria-label="แก้ไข" style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border:0;border-radius:6px;background:transparent;color:#55626c;cursor:pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16Z"></path><path d="m13.5 6.5 4 4"></path></svg></button><button type="button" aria-label="ลบ" style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border:0;border-radius:6px;background:transparent;color:#55626c;cursor:pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"></path><path d="M9 7V4h6v3"></path></svg></button></div>
+</div>
+</sc-for>
+<div style="display: flex; align-items: center; gap: 8px; padding: 12px 20px; font-size: 12px; line-height: 18px; color: #55626c"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v5"></path><path d="M12 8h.01"></path></svg>ตัวเลือกที่ถูกใช้งานแล้วจะเปลี่ยนเป็น “ปิดใช้งาน” แทนการลบ เพื่อรักษาข้อมูลย้อนหลัง · ลากเพื่อเรียงลำดับใน Dropdown</div>
+</section>
+</div>
+</sc-if>
+
+<sc-if value="{{isCO}}" hint-placeholder-val="{{false}}">
+<section style="background:#ffffff;border:1px solid #e1e7ea;border-radius:14px;box-shadow:0 1px 2px #14212b0d; padding: 24px; display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 32px">
+<div style="display: flex; flex-direction: column; gap: 12px">
+<span style="font-size: 13px; line-height: 20px; font-weight: 500; color: #55626c">โลโก้บริษัท</span>
+<div style="height: 200px; border: 1.5px dashed #7f8c95; border-radius: 14px; background: #eef2f4; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: #55626c; text-align: center; padding: 16px">
+<div style="width: 64px; height: 64px; border-radius: 14px; background: #10232a; color: #4fd1bf; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 700">ส</div>
+<span style="font-size: 13px; line-height: 20px">ลากไฟล์มาวาง หรือ <a href="#" style="font-weight: 500">เลือกไฟล์</a></span>
+<span style="font-size: 12px; line-height: 18px">PNG, JPG ไม่เกิน 5 MB</span>
+</div>
+<p style="margin: 0; font-size: 12px; line-height: 18px; color: #55626c">โลโก้จะแสดงที่เมนูด้านซ้ายและหัวใบเสร็จ</p>
+</div>
+<div style="display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; gap: 16px"><label style="display:flex;flex-direction:column;gap:6px;flex: 1"><span style="font-size:13px;line-height:20px;font-weight:500;color:#55626c">ชื่อบริษัท (ตามจดทะเบียน)</span><input type="text" value="บริษัท สายธาร ฮอสพิทาลิตี้ จำกัด" style="width:100%;height:40px;padding:0 12px;border:1px solid #7f8c95;border-radius:10px;background:#ffffff;font-size:15px;color:#14212b"></label><label style="display:flex;flex-direction:column;gap:6px;flex: 1"><span style="font-size:13px;line-height:20px;font-weight:500;color:#55626c">ชื่อโรงแรม</span><input type="text" value="โรงแรมสายธาร" style="width:100%;height:40px;padding:0 12px;border:1px solid #7f8c95;border-radius:10px;background:#ffffff;font-size:15px;color:#14212b"></label></div>
+<div style="display: flex; gap: 16px"><label style="display:flex;flex-direction:column;gap:6px;flex: 1"><span style="font-size:13px;line-height:20px;font-weight:500;color:#55626c">เลขประจำตัวผู้เสียภาษี</span><input type="text" class="mono" value="0505566012345" style="width:100%;height:40px;padding:0 12px;border:1px solid #7f8c95;border-radius:10px;background:#ffffff;font-size:15px;color:#14212b"><span style="font-size:12px;line-height:18px;color:#55626c">13 หลัก · เก็บเป็นข้อความ</span></label><div style="display:flex;flex-direction:column;gap:6px;flex: 1"><span style="font-size:13px;line-height:20px;font-weight:500;color:#55626c">สาขา</span><button type="button" aria-label="สาขา" style="display:flex;align-items:center;justify-content:space-between;width:100%;height:40px;padding:0 12px;border:1px solid #7f8c95;border-radius:10px;background:#ffffff;font-size:15px;color:#14212b;cursor:pointer"><span>สำนักงานใหญ่</span><span style="display:flex;color:#55626c"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></span></button></div></div>
+<label style="display: flex; flex-direction: column; gap: 6px"><span style="font-size: 13px; line-height: 20px; font-weight: 500; color: #55626c">ที่อยู่</span><textarea rows="2" style="padding: 10px 12px; border: 1px solid #7f8c95; border-radius: 10px; font-size: 15px; line-height: 24px; resize: vertical">88/8 หมู่ 3 ถนนเชียงใหม่-ลำพูน ตำบลหนองผึ้ง อำเภอสารภี จังหวัดเชียงใหม่ 50140</textarea></label>
+<div style="display: flex; gap: 16px"><label style="display:flex;flex-direction:column;gap:6px;flex: 1"><span style="font-size:13px;line-height:20px;font-weight:500;color:#55626c">โทรศัพท์</span><input type="text" class="mono" value="053-123-456" style="width:100%;height:40px;padding:0 12px;border:1px solid #7f8c95;border-radius:10px;background:#ffffff;font-size:15px;color:#14212b"><span style="font-size:12px;line-height:18px;color:#55626c">รักษาเลข 0 นำหน้าอัตโนมัติ</span></label><label style="display:flex;flex-direction:column;gap:6px;flex: 1"><span style="font-size:13px;line-height:20px;font-weight:500;color:#55626c">อีเมล</span><input type="text" value="contact@saitarn-hotel.com" style="width:100%;height:40px;padding:0 12px;border:1px solid #7f8c95;border-radius:10px;background:#ffffff;font-size:15px;color:#14212b"></label><label style="display:flex;flex-direction:column;gap:6px;flex: 1"><span style="font-size:13px;line-height:20px;font-weight:500;color:#55626c">เว็บไซต์</span><input type="text" value="saitarn-hotel.com" style="width:100%;height:40px;padding:0 12px;border:1px solid #7f8c95;border-radius:10px;background:#ffffff;font-size:15px;color:#14212b"></label></div>
+<div style="height: 1px; background: #e1e7ea"></div>
+<h3 style="margin: 0; font-size: 16px; line-height: 24px; font-weight: 600">ค่าเริ่มต้นเอกสารและการเข้าพัก</h3>
+<div style="display: flex; gap: 16px"><div style="display:flex;flex-direction:column;gap:6px;flex: 1"><span style="font-size:13px;line-height:20px;font-weight:500;color:#55626c">ภาษีมูลค่าเพิ่ม</span><button type="button" aria-label="ภาษีมูลค่าเพิ่ม" style="display:flex;align-items:center;justify-content:space-between;width:100%;height:40px;padding:0 12px;border:1px solid #7f8c95;border-radius:10px;background:#ffffff;font-size:15px;color:#14212b;cursor:pointer"><span>VAT 7% (รวมในราคา)</span><span style="display:flex;color:#55626c"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></span></button></div><label style="display:flex;flex-direction:column;gap:6px;flex: 1"><span style="font-size:13px;line-height:20px;font-weight:500;color:#55626c">รูปแบบเลขที่ใบเสร็จ</span><input type="text" class="mono" value="RC-{YYYYMM}-{####}" style="width:100%;height:40px;padding:0 12px;border:1px solid #7f8c95;border-radius:10px;background:#ffffff;font-size:15px;color:#14212b"><span style="font-size:12px;line-height:18px;color:#55626c">ตัวอย่าง RC-202609-0112</span></label></div>
+<div style="display: flex; gap: 16px"><label style="display:flex;flex-direction:column;gap:6px;flex: 1"><span style="font-size:13px;line-height:20px;font-weight:500;color:#55626c">เวลาเช็คอิน</span><input type="text" value="14:00" style="width:100%;height:40px;padding:0 12px;border:1px solid #7f8c95;border-radius:10px;background:#ffffff;font-size:15px;color:#14212b"></label><label style="display:flex;flex-direction:column;gap:6px;flex: 1"><span style="font-size:13px;line-height:20px;font-weight:500;color:#55626c">เวลาเช็คเอาท์</span><input type="text" value="12:00" style="width:100%;height:40px;padding:0 12px;border:1px solid #7f8c95;border-radius:10px;background:#ffffff;font-size:15px;color:#14212b"></label><div style="display:flex;flex-direction:column;gap:6px;flex: 1"><span style="font-size:13px;line-height:20px;font-weight:500;color:#55626c">สกุลเงิน</span><button type="button" aria-label="สกุลเงิน" style="display:flex;align-items:center;justify-content:space-between;width:100%;height:40px;padding:0 12px;border:1px solid #7f8c95;border-radius:10px;background:#ffffff;font-size:15px;color:#14212b;cursor:pointer"><span>บาท (฿)</span><span style="display:flex;color:#55626c"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></span></button></div></div>
+<div style="display: flex; justify-content: flex-end; gap: 8px; padding-top: 4px"><button type="button" style="display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 16px;border-radius:10px;font-size:14px;line-height:22px;font-weight:500;cursor:pointer;white-space:nowrap;text-decoration:none;border:1px solid #7f8c95;background:#ffffff;color:#14212b">ยกเลิก</button><button type="button" style="display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 16px;border-radius:10px;font-size:14px;line-height:22px;font-weight:500;cursor:pointer;white-space:nowrap;text-decoration:none;border:1px solid #0d7068;background:#0d7068;color:#ffffff"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg>บันทึกข้อมูลบริษัท</button></div>
+</div>
+</section>
+</sc-if>
+
+<sc-if value="{{isUS}}" hint-placeholder-val="{{false}}">
+<section style="background:#ffffff;border:1px solid #e1e7ea;border-radius:14px;box-shadow:0 1px 2px #14212b0d; overflow: hidden">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px">
+<div><h3 style="margin: 0; font-size: 16px; line-height: 24px; font-weight: 600">ผู้ใช้งานระบบ</h3><p style="margin: 0; font-size: 12px; line-height: 18px; color: #55626c">5 บัญชี · สิทธิ์ตามบทบาท</p></div>
+<div style="display: flex; gap: 8px"><label style="position:relative;display:flex;align-items:center;width:240px"><span style="position:absolute;left:12px;display:flex;color:#55626c"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg></span><input type="search" placeholder="ค้นหาชื่อหรือชื่อผู้ใช้" aria-label="ค้นหาชื่อหรือชื่อผู้ใช้" style="width:100%;height:40px;padding:0 12px 0 40px;border:1px solid #7f8c95;border-radius:10px;background:#ffffff;font-size:14px"></label><button type="button" aria-label="บทบาท" style="display:inline-flex;align-items:center;justify-content:space-between;gap:8px;width:150px;height:40px;padding:0 12px;border:1px solid #7f8c95;border-radius:10px;background:#ffffff;font-size:14px;color:#14212b;cursor:pointer;white-space:nowrap"><span style="overflow:hidden;text-overflow:ellipsis">ทุกบทบาท</span><span style="display:flex;color:#55626c"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></span></button><button type="button" style="display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 16px;border-radius:10px;font-size:14px;line-height:22px;font-weight:500;cursor:pointer;white-space:nowrap;text-decoration:none;border:1px solid #0d7068;background:#0d7068;color:#ffffff"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>เพิ่มผู้ใช้</button></div>
+</div>
+<div class="thead" style="grid-template-columns: minmax(0,1.6fr) 140px 130px 130px 150px 100px 56px"><div>ชื่อ-นามสกุล</div><div>ชื่อผู้ใช้</div><div>บทบาท</div><div>โทรศัพท์</div><div>เข้าใช้ล่าสุด</div><div>สถานะ</div><div></div></div>
+<sc-for list="{{users}}" as="u" hint-placeholder-count="5">
+<div class="trow" style="grid-template-columns: minmax(0,1.6fr) 140px 130px 130px 150px 100px 56px">
+<div style="display: flex; align-items: center; gap: 10px"><span style="width: 32px; height: 32px; border-radius: 9999px; background: #e3f3f1; color: #0d7068; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0">{{u.ini}}</span><span style="display: flex; flex-direction: column"><span style="font-weight: 500">{{u.n}}</span><span style="font-size: 12px; line-height: 18px; color: #55626c">{{u.mail}}</span></span></div>
+<div class="mono">{{u.user}}</div>
+<div><span style="display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:9999px;font-size:12px;line-height:18px;font-weight:500;white-space:nowrap;border-radius:6px;background:{{u.role.bg}};color:{{u.role.fg}}">{{u.role.t}}</span></div>
+<div class="mono">{{u.phone}}</div>
+<div style="color: #55626c">{{u.last}}</div>
+<div><span style="display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:9999px;font-size:12px;line-height:18px;font-weight:500;white-space:nowrap;background:{{u.st.bg}};color:{{u.st.fg}}"><span style="width:6px;height:6px;border-radius:9999px;background:currentColor"></span>{{u.st.t}}</span></div>
+<div><button type="button" aria-label="จัดการผู้ใช้" style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border:0;border-radius:6px;background:transparent;color:#55626c;cursor:pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="1.3"></circle><circle cx="12" cy="12" r="1.3"></circle><circle cx="12" cy="19" r="1.3"></circle></svg></button></div>
+</div>
+</sc-for>
+<div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 16px;font-size:13px;line-height:20px;color:#55626c"><span>แสดง 1–5 จาก 5 รายการ</span><nav aria-label="เลขหน้า" style="display:flex;align-items:center;gap:4px"><button type="button" aria-label="หน้าก่อนหน้า" style="width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #e1e7ea;border-radius:6px;background:#ffffff;color:#55626c;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg></button><button type="button" style="min-width:32px;height:32px;padding:0 8px;border-radius:6px;font-size:13px;cursor:pointer;border:1px solid #0d7068;background:#0d7068;color:#ffffff;font-weight:600">1</button><button type="button" aria-label="หน้าถัดไป" style="width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #e1e7ea;border-radius:6px;background:#ffffff;color:#55626c;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></button></nav></div>
+</section>
+</sc-if>
+</main>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1040}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const TONE={success:['#e5f5ea','#157a3a'],warning:['#fdf1dc','#9a5806'],danger:['#fce9e9','#c02626'],info:['#e8effc','#2257c9'],primary:['#e3f3f1','#0d7068'],neutral:['#eef2f4','#55626c']};
+const T=(t,x)=>({t:x,bg:TONE[t][0],fg:TONE[t][1]});
+const num=n=>Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const int=n=>Number(n).toLocaleString('en-US');
+const baht=n=>'฿'+num(n);
+    const st = this.state || {};
+    const tab = st.tab || 'dd';
+    const gsel = st.g || 'expcat';
+    const tb = {};
+    ['dd', 'co', 'us'].forEach((k) => { const on = k === tab; tb[k] = { fg: on ? '#0d7068' : '#55626c', w: on ? '600' : '400', bar: on ? '#0d7068' : 'transparent' }; });
+    const G = [
+      ['channel', 'ช่องทางการจอง', 'ใช้ในหน้าบันทึกรายได้ห้องพัก', [['Walk-in', 'WALKIN', 64], ['โทรศัพท์', 'PHONE', 38], ['LINE Official', 'LINE', 22], ['Booking.com', 'BKG', 71], ['Agoda', 'AGD', 45], ['Expedia', 'EXP', 0]]],
+      ['pay', 'วิธีชำระเงิน', 'ใช้ในรายได้ รายจ่าย และใบเสร็จ', [['เงินสด', 'CASH', 88], ['โอนเงิน', 'TRANSFER', 120], ['บัตรเครดิต', 'CARD', 51], ['QR PromptPay', 'QR', 47], ['วางบิล (บริษัท)', 'CREDIT', 6]]],
+      ['expcat', 'หมวดหมู่ค่าใช้จ่าย', 'ใช้ในหน้าบันทึกรายจ่ายและรายงานค่าใช้จ่าย', [['เงินเดือนพนักงาน', 'SALARY', 12], ['ค่าน้ำ-ค่าไฟ', 'UTIL', 14], ['วัตถุดิบอาหารและเครื่องดื่ม', 'FNB', 36], ['ของใช้ในห้องพัก (Amenities)', 'AMEN', 18], ['ซ่อมบำรุง', 'MAINT', 9], ['ค่าคอมมิชชั่น OTA', 'OTA', 12], ['การตลาดและโฆษณา', 'MKT', 4], ['ภาษีและค่าธรรมเนียม', 'TAX', 5], ['อื่นๆ', 'OTHER', 0]]],
+      ['other', 'ประเภทรายได้อื่น', 'ใช้ในหน้าบันทึกรายได้อื่นๆ', [['Minibar', 'MINIBAR', 42], ['ห้องอาหาร', 'FOOD', 36], ['ซักรีด', 'LAUNDRY', 18], ['รถรับส่งสนามบิน', 'SHUTTLE', 9], ['Late check-out', 'LATE', 7], ['เตียงเสริม', 'EXTRABED', 0]]],
+      ['cust', 'ประเภทลูกค้า', 'ใช้ในข้อมูลลูกค้า', [['ทั่วไป', 'GEN', 168], ['VIP', 'VIP', 21], ['บริษัท/องค์กร', 'CORP', 14], ['OTA', 'OTA', 11]]],
+      ['unit', 'หน่วยนับ', 'ใช้ในรายได้อื่นและใบเสร็จ', [['คืน', 'NIGHT', 226], ['ชิ้น', 'PCS', 64], ['ครั้ง', 'TIME', 25], ['ชุด', 'SET', 12], ['เที่ยว', 'TRIP', 9]]]
+    ];
+    const groups = G.map((g) => { const on = g[0] === gsel; return { n: g[1], count: g[3].length, bg: on ? '#e3f3f1' : 'transparent', fg: on ? '#0d7068' : '#14212b', w: on ? '600' : '400', pick: () => this.setState({ g: g[0] }) }; });
+    const cg = G.find((g) => g[0] === gsel);
+    const cur = { n: cg[1], hint: cg[2], items: cg[3].map((it) => ({ n: it[0], code: it[1], used: it[2] ? 'ใช้ใน ' + int(it[2]) + ' รายการ' : 'ยังไม่ถูกใช้', st: it[2] || it[1] !== 'EXP' ? T('success', 'ใช้งาน') : T('neutral', 'ปิดใช้งาน') })) };
+    const users = [
+      ['สม', 'สมชาย ใจดี', 'somchai@saitarn-hotel.com', 'somchai', ['primary', 'Admin'], '081-234-5678', '24/09/2026 13:58', ['success', 'ใช้งาน']],
+      ['มณ', 'มณีรัตน์ วงศ์ดี', 'maneerat@saitarn-hotel.com', 'maneerat', ['info', 'Owner'], '089-001-2233', '24/09/2026 09:12', ['success', 'ใช้งาน']],
+      ['ปิ', 'ปิยะนุช ทองคำ', 'piyanuch@saitarn-hotel.com', 'piyanuch', ['warning', 'Accounting'], '062-445-7788', '23/09/2026 17:40', ['success', 'ใช้งาน']],
+      ['ธน', 'ธนพล สุขใจ', 'thanapol@saitarn-hotel.com', 'frontdesk1', ['neutral', 'Front Desk'], '095-334-1200', '24/09/2026 14:02', ['success', 'ใช้งาน']],
+      ['กา', 'กานดา มีสุข', 'kanda@saitarn-hotel.com', 'frontdesk2', ['neutral', 'Front Desk'], '098-765-0012', '02/08/2026 20:15', ['neutral', 'ระงับ']]
+    ].map((u) => ({ ini: u[0], n: u[1], mail: u[2], user: u[3], role: T(u[4][0], u[4][1]), phone: u[5], last: u[6], st: T(u[7][0], u[7][1]) }));
+    return {
+      tb, isDD: tab === 'dd', isCO: tab === 'co', isUS: tab === 'us',
+      goDD: () => this.setState({ tab: 'dd' }), goCO: () => this.setState({ tab: 'co' }), goUS: () => this.setState({ tab: 'us' }),
+      groups, cur, users
+    };
+  }
+}
+</script>
+</body>
+</html>

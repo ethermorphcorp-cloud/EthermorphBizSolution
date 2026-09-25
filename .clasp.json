@@ -1,0 +1,8 @@
+{
+  "scriptId": "1Hw8UypCPUqXV8yhk5AIRsSgouIt4YrMuZG7nOWHYdWnC19c8D3Z5_a7M",
+  "rootDir": "gas",
+  "filePushOrder": [
+    "backend/Config.gs",
+    "backend/Database.gs"
+  ]
+}

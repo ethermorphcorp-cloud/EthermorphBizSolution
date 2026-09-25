@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Dashboard มือถือ</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:"Noto Sans Thai","Noto Sans",system-ui,sans-serif;color:#14212b;background:#f5f7f8}
+*{box-sizing:border-box}
+button,input,select,textarea{font-family:inherit;color:inherit}
+a{color:#0d7068;text-decoration:none}a:hover{color:#0a5a54}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:13px;font-weight:500}
+.thead{display:grid;align-items:center;background:#eef2f4;border-bottom:1px solid #e1e7ea;font-size:12px;line-height:18px;font-weight:500;color:#55626c}
+.thead>div{padding:10px 12px;white-space:nowrap}
+.trow{display:grid;align-items:center;border-bottom:1px solid #e1e7ea;font-size:14px;line-height:22px}
+.trow:hover{background:#f2f6f7}
+.trow>div{padding:10px 12px;min-width:0}
+button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{outline:none;box-shadow:0 0 0 2px #ffffff,0 0 0 4px #0d7068}
+input::placeholder,textarea::placeholder{color:#55626c}
+
+</style>
+</helmet>
+
+
+
+<div style="position: relative; width: 390px; height: 844px; background: #f5f7f8; overflow: hidden">
+<header style="position: sticky; top: 0; z-index: 20; height: 56px; display: flex; align-items: center; gap: 8px; padding: 0 8px; background: #ffffff; border-bottom: 1px solid #e1e7ea"><a href="Mobile-Menu.dc.html" aria-label="เปิดเมนู" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 10px; color: #14212b"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16"></path><path d="M4 12h16"></path><path d="M4 18h16"></path></svg></a><span style="flex-grow: 1; font-size: 17px; line-height: 26px; font-weight: 600">Dashboard</span><span style="display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border-radius: 9999px; background: #e8effc; color: #2257c9; font-size: 11px; font-weight: 600">DEMO</span><button type="button" aria-label="การแจ้งเตือน" style="position: relative; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 10px; background: transparent; color: #14212b"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"></path></svg><span style="position: absolute; top: 10px; right: 11px; width: 8px; height: 8px; border-radius: 9999px; background: #c02626; border: 2px solid #ffffff"></span></button></header>
+<div style="padding: 16px 16px 88px; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; align-items: flex-end; justify-content: space-between">
+<div><span style="display: block; font-size: 12px; line-height: 18px; color: #55626c">พฤหัสบดี 24/09/2026</span><span style="font-size: 22px; line-height: 32px; font-weight: 600">ภาพรวมกันยายน</span></div>
+<button type="button" aria-label="เปลี่ยนเดือน" style="display: inline-flex; align-items: center; gap: 4px; height: 36px; padding: 0 10px; border: 1px solid #7f8c95; border-radius: 10px; background: #ffffff; font-size: 13px">ก.ย. 2026<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></button>
+</div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+<div style="background: #ffffff; border: 1px solid #e1e7ea; border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 6px"><span style="font-size: 12px; line-height: 18px; color: #55626c; display: flex; align-items: center; gap: 6px"><span style="display: flex; color: #0d7068"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="9" r="6"></circle><path d="M18.1 10.4A6 6 0 1 1 10.4 18.1"></path><path d="M9 7v4"></path></svg></span>รายได้</span><span style="font-size: 18px; line-height: 26px; font-weight: 600; font-variant-numeric: tabular-nums">฿486,250</span><span style="font-size: 11px; line-height: 16px; color: #157a3a; font-weight: 600">▲ 12.4%</span></div>
+<div style="background: #ffffff; border: 1px solid #e1e7ea; border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 6px"><span style="font-size: 12px; line-height: 18px; color: #55626c; display: flex; align-items: center; gap: 6px"><span style="display: flex; color: #9a5806"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h13v4"></path><path d="M3 7v11a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5a2 2 0 0 1-2-2Z"></path><circle cx="16.5" cy="14" r="1.2"></circle></svg></span>ค่าใช้จ่าย</span><span style="font-size: 18px; line-height: 26px; font-weight: 600; font-variant-numeric: tabular-nums">฿172,840</span><span style="font-size: 11px; line-height: 16px; color: #9a5806; font-weight: 600">▲ 3.1%</span></div>
+<div style="background: #ffffff; border: 1px solid #e1e7ea; border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 6px"><span style="font-size: 12px; line-height: 18px; color: #55626c; display: flex; align-items: center; gap: 6px"><span style="display: flex; color: #157a3a"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 17 6-6 4 4 8-8"></path><path d="M15 7h6v6"></path></svg></span>กำไรสุทธิ</span><span style="font-size: 18px; line-height: 26px; font-weight: 600; font-variant-numeric: tabular-nums">฿313,410</span><span style="font-size: 11px; line-height: 16px; color: #55626c">อัตรากำไร 64.5%</span></div>
+<div style="background: #ffffff; border: 1px solid #e1e7ea; border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 6px"><span style="font-size: 12px; line-height: 18px; color: #55626c; display: flex; align-items: center; gap: 6px"><span style="display: flex; color: #2257c9"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 20v-8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v8"></path><path d="M4 10V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4"></path><path d="M12 4v6"></path><path d="M2 17h20"></path></svg></span>อัตราเข้าพัก</span><span style="font-size: 18px; line-height: 26px; font-weight: 600; font-variant-numeric: tabular-nums">78.5%</span><span style="font-size: 11px; line-height: 16px; color: #55626c">วันนี้ 8/12 ห้อง</span></div>
+</div>
+<section style="background: #ffffff; border: 1px solid #e1e7ea; border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; justify-content: space-between; align-items: center"><span style="font-size: 15px; line-height: 22px; font-weight: 600">รายได้ vs ค่าใช้จ่าย</span><span style="display: flex; gap: 10px; font-size: 11px; color: #55626c"><span style="display: flex; align-items: center; gap: 4px"><span style="width: 8px; height: 8px; border-radius: 2px; background: #0d7068"></span>รายได้</span><span style="display: flex; align-items: center; gap: 4px"><span style="width: 8px; height: 8px; border-radius: 2px; background: #e0a04a"></span>จ่าย</span></span></div>
+<div style="display: flex; align-items: flex-end; gap: 10px; height: 120px; border-bottom: 1px solid #7f8c95; padding: 0 4px">
+<sc-for list="{{m}}" as="x" hint-placeholder-count="6">
+<div style="flex: 1; display: flex; justify-content: center; align-items: flex-end; gap: 3px"><div style="width: 12px; height: {{x.r}}; background: #0d7068; border-radius: 3px 3px 0 0"></div><div style="width: 12px; height: {{x.e}}; background: #e0a04a; border-radius: 3px 3px 0 0"></div></div>
+</sc-for>
+</div>
+<div style="display: flex; gap: 10px; padding: 0 4px"><sc-for list="{{m}}" as="x" hint-placeholder-count="6"><span style="flex: 1; text-align: center; font-size: 11px; line-height: 16px; color: #55626c">{{x.l}}</span></sc-for></div>
+</section>
+<section style="background: #ffffff; border: 1px solid #e1e7ea; border-radius: 14px; overflow: hidden">
+<div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 14px"><span style="font-size: 15px; line-height: 22px; font-weight: 600">เช็คอินวันนี้</span><a href="Mobile-Income.dc.html" style="font-size: 13px; font-weight: 500">ดูทั้งหมด</a></div>
+<sc-for list="{{today}}" as="t" hint-placeholder-count="3">
+<div style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-top: 1px solid #e1e7ea">
+<span class="mono" style="width: 52px; height: 36px; border-radius: 8px; background: #eef2f4; display: flex; align-items: center; justify-content: center; font-size: 12px">{{t.room}}</span>
+<div style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0"><span style="font-size: 14px; line-height: 22px; font-weight: 500">{{t.n}}</span><span class="num" style="text-align: left; font-size: 12px; line-height: 18px; color: #55626c">{{t.amt}}</span></div>
+<span style="display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:9999px;font-size:12px;line-height:18px;font-weight:500;white-space:nowrap;background:{{t.st.bg}};color:{{t.st.fg}}"><span style="width:6px;height:6px;border-radius:9999px;background:currentColor"></span>{{t.st.t}}</span>
+</div>
+</sc-for>
+</section>
+</div>
+<nav aria-label="เมนูด้านล่าง" style="position: absolute; left: 0; right: 0; bottom: 0; z-index: 20; height: 64px; display: flex; align-items: center; background: #ffffff; border-top: 1px solid #e1e7ea"><a href="Mobile-Dashboard.dc.html" aria-current="page" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; height: 64px; color: #0d7068; font-size: 11px; line-height: 16px; font-weight: 600; text-decoration: none"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.5"></rect><rect x="14" y="3" width="7" height="5" rx="1.5"></rect><rect x="14" y="12" width="7" height="9" rx="1.5"></rect><rect x="3" y="16" width="7" height="5" rx="1.5"></rect></svg>Dashboard</a><a href="Mobile-Income.dc.html" aria-current="false" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; height: 64px; color: #55626c; font-size: 11px; line-height: 16px; font-weight: 400; text-decoration: none"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="9" r="6"></circle><path d="M18.1 10.4A6 6 0 1 1 10.4 18.1"></path><path d="M9 7v4"></path></svg>รายได้</a><div style="flex: 1; display: flex; justify-content: center"><a href="Income-Modal.dc.html" aria-label="บันทึกรายการใหม่" style="width: 52px; height: 52px; margin-top: -22px; border-radius: 9999px; background: #0d7068; color: #ffffff; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px #14212b1f, 0 1px 3px #14212b14; border: 4px solid #ffffff"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg></a></div><a href="Expenses.dc.html" aria-current="false" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; height: 64px; color: #55626c; font-size: 11px; line-height: 16px; font-weight: 400; text-decoration: none"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h13v4"></path><path d="M3 7v11a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5a2 2 0 0 1-2-2Z"></path><circle cx="16.5" cy="14" r="1.2"></circle></svg>รายจ่าย</a><a href="Mobile-Menu.dc.html" aria-current="false" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; height: 64px; color: #55626c; font-size: 11px; line-height: 16px; font-weight: 400; text-decoration: none"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16"></path><path d="M4 12h16"></path><path d="M4 18h16"></path></svg>เมนู</a></nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const TONE={success:['#e5f5ea','#157a3a'],warning:['#fdf1dc','#9a5806'],danger:['#fce9e9','#c02626'],info:['#e8effc','#2257c9'],primary:['#e3f3f1','#0d7068'],neutral:['#eef2f4','#55626c']};
+const T=(t,x)=>({t:x,bg:TONE[t][0],fg:TONE[t][1]});
+const num=n=>Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const int=n=>Number(n).toLocaleString('en-US');
+const baht=n=>'฿'+num(n);
+    const M = [['เม.ย.', 352000, 148200], ['พ.ค.', 318400, 151300], ['มิ.ย.', 296200, 139600], ['ก.ค.', 402100, 160400], ['ส.ค.', 432600, 167600], ['ก.ย.', 486250, 172840]];
+    const m = M.map((x) => ({ l: x[0], r: Math.round(x[1] / 500000 * 112) + 'px', e: Math.round(x[2] / 500000 * 112) + 'px' }));
+    const today = [['DLX 204', 'คุณวรรณา ศรีสุข', 3600, ['success', 'ชำระแล้ว']], ['STE 401', 'Mr. James Carter', 7800, ['info', 'มัดจำ']], ['FAM 301', 'บริษัท ไทยทัวร์ จำกัด', 5200, ['warning', 'ค้างชำระ']]]
+      .map((t) => ({ room: t[0].slice(4), n: t[1], amt: t[0] + ' · ' + baht(t[2]), st: T(t[3][0], t[3][1]) }));
+    return { m, today };
+  }
+}
+</script>
+</body>
+</html>

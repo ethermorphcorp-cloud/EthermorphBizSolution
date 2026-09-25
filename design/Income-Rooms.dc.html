@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>รายได้จากห้องพัก</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:"Noto Sans Thai","Noto Sans",system-ui,sans-serif;color:#14212b;background:#f5f7f8}
+*{box-sizing:border-box}
+button,input,select,textarea{font-family:inherit;color:inherit}
+a{color:#0d7068;text-decoration:none}a:hover{color:#0a5a54}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:13px;font-weight:500}
+.thead{display:grid;align-items:center;background:#eef2f4;border-bottom:1px solid #e1e7ea;font-size:12px;line-height:18px;font-weight:500;color:#55626c}
+.thead>div{padding:10px 12px;white-space:nowrap}
+.trow{display:grid;align-items:center;border-bottom:1px solid #e1e7ea;font-size:14px;line-height:22px}
+.trow:hover{background:#f2f6f7}
+.trow>div{padding:10px 12px;min-width:0}
+button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{outline:none;box-shadow:0 0 0 2px #ffffff,0 0 0 4px #0d7068}
+input::placeholder,textarea::placeholder{color:#55626c}
+
+</style>
+</helmet>
+
+
+
+
+
+
+<div style="width: 1440px; height: 1120px; display: flex; background: #f5f7f8">
+<div style="width:248px;flex-shrink:0;align-self:stretch;background:#10232a"><dc-import name="Sidebar" active="rooms" hint-size="248px,900px"></dc-import></div>
+<div style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0">
+<dc-import name="Topbar" heading="บันทึกรายได้" crumb="รายได้ / ห้องพัก" hint-size="1192px,60px"></dc-import>
+<main style="padding: 24px; display: flex; flex-direction: column; gap: 20px">
+<div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<h1 style="margin: 0; font-size: 22px; line-height: 32px; font-weight: 600">บันทึกรายได้</h1>
+<p style="margin: 0; font-size: 12px; line-height: 18px; color: #55626c">รายได้จากการเข้าพัก และรายได้อื่นๆ เช่น Minibar ห้องอาหาร ซักรีด</p>
+</div>
+<div style="display: flex; gap: 8px"><button type="button" style="display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 16px;border-radius:10px;font-size:14px;line-height:22px;font-weight:500;cursor:pointer;white-space:nowrap;text-decoration:none;border:1px solid #7f8c95;background:#ffffff;color:#14212b"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 21h14"></path></svg>ส่งออก Excel</button><a href="Income-Modal.dc.html" style="display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 16px;border-radius:10px;font-size:14px;line-height:22px;font-weight:500;cursor:pointer;white-space:nowrap;text-decoration:none;border:1px solid #0d7068;background:#0d7068;color:#ffffff"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>บันทึกรายได้ห้องพัก</a></div>
+</div>
+<div style="display: flex; align-items: flex-end; justify-content: space-between; border-bottom: 1px solid #e1e7ea"><nav aria-label="ประเภทรายได้" style="display: flex; gap: 4px"><a href="Income-Rooms.dc.html" aria-current="page" style="display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px; font-size: 14px; text-decoration: none; margin-bottom: -1px; color: #0d7068; font-weight: 600; border-bottom: 2px solid #0d7068"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 20v-8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v8"></path><path d="M4 10V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4"></path><path d="M12 4v6"></path><path d="M2 17h20"></path></svg>รายได้จากห้องพัก<span style="min-width: 24px; height: 20px; padding: 0 7px; border-radius: 9999px; font-size: 12px; line-height: 20px; text-align: center; background: #e3f3f1; color: #0d7068">64</span></a><a href="Income-Other.dc.html" aria-current="false" style="display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px; font-size: 14px; text-decoration: none; margin-bottom: -1px; color: #55626c; font-weight: 400; border-bottom: 2px solid transparent"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 8h1a4 4 0 1 1 0 8h-1"></path><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"></path><path d="M6 2v2"></path><path d="M10 2v2"></path><path d="M14 2v2"></path></svg>รายได้อื่นๆ<span style="min-width: 24px; height: 20px; padding: 0 7px; border-radius: 9999px; font-size: 12px; line-height: 20px; text-align: center; background: #eef2f4; color: #55626c">117</span></a><a href="Income-Booking.dc.html" aria-current="false" style="display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px; font-size: 14px; text-decoration: none; margin-bottom: -1px; color: #55626c; font-weight: 400; border-bottom: 2px solid transparent"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5Z"></path><path d="m3 13 9 5 9-5"></path></svg>ตารางจองห้องพักรายวัน</a></nav><div role="group" aria-label="มุมมอง" style="display: flex; gap: 2px; padding: 3px; margin-bottom: 8px; background: #eef2f4; border-radius: 10px"><a href="Income-Rooms.dc.html" style="display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 14px; border-radius: 8px; font-size: 13px; font-weight: 500; text-decoration: none; background: #ffffff; color: #0d7068; box-shadow: 0 1px 2px #14212b0d"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M3 10h18"></path><path d="M3 15h18"></path><path d="M9 10v10"></path></svg>ตาราง</a><a href="Income-Calendar.dc.html" style="display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 14px; border-radius: 8px; font-size: 13px; font-weight: 500; text-decoration: none; background: transparent; color: #55626c"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16.5" rx="2"></rect><path d="M3 9.5h18"></path><path d="M8 2.5v4"></path><path d="M16 2.5v4"></path></svg>ปฏิทิน</a></div></div>
+<div style="background:#ffffff;border:1px solid #e1e7ea;border-radius:14px;box-shadow:0 1px 2px #14212b0d; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr))">
+<div style="padding: 16px 20px; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; line-height: 18px; color: #55626c">รายได้ห้องพัก (ก.ย. 2026)</span><span style="font-size: 20px; line-height: 28px; font-weight: 600; font-variant-numeric: tabular-nums">฿402,650.00</span></div>
+<div style="padding: 16px 20px; display: flex; flex-direction: column; gap: 2px; border-left: 1px solid #e1e7ea"><span style="font-size: 12px; line-height: 18px; color: #55626c">คืนที่ขายได้</span><span style="font-size: 20px; line-height: 28px; font-weight: 600; font-variant-numeric: tabular-nums">226 คืน</span></div>
+<div style="padding: 16px 20px; display: flex; flex-direction: column; gap: 2px; border-left: 1px solid #e1e7ea"><span style="font-size: 12px; line-height: 18px; color: #55626c">ราคาเฉลี่ยต่อคืน (ADR)</span><span style="font-size: 20px; line-height: 28px; font-weight: 600; font-variant-numeric: tabular-nums">฿1,781.64</span></div>
+<div style="padding: 16px 20px; display: flex; flex-direction: column; gap: 2px; border-left: 1px solid #e1e7ea"><span style="font-size: 12px; line-height: 18px; color: #55626c">ค้างชำระ</span><span style="font-size: 20px; line-height: 28px; font-weight: 600; font-variant-numeric: tabular-nums; color: #9a5806">฿18,400.00 <span style="font-size: 13px; font-weight: 500">· 3 รายการ</span></span></div>
+</div>
+
+<section style="background:#ffffff;border:1px solid #e1e7ea;border-radius:14px;box-shadow:0 1px 2px #14212b0d">
+<div style="position: relative; display: flex; align-items: center; gap: 8px; padding: 12px 16px; background: #eef2f4; border-bottom: 1px solid #e1e7ea; border-radius: 14px 14px 0 0">
+<label style="position:relative;display:flex;align-items:center;width:300px"><span style="position:absolute;left:12px;display:flex;color:#55626c"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg></span><input type="search" placeholder="ค้นหาเลขที่ ชื่อผู้เข้าพัก หรือเบอร์โทร" aria-label="ค้นหาเลขที่ ชื่อผู้เข้าพัก หรือเบอร์โทร" style="width:100%;height:40px;padding:0 12px 0 40px;border:1px solid #7f8c95;border-radius:10px;background:#ffffff;font-size:14px"></label>
+<button type="button" aria-label="เดือน" aria-expanded="true" style="display: inline-flex; align-items: center; justify-content: space-between; gap: 8px; width: 200px; height: 40px; padding: 0 12px; border: 1px solid #0d7068; border-radius: 10px; background: #ffffff; font-size: 14px; color: #14212b; box-shadow: 0 0 0 3px #e3f3f1; cursor: pointer"><span style="display: flex; align-items: center; gap: 8px"><span style="display: flex; color: #0d7068"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16.5" rx="2"></rect><path d="M3 9.5h18"></path><path d="M8 2.5v4"></path><path d="M16 2.5v4"></path></svg></span>ก.ย. 2026 (64)</span><span style="display: flex; color: #0d7068"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></span></button>
+<button type="button" aria-label="ประเภทห้อง" style="display:inline-flex;align-items:center;justify-content:space-between;gap:8px;width:180px;height:40px;padding:0 12px;border:1px solid #7f8c95;border-radius:10px;background:#ffffff;font-size:14px;color:#14212b;cursor:pointer;white-space:nowrap"><span style="overflow:hidden;text-overflow:ellipsis">ประเภทห้อง: ทั้งหมด</span><span style="display:flex;color:#55626c"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></span></button>
+<button type="button" aria-label="ช่องทางการจอง" style="display:inline-flex;align-items:center;justify-content:space-between;gap:8px;width:170px;height:40px;padding:0 12px;border:1px solid #7f8c95;border-radius:10px;background:#ffffff;font-size:14px;color:#14212b;cursor:pointer;white-space:nowrap"><span style="overflow:hidden;text-overflow:ellipsis">ช่องทาง: ทั้งหมด (5)</span><span style="display:flex;color:#55626c"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></span></button>
+<button type="button" aria-label="สถานะการชำระ" style="display:inline-flex;align-items:center;justify-content:space-between;gap:8px;width:150px;height:40px;padding:0 12px;border:1px solid #7f8c95;border-radius:10px;background:#ffffff;font-size:14px;color:#14212b;cursor:pointer;white-space:nowrap"><span style="overflow:hidden;text-overflow:ellipsis">สถานะ: ทั้งหมด</span><span style="display:flex;color:#55626c"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></span></button>
+<button type="button" style="display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 10px; border: 0; background: transparent; color: #0d7068; font-size: 14px; font-weight: 500; cursor: pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11A8 8 0 0 0 5.3 7"></path><path d="M4 4v4h4"></path><path d="M4 13a8 8 0 0 0 14.7 4"></path><path d="M20 20v-4h-4"></path></svg>ล้างตัวกรอง</button>
+<div role="listbox" aria-label="เลือกเดือน" style="position: absolute; top: 58px; left: 324px; z-index: 1070; width: 240px; padding: 4px; background: #ffffff; border: 1px solid #e1e7ea; border-radius: 10px; box-shadow: 0 4px 12px #14212b1f, 0 1px 3px #14212b14">
+<div style="padding: 8px 10px 6px; font-size: 12px; line-height: 18px; color: #55626c">แสดงเฉพาะเดือนที่มีข้อมูล</div>
+<sc-for list="{{months}}" as="m" hint-placeholder-count="6">
+<div role="option" aria-selected="{{m.on}}" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; height: 36px; padding: 0 10px; border-radius: 6px; font-size: 14px; background: {{m.bg}}; color: {{m.fg}}; font-weight: {{m.w}}"><span>{{m.n}}</span><span style="font-size: 12px; color: #55626c">{{m.c}} รายการ</span></div>
+</sc-for>
+</div>
+</div>
+<div class="thead" style="grid-template-columns: 150px minmax(0,1.4fr) 90px 190px 56px 120px 120px 110px 80px"><div>เลขที่</div><div>ผู้เข้าพัก</div><div>ห้อง</div><div>วันที่เข้าพัก</div><div style="text-align: right">คืน</div><div>ช่องทาง</div><div style="text-align: right">ยอดสุทธิ</div><div>สถานะ</div><div style="text-align: right">จัดการ</div></div>
+<sc-for list="{{rows}}" as="r" hint-placeholder-count="8">
+<div class="trow" style="grid-template-columns: 150px minmax(0,1.4fr) 90px 190px 56px 120px 120px 110px 80px">
+<div class="mono">{{r.no}}</div>
+<div style="display: flex; flex-direction: column"><span style="font-weight: 500">{{r.guest}}</span><span class="mono" style="font-size: 12px; font-weight: 400; color: #55626c">{{r.phone}}</span></div>
+<div><span class="mono" style="padding: 2px 6px; border-radius: 6px; background: #eef2f4">{{r.room}}</span></div>
+<div style="font-variant-numeric: tabular-nums">{{r.dates}}</div>
+<div class="num">{{r.nights}}</div>
+<div style="color: #55626c">{{r.ch}}</div>
+<div class="num" style="font-weight: 500">{{r.amt}}</div>
+<div><span style="display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:9999px;font-size:12px;line-height:18px;font-weight:500;white-space:nowrap;background:{{r.st.bg}};color:{{r.st.fg}}"><span style="width:6px;height:6px;border-radius:9999px;background:currentColor"></span>{{r.st.t}}</span></div>
+<div style="display: flex; justify-content: flex-end; gap: 2px"><a href="Receipt.dc.html" aria-label="ใบเสร็จ {{r.no}}" style="width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; color: #0d7068"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h14v18l-2.5-1.5L14 21l-2-1.5L10 21l-2.5-1.5L5 21Z"></path><path d="M9 8h6"></path><path d="M9 12h6"></path><path d="M9 16h4"></path></svg></a><button type="button" aria-label="จัดการ" style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border:0;border-radius:6px;background:transparent;color:#55626c;cursor:pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="1.3"></circle><circle cx="12" cy="12" r="1.3"></circle><circle cx="12" cy="19" r="1.3"></circle></svg></button></div>
+</div>
+</sc-for>
+<div style="display: grid; grid-template-columns: 150px minmax(0,1.4fr) 90px 190px 56px 120px 120px 110px 80px; align-items: center; background: #eef2f4; font-size: 14px; line-height: 22px; font-weight: 600; border-bottom: 1px solid #e1e7ea">
+<div style="padding: 10px 12px; grid-column: span 4">รวมหน้านี้ (8 รายการ)</div>
+<div class="num" style="padding: 10px 12px">{{sumN}}</div>
+<div></div>
+<div class="num" style="padding: 10px 12px">{{sumA}}</div>
+<div></div><div></div>
+</div>
+<div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 16px;font-size:13px;line-height:20px;color:#55626c"><span>แสดง 1–8 จาก 64 รายการ · 8 รายการต่อหน้า (ปรับตามความสูงการ์ด)</span><nav aria-label="เลขหน้า" style="display:flex;align-items:center;gap:4px"><button type="button" aria-label="หน้าก่อนหน้า" style="width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #e1e7ea;border-radius:6px;background:#ffffff;color:#55626c;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg></button><button type="button" style="min-width:32px;height:32px;padding:0 8px;border-radius:6px;font-size:13px;cursor:pointer;border:1px solid #0d7068;background:#0d7068;color:#ffffff;font-weight:600">1</button><button type="button" style="min-width:32px;height:32px;padding:0 8px;border-radius:6px;font-size:13px;cursor:pointer;border:1px solid #e1e7ea;background:#ffffff;color:#14212b">2</button><button type="button" style="min-width:32px;height:32px;padding:0 8px;border-radius:6px;font-size:13px;cursor:pointer;border:1px solid #e1e7ea;background:#ffffff;color:#14212b">3</button><span style="width:24px;text-align:center;color:#55626c">…</span><button type="button" style="min-width:32px;height:32px;padding:0 8px;border-radius:6px;font-size:13px;cursor:pointer;border:1px solid #e1e7ea;background:#ffffff;color:#14212b">8</button><button type="button" aria-label="หน้าถัดไป" style="width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #e1e7ea;border-radius:6px;background:#ffffff;color:#55626c;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></button></nav></div>
+</section>
+</main>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1120}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const TONE={success:['#e5f5ea','#157a3a'],warning:['#fdf1dc','#9a5806'],danger:['#fce9e9','#c02626'],info:['#e8effc','#2257c9'],primary:['#e3f3f1','#0d7068'],neutral:['#eef2f4','#55626c']};
+const T=(t,x)=>({t:x,bg:TONE[t][0],fg:TONE[t][1]});
+const num=n=>Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const int=n=>Number(n).toLocaleString('en-US');
+const baht=n=>'฿'+num(n);
+    const ST = { paid: ['success', 'ชำระแล้ว'], dep: ['info', 'มัดจำ'], due: ['warning', 'ค้างชำระ'], cxl: ['danger', 'ยกเลิก'] };
+    const R = [
+      ['BK-202609-0064', 'คุณกิตติ พรหมมา', '080-009-1122', 'DLX 201', '24/09 – 27/09/2026', 3, 'LINE Official', 5400, 'dep'],
+      ['BK-202609-0063', 'บริษัท ไทยทัวร์ จำกัด', '02-345-6789', 'FAM 301', '24/09 – 26/09/2026', 2, 'โทรศัพท์', 5200, 'due'],
+      ['BK-202609-0062', 'Mr. James Carter', '061-220-4478', 'STE 401', '24/09 – 26/09/2026', 2, 'Booking.com', 7800, 'dep'],
+      ['BK-202609-0061', 'คุณวรรณา ศรีสุข', '089-765-4321', 'DLX 204', '24/09 – 26/09/2026', 2, 'Walk-in', 3600, 'paid'],
+      ['BK-202609-0060', 'คุณสุดา ใจงาม', '087-432-1098', 'SUP 103', '23/09 – 24/09/2026', 1, 'Agoda', 1200, 'cxl'],
+      ['BK-202609-0059', 'คุณประเสริฐ มั่นคง', '081-234-5678', 'SUP 101', '22/09 – 25/09/2026', 3, 'Walk-in', 3600, 'paid'],
+      ['BK-202609-0058', 'Ms. Lena Hoffmann', '095-876-1032', 'SUP 102', '21/09 – 24/09/2026', 3, 'Booking.com', 3600, 'due'],
+      ['BK-202609-0057', 'คุณอรทัย แก้วใส', '086-111-0923', 'DLX 203', '21/09 – 24/09/2026', 3, 'Agoda', 5400, 'paid']
+    ];
+    const rows = R.map((r) => ({ no: r[0], guest: r[1], phone: r[2], room: r[3], dates: r[4], nights: r[5], ch: r[6], amt: baht(r[7]), st: T(ST[r[8]][0], ST[r[8]][1]) }));
+    const live = R.filter((r) => r[8] !== 'cxl');
+    const months = [['กันยายน 2026', 64], ['สิงหาคม 2026', 71], ['กรกฎาคม 2026', 66], ['มิถุนายน 2026', 48], ['พฤษภาคม 2026', 52], ['เมษายน 2026', 57]]
+      .map((m, i) => ({ n: m[0], c: m[1], on: i === 0, bg: i === 0 ? '#e3f3f1' : '', fg: i === 0 ? '#0d7068' : '#14212b', w: i === 0 ? '600' : '400' }));
+    return { rows, months, sumN: live.reduce((s, r) => s + r[5], 0), sumA: baht(live.reduce((s, r) => s + r[7], 0)) };
+  }
+}
+</script>
+</body>
+</html>

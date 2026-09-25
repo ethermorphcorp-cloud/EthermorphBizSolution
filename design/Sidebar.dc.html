@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Sidebar</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<nav aria-label="เมนูหลัก" style="width: 248px; height: 900px; box-sizing: border-box; display: flex; flex-direction: column; background: #10232a; color: #b9cad1; font-family: 'Noto Sans Thai', 'Noto Sans', system-ui, sans-serif; padding: 16px 12px">
+<div style="display: flex; align-items: center; gap: 12px; padding: 4px 8px 20px">
+<div style="width: 40px; height: 40px; border-radius: 10px; background: #4fd1bf; color: #10232a; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700">ส</div>
+<div style="display: flex; flex-direction: column; min-width: 0">
+<span style="font-size: 15px; line-height: 22px; font-weight: 600; color: #ffffff">โรงแรมสายธาร</span>
+<span style="font-size: 12px; line-height: 18px; color: #b9cad1">Hotel · Standard</span>
+</div>
+</div>
+<div style="padding: 12px 12px 6px; font-size: 12px; line-height: 18px; font-weight: 500; color: #8fa6ae; letter-spacing: 0.02em">ภาพรวม</div>
+<a href="Main.dc.html" style="position: relative; display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 12px; margin-bottom: 2px; border-radius: 10px; font-size: 14px; line-height: 22px; text-decoration: none; background: {{n.dash.bg}}; color: {{n.dash.fg}}; font-weight: {{n.dash.w}}"><span style="position: absolute; left: -12px; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0; background: {{n.dash.bar}}"></span><span style="display: flex; color: {{n.dash.ic}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.5"></rect><rect x="14" y="3" width="7" height="5" rx="1.5"></rect><rect x="14" y="12" width="7" height="9" rx="1.5"></rect><rect x="3" y="16" width="7" height="5" rx="1.5"></rect></svg></span>Dashboard</a>
+<div style="padding: 12px 12px 6px; font-size: 12px; line-height: 18px; font-weight: 500; color: #8fa6ae; letter-spacing: 0.02em">รายได้</div>
+<a href="Income-Rooms.dc.html" style="position: relative; display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 12px; margin-bottom: 2px; border-radius: 10px; font-size: 14px; line-height: 22px; text-decoration: none; background: {{n.rooms.bg}}; color: {{n.rooms.fg}}; font-weight: {{n.rooms.w}}"><span style="position: absolute; left: -12px; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0; background: {{n.rooms.bar}}"></span><span style="display: flex; color: {{n.rooms.ic}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 20v-8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v8"></path><path d="M4 10V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4"></path><path d="M12 4v6"></path><path d="M2 17h20"></path></svg></span><span>บันทึกการจองห้องพัก<br></span></a>
+<a href="Income-Other.dc.html" style="position: relative; display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 12px; margin-bottom: 2px; border-radius: 10px; font-size: 14px; line-height: 22px; text-decoration: none; background: {{n.other.bg}}; color: {{n.other.fg}}; font-weight: {{n.other.w}}"><span style="position: absolute; left: -12px; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0; background: {{n.other.bar}}"></span><span style="display: flex; color: {{n.other.ic}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 8h1a4 4 0 1 1 0 8h-1"></path><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"></path><path d="M6 2v2"></path><path d="M10 2v2"></path><path d="M14 2v2"></path></svg></span>รายได้อื่นๆ</a>
+<div style="padding: 12px 12px 6px; font-size: 12px; line-height: 18px; font-weight: 500; color: #8fa6ae; letter-spacing: 0.02em">รายจ่าย</div>
+<a href="Expenses.dc.html" style="position: relative; display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 12px; margin-bottom: 2px; border-radius: 10px; font-size: 14px; line-height: 22px; text-decoration: none; background: {{n.exp.bg}}; color: {{n.exp.fg}}; font-weight: {{n.exp.w}}"><span style="position: absolute; left: -12px; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0; background: {{n.exp.bar}}"></span><span style="display: flex; color: {{n.exp.ic}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h13v4"></path><path d="M3 7v11a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5a2 2 0 0 1-2-2Z"></path><circle cx="16.5" cy="14" r="1.2"></circle></svg></span>บันทึกรายจ่าย</a>
+<div style="padding: 12px 12px 6px; font-size: 12px; line-height: 18px; font-weight: 500; color: #8fa6ae; letter-spacing: 0.02em">เอกสารและรายงาน</div>
+<a href="Receipt.dc.html" style="position: relative; display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 12px; margin-bottom: 2px; border-radius: 10px; font-size: 14px; line-height: 22px; text-decoration: none; background: {{n.rcpt.bg}}; color: {{n.rcpt.fg}}; font-weight: {{n.rcpt.w}}"><span style="position: absolute; left: -12px; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0; background: {{n.rcpt.bar}}"></span><span style="display: flex; color: {{n.rcpt.ic}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h14v18l-2.5-1.5L14 21l-2-1.5L10 21l-2.5-1.5L5 21Z"></path><path d="M9 8h6"></path><path d="M9 12h6"></path><path d="M9 16h4"></path></svg></span>ใบเสร็จรับเงิน</a>
+<a href="Reports.dc.html" style="position: relative; display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 12px; margin-bottom: 2px; border-radius: 10px; font-size: 14px; line-height: 22px; text-decoration: none; background: {{n.rep.bg}}; color: {{n.rep.fg}}; font-weight: {{n.rep.w}}"><span style="position: absolute; left: -12px; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0; background: {{n.rep.bar}}"></span><span style="display: flex; color: {{n.rep.ic}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"></path><rect x="7" y="12" width="3" height="5" rx="0.5"></rect><rect x="12" y="8" width="3" height="9" rx="0.5"></rect><rect x="17" y="5" width="3" height="12" rx="0.5"></rect></svg></span>รายงาน</a>
+<div style="padding: 12px 12px 6px; font-size: 12px; line-height: 18px; font-weight: 500; color: #8fa6ae; letter-spacing: 0.02em">ตั้งค่า</div>
+<a href="Settings.dc.html" style="position: relative; display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 12px; margin-bottom: 2px; border-radius: 10px; font-size: 14px; line-height: 22px; text-decoration: none; background: {{n.set.bg}}; color: {{n.set.fg}}; font-weight: {{n.set.w}}"><span style="position: absolute; left: -12px; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0; background: {{n.set.bar}}"></span><span style="display: flex; color: {{n.set.ic}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h10"></path><path d="M18 6h2"></path><circle cx="16" cy="6" r="2"></circle><path d="M4 12h4"></path><path d="M12 12h8"></path><circle cx="10" cy="12" r="2"></circle><path d="M4 18h12"></path><circle cx="18" cy="18" r="2"></circle></svg></span>ตั้งค่าทั่วไป</a>
+<a href="Customers.dc.html" style="position: relative; display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 12px; margin-bottom: 2px; border-radius: 10px; font-size: 14px; line-height: 22px; text-decoration: none; background: {{n.cust.bg}}; color: {{n.cust.fg}}; font-weight: {{n.cust.w}}"><span style="position: absolute; left: -12px; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0; background: {{n.cust.bar}}"></span><span style="display: flex; color: {{n.cust.ic}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20a6.5 6.5 0 0 1 13 0"></path><path d="M16 4.5a3.5 3.5 0 0 1 0 7"></path><path d="M18 14.2a6.5 6.5 0 0 1 3.5 5.8"></path></svg></span>ข้อมูลลูกค้า</a>
+<a href="RoomTypes.dc.html" style="position: relative; display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 12px; margin-bottom: 2px; border-radius: 10px; font-size: 14px; line-height: 22px; text-decoration: none; background: {{n.rtype.bg}}; color: {{n.rtype.fg}}; font-weight: {{n.rtype.w}}"><span style="position: absolute; left: -12px; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0; background: {{n.rtype.bar}}"></span><span style="display: flex; color: {{n.rtype.ic}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21h16"></path><path d="M6 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17"></path><circle cx="14.5" cy="12" r="1"></circle></svg></span>ประเภทห้องพัก</a>
+<div style="flex-grow: 1"></div>
+<div style="display: flex; align-items: center; gap: 12px; padding: 12px 8px; border-top: 1px solid #1b3d45">
+<div style="width: 36px; height: 36px; border-radius: 9999px; background: #1b3d45; color: #4fd1bf; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600">สม</div>
+<div style="display: flex; flex-direction: column; flex-grow: 1; min-width: 0">
+<span style="font-size: 14px; line-height: 20px; font-weight: 500; color: #ffffff">สมชาย ใจดี</span>
+<span style="font-size: 12px; line-height: 18px">Admin</span>
+</div>
+<a href="Login.dc.html" aria-label="ออกจากระบบ" style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 10px; color: #b9cad1"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="m16 17 5-5-5-5"></path><path d="M21 12H9"></path></svg></a>
+</div>
+</nav>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"active":{"editor":"enum","options":["dash","rooms","other","exp","rcpt","rep","set","cust","rtype"],"default":"dash"},"$preview":{"width":248,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const a = this.props.active ?? 'dash';
+    const keys = ['dash','rooms','other','exp','rcpt','rep','set','cust','rtype'];
+    const n = {};
+    keys.forEach((k) => {
+      const on = k === a;
+      n[k] = on
+        ? { bg: '#1b3d45', fg: '#ffffff', bar: '#4fd1bf', ic: '#4fd1bf', w: '600' }
+        : { bg: 'transparent', fg: '#b9cad1', bar: 'transparent', ic: '#b9cad1', w: '400' };
+    });
+    return { n };
+  }
+}
+</script>
+</body>
+</html>

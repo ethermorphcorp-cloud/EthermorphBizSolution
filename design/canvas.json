@@ -1,0 +1,253 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "Architecture.dc.html": {
+      "h": 1500,
+      "title": "Architecture · GAS",
+      "w": 1440,
+      "x": 1520,
+      "y": 6420
+    },
+    "Customers.dc.html": {
+      "h": 1000,
+      "is_interactive": true,
+      "title": "2.2 · ข้อมูลลูกค้า",
+      "w": 1440,
+      "x": 1520,
+      "y": 3240
+    },
+    "Expenses.dc.html": {
+      "h": 1100,
+      "is_interactive": true,
+      "title": "4 · บันทึกรายจ่าย",
+      "w": 1440,
+      "x": 6080,
+      "y": 1700
+    },
+    "Feedback.dc.html": {
+      "h": 1320,
+      "title": "UI Kit · Feedback & Validation",
+      "w": 1440,
+      "x": 0,
+      "y": 6420
+    },
+    "Income-Booking.dc.html": {
+      "h": 1160,
+      "is_interactive": true,
+      "title": "3.3 · ตารางจองห้องพักรายวัน",
+      "w": 1440,
+      "x": 7600,
+      "y": 1700
+    },
+    "Income-Calendar.dc.html": {
+      "h": 1100,
+      "is_interactive": true,
+      "title": "3 · รายได้ — ปฏิทิน",
+      "w": 1440,
+      "x": 1520,
+      "y": 1700
+    },
+    "Income-Modal.dc.html": {
+      "h": 1080,
+      "is_interactive": true,
+      "title": "3 · Modal เพิ่มรายได้ห้องพัก",
+      "w": 1440,
+      "x": 4560,
+      "y": 1700
+    },
+    "Income-Other.dc.html": {
+      "h": 1060,
+      "is_interactive": true,
+      "title": "3.2 · รายได้อื่นๆ",
+      "w": 1440,
+      "x": 3040,
+      "y": 1700
+    },
+    "Income-Rooms.dc.html": {
+      "h": 1120,
+      "is_interactive": true,
+      "title": "3.1 · รายได้ห้องพัก — ตาราง",
+      "w": 1440,
+      "x": 0,
+      "y": 1700
+    },
+    "Login.dc.html": {
+      "h": 900,
+      "is_interactive": true,
+      "title": "1 · Login",
+      "w": 1440,
+      "x": 0,
+      "y": 0
+    },
+    "Main.dc.html": {
+      "h": 1280,
+      "is_interactive": true,
+      "title": "7 · Dashboard",
+      "w": 1440,
+      "x": 1520,
+      "y": 0
+    },
+    "Mobile-Dashboard.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Mobile · Dashboard",
+      "w": 390,
+      "x": 3040,
+      "y": 0
+    },
+    "Mobile-Income.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Mobile · รายได้ (stacked table)",
+      "w": 390,
+      "x": 3980,
+      "y": 0
+    },
+    "Mobile-Menu.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Mobile · Toggle menu",
+      "w": 390,
+      "x": 3510,
+      "y": 0
+    },
+    "Receipt.dc.html": {
+      "h": 1123,
+      "paper": "a4",
+      "title": "5 · แบบฟอร์มใบเสร็จ (A4)",
+      "w": 794,
+      "x": 0,
+      "y": 4760
+    },
+    "Reports.dc.html": {
+      "h": 1240,
+      "is_interactive": true,
+      "title": "6 · รายงาน",
+      "w": 1440,
+      "x": 874,
+      "y": 4760
+    },
+    "RoomTypes.dc.html": {
+      "h": 1100,
+      "is_interactive": true,
+      "title": "2.3 · ประเภทห้องพัก",
+      "w": 1440,
+      "x": 3040,
+      "y": 3240
+    },
+    "Settings.dc.html": {
+      "h": 1040,
+      "is_interactive": true,
+      "title": "2.1 · ตั้งค่าทั่วไป (Dropdown / บริษัท / ผู้ใช้)",
+      "w": 1440,
+      "x": 0,
+      "y": 3240
+    },
+    "Sidebar.dc.html": {
+      "h": 900,
+      "is_interactive": true,
+      "title": "Component · Sidebar",
+      "w": 248,
+      "x": 0,
+      "y": 8340
+    },
+    "Topbar.dc.html": {
+      "h": 60,
+      "title": "Component · Topbar",
+      "w": 1192,
+      "x": 328,
+      "y": 8340
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-09-24T13:46:25Z",
+    "v": 1
+  },
+  "designSystems": [
+    {
+      "artifact": "https://claude.ai/code/artifact/6143c5b6-8acd-422a-b701-199249c613e0",
+      "copiedAt": "2026-09-24T13:46:25Z",
+      "namespace": "ethermorph-retail",
+      "title": "Ethermorph Retail",
+      "version": "1790254497-8010"
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  },
+  "notes": {
+    "t1": {
+      "kind": "title1",
+      "maxW": 4370,
+      "text": "เข้าสู่ระบบ · Dashboard · มือถือ",
+      "w": 240,
+      "x": 0,
+      "y": -300
+    },
+    "t2": {
+      "kind": "title1",
+      "maxW": 8000,
+      "text": "บันทึกรายได้ และรายจ่าย",
+      "w": 240,
+      "x": 0,
+      "y": 1400
+    },
+    "t3": {
+      "kind": "title1",
+      "maxW": 4480,
+      "text": "ตั้งค่า",
+      "w": 240,
+      "x": 0,
+      "y": 2940
+    },
+    "t4": {
+      "kind": "title1",
+      "maxW": 2314,
+      "text": "ใบเสร็จ และรายงาน",
+      "w": 240,
+      "x": 0,
+      "y": 4460
+    },
+    "t5": {
+      "kind": "title1",
+      "maxW": 2960,
+      "text": "ระบบ Feedback และสถาปัตยกรรม",
+      "w": 240,
+      "x": 0,
+      "y": 6120
+    },
+    "t6": {
+      "kind": "title1",
+      "maxW": 1520,
+      "text": "Components ที่ใช้ร่วมกัน",
+      "w": 240,
+      "x": 0,
+      "y": 8040
+    }
+  },
+  "order": [
+    "Login.dc.html",
+    "Main.dc.html",
+    "Mobile-Dashboard.dc.html",
+    "Mobile-Menu.dc.html",
+    "Mobile-Income.dc.html",
+    "Income-Rooms.dc.html",
+    "Income-Calendar.dc.html",
+    "Income-Other.dc.html",
+    "Income-Modal.dc.html",
+    "Expenses.dc.html",
+    "Income-Booking.dc.html",
+    "Settings.dc.html",
+    "Customers.dc.html",
+    "RoomTypes.dc.html",
+    "Receipt.dc.html",
+    "Reports.dc.html",
+    "Feedback.dc.html",
+    "Architecture.dc.html",
+    "Sidebar.dc.html",
+    "Topbar.dc.html"
+  ],
+  "pages": [],
+  "title": "Hotel Management Web App"
+}
