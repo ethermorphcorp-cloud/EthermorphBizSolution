@@ -75,8 +75,20 @@ var ROUTES = {
   'roomType.delete':     {perm: 'room.edit', fn: function (a, u) { return RoomService.typeDelete(u, a.code); }},
   'room.save':           {perm: 'room.edit', fn: function (a, u) { return RoomService.roomSave(u, a.data, a.isNew === true); }},
   'room.delete':         {perm: 'room.edit', fn: function (a, u) { return RoomService.roomDelete(u, a.roomNo); }},
-  'room.status':         {perm: 'room.status', fn: function (a, u) { return RoomService.roomStatus(u, a.roomNo, a.status, a.note); }}
-  // step 4+: dashboard.summary, roomIncome.*, booking.grid, otherIncome.*, expense.*, receipt.*, report.*, upload.*
+  'room.status':         {perm: 'room.status', fn: function (a, u) { return RoomService.roomStatus(u, a.roomNo, a.status, a.note); }},
+  'audit.client':        {fn: function (a, u) { return clientAudit_(u, a); }},
+
+  'roomIncome.list':     {perm: 'roomIncome.view', feature: 'roomIncome', fn: function (a) { return RoomIncomeService.list(a); }},
+  'roomIncome.get':      {perm: 'roomIncome.view', feature: 'roomIncome', fn: function (a) { return RoomIncomeService.get(a.docNo); }},
+  'roomIncome.availability': {perm: 'roomIncome.view', feature: 'roomIncome', fn: function (a) { return RoomIncomeService.availability(a.checkIn, a.checkOut, a.exceptDocNo); }},
+  'roomIncome.save':     {perm: 'roomIncome.edit', feature: 'roomIncome', fn: function (a, u) { return RoomIncomeService.save(u, a.data); }},
+  'roomIncome.cancel':   {perm: 'roomIncome.edit', feature: 'roomIncome', fn: function (a, u) { return RoomIncomeService.cancel(u, a.docNo); }},
+  'roomIncome.delete':   {perm: 'roomIncome.delete', feature: 'roomIncome', fn: function (a, u) { return RoomIncomeService.delete(u, a.docNo); }},
+  'roomIncome.calendar': {perm: 'roomIncome.view', feature: 'roomIncome', fn: function (a) { return RoomIncomeService.calendar(a.month); }},
+  'roomIncome.export':   {perm: 'roomIncome.view', feature: 'roomIncome', fn: function (a, u) { return RoomIncomeService.export(u, a); }},
+  'customer.lookup':     {perm: 'roomIncome.view', fn: function () { return customerLookup_(); }},
+  'booking.grid':        {perm: 'booking.view', feature: 'booking', fn: function (a) { return BookingService.grid(a.from, a.days, a.typeCode); }}
+  // step 5+: dashboard.summary, otherIncome.*, expense.*, receipt.*, report.*, upload.*
 };
 
 function api(shop, action, token, payload) {

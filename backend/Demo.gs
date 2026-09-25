@@ -135,7 +135,8 @@ function seedDemoMasters_() {
     return {code: t[0], name: t[1], price: t[2], weekendPrice: t[3], maxGuests: t[4], bedType: t[5], amenities: t[6], active: true};
   }));
   insertRows('Rooms', DemoData.rooms.map(function (r) {
-    return {roomNo: r[0], typeCode: r[1], floor: r[2], status: r[3], note: r[4]};
+    return {roomNo: r[0], typeCode: r[1], floor: r[2], status: r[3], note: r[4],
+            offUntil: r[0] === DemoData.roomOff.roomNo ? DemoData.roomOff.to : ''};
   }));
   var have = {};
   readTable('Users').forEach(function (u) { have[u.username] = 1; });

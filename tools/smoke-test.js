@@ -489,5 +489,89 @@ check('request state cleared', G('SHOP === null && SANDBOX === null && CURRENT_U
   check('demo sheet still untouched', dataRows('DEMO-HOTEL', 'Customers').length === 214 && dataRows('DEMO-HOTEL', 'Rooms').length === 12);
 }
 
+/* ---------- step 4: room income, calendar, booking grid ---------- */
+{
+  const D = api('DEMO-HOTEL', 'auth.login', null, {username: 'maneerat', password: '1234'}).data.token;
+  const desk = api('DEMO-HOTEL', 'auth.login', null, {username: 'frontdesk1', password: '1234'}).data.token;
+  const call = (tok, action, payload) => api('DEMO-HOTEL', action, tok, payload || {});
+  let r = call(D, 'roomIncome.list', {month: '2026-09', pageSize: 8});
+  const L = r.data;
+  check('Sep KPIs match Income-Rooms', r.ok && L.kpi.revenue === 402650 && L.kpi.nights === 226 && L.kpi.adr === 1781.64 && L.total === 71 && L.counts.other === 117,
+    r.ok ? {kpi: L.kpi, total: L.total, counts: L.counts} : r);
+  check('months that have data, newest first, with counts', L.months[0].value >= '2026-09' && L.months.find(m => m.value === '2026-08').count === 71 &&
+    L.months.find(m => m.value === '2026-04').label === 'เม.ย. 2026', L.months);
+  check('list page: newest doc first, page sum excludes cancelled', L.rows[0].docNo === 'BK-202609-0071' && L.rows.length === 8 &&
+    L.pageSum.total === L.rows.filter(b => b.payStatus !== 'cxl').reduce((s, b) => s + b.total, 0), L.pageSum);
+  check('filter options with labels', L.options.channel.find(o => o.value === 'BKG').label === 'Booking.com' && L.options.payStatus.find(o => o.value === 'cxl'), L.options.payStatus);
+  r = call(D, 'roomIncome.list', {month: '2026-09', filters: {payStatus: 'due'}, q: '', pageSize: 50});
+  check('filter by status', r.ok && r.data.rows.every(b => b.payStatus === 'due') && r.data.total === L.kpi.dueCount, r.ok ? r.data.total : r);
+  r = call(D, 'roomIncome.list', {month: '2026-09', q: '089-765-4321'});
+  check('search by phone', r.ok && r.data.rows[0].docNo === 'BK-202609-0061', r.ok ? r.data.rows.map(b => b.docNo) : r);
+
+  const base = {customerId: 'CU-0214', typeCode: 'SUP', roomNo: '101', checkIn: '2027-01-10', checkOut: '2027-01-12', guests: 2,
+                rate: 1200, discount: 0, channel: 'WALKIN', payMethod: 'CASH', payStatus: 'paid'};
+  r = call(D, 'roomIncome.save', {data: Object.assign({}, base, {customerId: ''})});
+  check('customer required', !r.ok && r.field === 'customerId', r);
+  r = call(D, 'roomIncome.save', {data: Object.assign({}, base, {guests: 3})});
+  check('guests over the room type capacity', !r.ok && r.field === 'guests', r);
+  r = call(D, 'roomIncome.save', {data: Object.assign({}, base, {roomNo: '201'})});
+  check('room must belong to the type', !r.ok && r.field === 'roomNo', r);
+  r = call(D, 'roomIncome.save', {data: Object.assign({}, base, {payStatus: 'dep', deposit: 5000})});
+  check('deposit over the total', !r.ok && r.field === 'deposit' && /฿2,400.00/.test(r.message), r);
+  r = call(D, 'roomIncome.save', {data: Object.assign({}, base, {payStatus: 'dep', deposit: 1000, discount: 100}), _mv: ''});
+  const nb = r.ok && r.data;
+  check('booking saved: nights, total, VAT inside, guest from the customer', r.ok && /^BK-\d{6}-\d{4}$/.test(nb.docNo) && nb.nights === 2 && nb.total === 2300 &&
+    nb.vatAmount === Math.round(2300 * 7 / 107 * 100) / 100 && nb.guestName === 'คุณวรรณา ศรีสุข' && nb.phone === '089-765-4321' && nb.createdBy === 'maneerat', r);
+  r = call(D, 'roomIncome.save', {data: Object.assign({}, base, {checkIn: '2027-01-11', checkOut: '2027-01-13'})});
+  check('overlapping stay in the same room refused', !r.ok && r.field === 'roomNo' && r.message.includes(nb.docNo), r);
+  r = call(D, 'roomIncome.save', {data: Object.assign({}, base, {checkIn: '2027-01-12', checkOut: '2027-01-13'})});
+  check('back-to-back stay is fine', r.ok, r);
+  const next = r.data;
+  r = call(D, 'roomIncome.availability', {checkIn: '2027-01-11', checkOut: '2027-01-12'});
+  check('availability: 101 taken, 102 free', r.ok && !r.data['101'].free && r.data['101'].docNo === nb.docNo && r.data['102'].free, r.ok ? r.data['101'] : r);
+  r = call(D, 'roomIncome.availability', {checkIn: '2027-01-11', checkOut: '2027-01-12', exceptDocNo: nb.docNo});
+  check('availability ignores the booking being edited', r.ok && r.data['101'].free);
+  r = call(D, 'roomIncome.save', {data: Object.assign({}, base, {docNo: nb.docNo, checkOut: '2027-01-11', payStatus: 'paid'})});
+  check('edit keeps the doc number', r.ok && r.data.docNo === nb.docNo && r.data.nights === 1 && r.data.deposit === 0, r);
+  r = call(D, 'roomIncome.cancel', {docNo: next.docNo});
+  const again = call(D, 'roomIncome.save', {data: Object.assign({}, base, {checkIn: '2027-01-12', checkOut: '2027-01-14'})});
+  check('cancel frees the room', r.ok && again.ok, [r, again]);
+  r = call(D, 'roomIncome.delete', {docNo: 'BK-202609-0057'});
+  check('booking with other income cannot be deleted', !r.ok && r.code === 'IN_USE', r);
+  r = call(desk, 'roomIncome.delete', {docNo: nb.docNo});
+  check('FrontDesk cannot delete bookings', !r.ok && r.code === 'FORBIDDEN', r);
+  r = call(desk, 'roomIncome.save', {data: Object.assign({}, base, {roomNo: '102', checkIn: '2027-02-01', checkOut: '2027-02-02'})});
+  check('FrontDesk can book', r.ok, r);
+  r = call(D, 'roomIncome.delete', {docNo: nb.docNo});
+  check('delete an unreferenced booking', r.ok && !call(D, 'roomIncome.get', {docNo: nb.docNo}).ok, r);
+  r = call(D, 'roomIncome.get', {docNo: 'BK-202609-0057'});
+  check('get with linked other income', r.ok && r.data.other.some(o => o.docNo === 'OI-202609-0117'), r.ok ? r.data.other.length : r);
+
+  r = call(D, 'roomIncome.calendar', {month: '2026-09'});
+  const d24 = r.ok && r.data.days.find(d => d.date === '2026-09-24');
+  check('calendar: 30 days, 24/09 check-ins and other income', r.ok && r.data.days.length === 30 && d24.items.some(x => x.docNo === 'BK-202609-0061') &&
+    d24.items.some(x => x.docNo === 'OI-202609-0117' && x.name === 'Minibar') && d24.occ > 0 && d24.occ <= 12 &&
+    d24.rev === d24.items.filter(x => x.payStatus !== 'cxl').reduce((s, x) => s + x.amount, 0), d24);
+  const sepRev = r.data.days.reduce((s, d) => s + d.rev, 0);
+  check('calendar revenue for the month = room + other', Math.round(sepRev) === 486250, sepRev);
+
+  r = call(D, 'booking.grid', {from: '2026-09-21', days: 14});
+  const G2 = r.data;
+  const bar = no => G2.bars.find(b => b.docNo === no);
+  check('grid: 12 rooms × 14 days', r.ok && G2.rooms.length === 12 && G2.dates.length === 14 && G2.dates[13] === '2026-10-04' && G2.summary.length === 14, r.ok ? G2.dates : r);
+  check('grid bars: position, clipping, phone', bar('BK-202609-0059').start === 1 && bar('BK-202609-0059').span === 3 &&
+    bar('BK-202609-0053').clipL && bar('BK-202609-0053').start === 0 && bar('BK-202610-0004').clipR && bar('BK-202610-0004').start === 11 &&
+    bar('BK-202610-0004').span === 3 && bar('BK-202609-0061').phone === '089-765-4321' && !bar('BK-202609-0060'), [bar('BK-202609-0053'), bar('BK-202610-0004')]);
+  check('grid summary: free rooms per day', G2.summary.every(s => s.free >= 0 && s.free <= 12 && s.occupancy === Math.round((12 - s.free) / 12 * 100)), G2.summary);
+  r = call(D, 'booking.grid', {from: '2026-09-21', days: 7, typeCode: 'STE'});
+  check('grid filtered by type', r.ok && r.data.rooms.length === 2 && r.data.bars.every(b => b.roomNo.startsWith('4')) && r.data.typeOptions.length === 4, r.ok ? r.data.rooms : r);
+  r = call(D, 'roomIncome.export', {month: '2026-09'});
+  check('export rows', r.ok && r.data.rows.length === 71 && r.data.headers[0] === 'เลขที่', r.ok ? r.data.rows.length : r);
+  r = call(desk, 'audit.client', {action: 'PRINT', entity: 'Booking', detail: 'grid 21/09–04/10'});
+  const r2 = call(desk, 'audit.client', {action: 'DELETE_ALL'});
+  check('client audit: print/export only', r.ok && !r2.ok, [r, r2]);
+  check('demo bookings sheet untouched', dataRows('DEMO-HOTEL', 'RoomIncome').length === 367);
+}
+
 console.log(`${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

@@ -1,0 +1,290 @@
+<script>
+/* page-rooms.html — บันทึกการจองห้องพัก: three views of RoomIncome.
+ *   table    (design/Income-Rooms)    KPI strip, month + filters that exist in the data, page total row
+ *   calendar (design/Income-Calendar) month grid, click a day for its items on the right
+ *   grid     (design/Income-Booking)  rooms × days, one bar per stay (name + phone), click an empty cell to book
+ * bookingModal_ (design/Income-Modal) adds or edits a stay: customer search, type → free rooms for the dates,
+ * rate from the room type (Fri/Sat nights at the weekend price), deposit, VAT by the company setting. */
+const PAY_LABEL={paid:'ชำระแล้ว',dep:'มัดจำ',due:'ค้างชำระ',cxl:'ยกเลิก'};
+let CUST_CACHE=null;   /* [[id,name,phone,type]] for the customer search, loaded once per page visit */
+
+Pages.rooms={render(el,params){
+  const view=['table','calendar','grid'].includes(params.view)?params.view:(el._view||'table');el._view=view;
+  const st=el._st||(el._st={month:'',q:'',filters:{},sort:{},page:1,calMonth:'',calSel:'',from:'',days:14,type:'',gq:''});
+  CUST_CACHE=null;
+  const head=view==='grid'?'ตารางจองรายวันแยกตามห้อง · แสดงชื่อและเบอร์โทรของผู้จอง · คลิกช่องว่างเพื่อจองห้อง'
+    :view==='calendar'?'มุมมองปฏิทิน · คลิกวันที่เพื่อดูรายการและเพิ่มรายได้ของวันนั้น':'รายได้จากการเข้าพัก และรายได้อื่นๆ เช่น Minibar ห้องอาหาร ซักรีด';
+  const addLabel=view==='grid'?'จองห้องพัก':'บันทึกรายได้ห้องพัก';
+  el.innerHTML=pageHead('บันทึกการจองห้องพัก',head,
+      (view==='grid'?`<button type="button" class="btn" id="rgPrint">${icon('printer')}<span>พิมพ์ตาราง</span></button>`:'')+
+      `<button type="button" class="btn" id="riExport">${icon('download')}<span>ส่งออก Excel</span></button>`+
+      (can('roomIncome.edit')?`<button type="button" class="btn primary" id="riAdd">${icon('plus')}<span>${addLabel}</span></button>`:''))+
+    `<div class="inc-bar"><div class="tabs" role="tablist" aria-label="ประเภทรายได้">
+      <button type="button" role="tab" aria-selected="${view!=='grid'}" data-v="table">${icon('bed','s16')}รายได้จากห้องพัก<span class="cnt" id="cntRooms">·</span></button>
+      ${can('otherIncome.view')?`<button type="button" role="tab" aria-selected="false" data-go-other>${icon('cup','s16')}รายได้อื่นๆ<span class="cnt" id="cntOther">·</span></button>`:''}
+      ${can('booking.view')?`<button type="button" role="tab" aria-selected="${view==='grid'}" data-v="grid">${icon('calendar','s16')}ตารางจองห้องพักรายวัน</button>`:''}</div>
+      ${view!=='grid'?`<div class="seg" role="group" aria-label="มุมมอง"><button type="button" data-v="table" aria-pressed="${view==='table'}">${icon('grid','s16')}ตาราง</button><button type="button" data-v="calendar" aria-pressed="${view==='calendar'}">${icon('calendar','s16')}ปฏิทิน</button></div>`:''}</div>
+    <div id="riBody" style="display:flex;flex-direction:column;gap:16px"></div>`;
+  $$('[data-v]',el).forEach(b=>b.onclick=()=>go('rooms',{view:b.dataset.v},true));
+  if($('[data-go-other]',el))$('[data-go-other]',el).onclick=()=>go('other');
+  const body=$('#riBody',el);
+  const reload=()=>({table:riTable_,calendar:riCalendar_,grid:riGrid_})[view](body,st,el);
+  el._reload=reload;
+  if($('#riAdd',el))$('#riAdd',el).onclick=()=>bookingModal_({date:view==='calendar'?st.calSel:''},reload);
+  $('#riExport',el).onclick=()=>view==='grid'?gridExport_(el._grid):riExport_(st);
+  if($('#rgPrint',el))$('#rgPrint',el).onclick=()=>gridPrint_(el);
+  reload();
+  if(params.add&&can('roomIncome.edit'))bookingModal_({},reload);
+  if(params.docNo)bookingOpen_(params.docNo,reload)}};
+
+const counts_=(el,r)=>{$('#cntRooms',el)&&($('#cntRooms',el).textContent=fmtN(r.counts.rooms));$('#cntOther',el)&&($('#cntOther',el).textContent=fmtN(r.counts.other))};
+const payBadge_=s=>UI.badge('pay',s);
+const stay_=b=>`${fmtD(b.checkIn).slice(0,5)} – ${fmtD(b.checkOut)}`;
+
+/* ---------- table ---------- */
+async function riTable_(body,st,el){
+  if(!body._built){body.innerHTML=`<div class="kpi-strip" id="riKpi"></div>
+    <section class="card" id="riCard"><div class="filterbar"><div class="iw search"><span class="lead">${icon('search','s16')}</span><input class="input sm" id="riQ" type="search" placeholder="ค้นหาเลขที่ ชื่อผู้เข้าพัก หรือเบอร์โทร" aria-label="ค้นหาเลขที่ ชื่อผู้เข้าพัก หรือเบอร์โทร" value="${esc(st.q)}"></div>
+      <select class="select sm" id="riMonth" aria-label="เดือน" style="width:auto"></select><select class="select sm" id="riType" aria-label="ประเภทห้อง" style="width:auto"></select>
+      <select class="select sm" id="riCh" aria-label="ช่องทางการจอง" style="width:auto"></select><select class="select sm" id="riSt" aria-label="สถานะการชำระ" style="width:auto"></select>
+      <button type="button" class="btn ghost sm" id="riClear">ล้างตัวกรอง</button><span class="grow"></span><span class="cap">เดือนและตัวกรองแสดงเฉพาะค่าที่มีข้อมูล</span></div>
+      <div class="tbl-wrap" id="riTable"></div><div class="pager" id="riPager"></div></section>`;
+    body._built=true;
+    const f=(id,k)=>$(id,body).onchange=e=>{st.filters[k]=e.target.value;st.page=1;riTable_(body,st,el)};
+    f('#riType','typeCode');f('#riCh','channel');f('#riSt','payStatus');
+    $('#riMonth',body).onchange=e=>{st.month=e.target.value;st.filters={};st.page=1;riTable_(body,st,el)};
+    $('#riQ',body).oninput=UI.debounce(e=>{st.q=e.target.value.trim();st.page=1;riTable_(body,st,el)},400);
+    $('#riClear',body).onclick=()=>{st.q='';st.filters={};st.page=1;$('#riQ',body).value='';riTable_(body,st,el)};
+    st.pageSize=UI.pageSizeFor($('#riCard',body),{header:58+44+45,rowHeight:61})}
+  let r;
+  try{r=await api('roomIncome.list',{month:st.month,q:st.q,filters:st.filters,sort:st.sort,page:st.page,pageSize:st.pageSize},{loading:'กำลังโหลดรายได้ห้องพัก'})}
+  catch(e){$('#riTable',body).innerHTML=UI.empty('โหลดข้อมูลไม่สำเร็จ',e.message);return}
+  st.month=r.month;st.page=r.page;counts_(el,r);
+  const mon=r.months.find(m=>m.value===r.month);
+  $('#riKpi',body).innerHTML=`<div><span class="lab">รายได้ห้องพัก (${esc(mon?mon.label:r.month)})</span><b>${fmtM(r.kpi.revenue)}</b></div>
+    <div><span class="lab">คืนที่ขายได้</span><b>${fmtN(r.kpi.nights)} คืน</b></div><div><span class="lab">ราคาเฉลี่ยต่อคืน (ADR)</span><b>${fmtM(r.kpi.adr)}</b></div>
+    <div><span class="lab">ค้างชำระ</span><b style="color:var(--warning)">${fmtM(r.kpi.due)}</b><span class="sub">${fmtN(r.kpi.dueCount)} รายการ</span></div>`;
+  $('#riMonth',body).innerHTML=(r.months.length?'':`<option value="${esc(r.month)}">ยังไม่มีข้อมูล</option>`)+r.months.map(m=>`<option value="${m.value}" ${m.value===r.month?'selected':''}>${esc(m.label)} (${fmtN(m.count)})</option>`).join('');
+  const opt=(id,label,list,cur)=>{$(id,body).innerHTML=`<option value="">${label}: ทั้งหมด (${list.length})</option>`+list.map(o=>`<option value="${esc(o.value)}" ${o.value===cur?'selected':''}>${esc(o.label)} (${fmtN(o.count)})</option>`).join('')};
+  opt('#riType','ประเภทห้อง',r.options.typeCode,st.filters.typeCode);opt('#riCh','ช่องทาง',r.options.channel,st.filters.channel);opt('#riSt','สถานะ',r.options.payStatus,st.filters.payStatus);
+  const host=$('#riTable',body);
+  if(!r.rows.length){host.innerHTML=UI.empty(r.kpi.revenue||r.total?'ไม่พบรายการที่ตรงกับตัวกรอง':'ยังไม่มีการจองในเดือนนี้',r.total?'ลองเปลี่ยนคำค้นหาหรือล้างตัวกรอง':'กดปุ่ม บันทึกรายได้ห้องพัก เพื่อเพิ่มการจอง');$('#riPager',body).innerHTML='';return}
+  const th=(k,l,c='')=>{const on=st.sort.key===k;return`<th scope="col" class="${c}" ${on?`aria-sort="${st.sort.dir==='asc'?'ascending':'descending'}"`:''}><button type="button" class="sort-btn" data-sort="${k}">${l}${on?icon(st.sort.dir==='asc'?'chevu':'chevd','s16'):''}</button></th>`};
+  host.innerHTML=`<table class="tbl stack"><thead><tr>${th('docNo','เลขที่')}${th('guestName','ผู้เข้าพัก')}<th scope="col">ห้อง</th>${th('checkIn','วันที่เข้าพัก')}${th('nights','คืน','r')}<th scope="col">ช่องทาง</th>${th('total','ยอดสุทธิ','r')}<th scope="col">สถานะ</th><th scope="col" class="act"><span class="sr-only">จัดการ</span></th></tr></thead>
+    <tbody>${r.rows.map((b,i)=>`<tr class="clickable" data-row="${i}"><td data-label="เลขที่"><span class="mono">${esc(b.docNo)}</span></td>
+      <td data-label="ผู้เข้าพัก"><span><b style="font-weight:500">${esc(b.guestName)}</b><span class="cap mono" style="display:block">${esc(b.phone||'')}</span></span></td>
+      <td data-label="ห้อง"><span class="mono">${esc(b.typeCode)} ${esc(b.roomNo)}</span></td><td data-label="วันที่เข้าพัก">${stay_(b)}</td>
+      <td data-label="คืน" class="r">${b.nights}</td><td data-label="ช่องทาง">${esc(Master.label('channel',b.channel))}</td>
+      <td data-label="ยอดสุทธิ" class="r" style="${b.payStatus==='cxl'?'text-decoration:line-through;color:var(--ink-muted)':''}">${fmtM(b.total)}</td><td data-label="สถานะ">${payBadge_(b.payStatus)}</td>
+      <td class="r nolabel act"><button type="button" class="btn plain icon sm" data-act="${i}" aria-haspopup="menu" aria-label="จัดการ ${esc(b.docNo)}">${icon('more')}</button></td></tr>`).join('')}</tbody>
+    <tfoot><tr><td colspan="4" class="nolabel">รวมหน้านี้ (${r.pageSum.count} รายการ)</td><td class="r" data-label="คืน">${fmtN(r.pageSum.nights)}</td><td class="nolabel"></td><td class="r" data-label="ยอดสุทธิ">${fmtM(r.pageSum.total)}</td><td colspan="2" class="nolabel"></td></tr></tfoot></table>`;
+  UI.pager($('#riPager',body),{page:r.page,pageSize:r.pageSize,total:r.total,onPage:p=>{st.page=p;riTable_(body,st,el)}});
+  const again=()=>riTable_(body,st,el);
+  $$('[data-sort]',host).forEach(b=>b.onclick=e=>{e.stopPropagation();const k=b.dataset.sort;st.sort=st.sort.key===k?{key:k,dir:st.sort.dir==='asc'?'desc':'asc'}:{key:k,dir:k==='guestName'?'asc':'desc'};st.page=1;again()});
+  $$('tr[data-row]',host).forEach(tr=>tr.onclick=e=>{if(!e.target.closest('button'))bookingOpen_(r.rows[+tr.dataset.row].docNo,again)});
+  $$('[data-act]',host).forEach(b=>b.onclick=e=>{e.stopPropagation();bookingMenu_(b,r.rows[+b.dataset.act],again)})}
+
+function bookingMenu_(anchor,b,done){
+  UI.openMenu(anchor,[
+    {icon:can('roomIncome.edit')?'edit':'eye',label:can('roomIncome.edit')?'แก้ไขการจอง':'ดูรายละเอียด',onClick:()=>bookingOpen_(b.docNo,done)},
+    ...(can('receipt.create')&&b.payStatus!=='cxl'?[{icon:'receipt',label:'ออกใบเสร็จ',onClick:()=>go('receipts',{bookingNo:b.docNo})}]:[]),
+    ...(can('roomIncome.edit')&&b.payStatus!=='cxl'?['-',{icon:'ban',label:'ยกเลิกการจอง',danger:true,onClick:()=>bookingCancel_(b,done)}]:[]),
+    ...(can('roomIncome.delete')?[{icon:'trash',label:'ลบรายการ',danger:true,onClick:()=>bookingDelete_(b,done)}]:[])],{header:`<b class="mono">${esc(b.docNo)}</b>${esc(b.guestName)}`})}
+
+async function bookingCancel_(b,done){
+  if(!await UI.swalConfirm('ยกเลิกการจองนี้?',`${b.docNo} · ${b.guestName} · ห้อง ${b.roomNo} ${stay_(b)} — ห้องจะว่างทันที รายการยังเก็บไว้ในสถานะยกเลิก`,'ยกเลิกการจอง'))return;
+  try{await api('roomIncome.cancel',{docNo:b.docNo},{loading:'กำลังยกเลิก'});UI.toast('ยกเลิกการจองแล้ว','warning',b.docNo);done()}catch(e){UI.swalError('ยกเลิกไม่สำเร็จ',e.message)}}
+async function bookingDelete_(b,done){
+  if(!await UI.swalConfirm('ลบรายการนี้?',`ลบ ${b.docNo} ออกจากระบบถาวร รายการที่มีใบเสร็จหรือรายได้อื่นผูกไว้จะลบไม่ได้ ให้ใช้ ยกเลิกการจอง แทน`,'ลบรายการ'))return;
+  try{await api('roomIncome.delete',{docNo:b.docNo},{loading:'กำลังลบ'});UI.toast('ลบรายการแล้ว','success',b.docNo);done()}catch(e){UI.swalError('ลบไม่สำเร็จ',e.message)}}
+
+async function riExport_(st){
+  try{UI.showLoading('กำลังเตรียมไฟล์ Excel');const [d,XLSX]=await Promise.all([api('roomIncome.export',{month:st.month,q:st.q,filters:st.filters},{loading:false}),UI.xlsx()]);
+    const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,xlsxSheet_(XLSX,d.headers,d.rows,[2,4]),'รายได้ห้องพัก');
+    const name=`room-income-${d.month.replace('-','')}.xlsx`;XLSX.writeFile(wb,name);UI.toast('ส่งออกไฟล์แล้ว','success',`${fmtN(d.rows.length)} รายการ · ${name}`)}
+  catch(e){UI.swalError('ส่งออกไม่สำเร็จ',e.message)}finally{UI.hideLoading()}}
+
+/* ---------- calendar ---------- */
+async function riCalendar_(body,st,el){
+  const month=st.calMonth||TODAY.slice(0,7);let r;
+  try{r=await api('roomIncome.calendar',{month},{loading:'กำลังโหลดปฏิทิน'})}catch(e){body.innerHTML=UI.empty('โหลดปฏิทินไม่สำเร็จ',e.message);return}
+  st.calMonth=r.month;if(!st.calSel||st.calSel.slice(0,7)!==r.month)st.calSel=r.today.slice(0,7)===r.month?r.today:r.month+'-01';
+  api('roomIncome.list',{month:r.month,pageSize:1},{loading:false}).then(x=>counts_(el,x)).catch(()=>{});
+  const [y,m]=r.month.split('-').map(Number),first=new Date(Date.UTC(y,m-1,1)).getUTCDay(),cells=[];
+  for(let i=0;i<first;i++)cells.push(null);r.days.forEach(d=>cells.push(d));while(cells.length%7)cells.push(null);
+  const shift=n=>{const d=new Date(Date.UTC(y,m-1+n,1));st.calMonth=d.toISOString().slice(0,7);st.calSel='';riCalendar_(body,st,el)};
+  const chipOf=x=>`<span class="bk-chip ${x.payStatus}">${esc(x.roomNo)} ${esc(String(x.name).replace(/^คุณ/,'').replace(/^บริษัท /,''))}</span>`;
+  body.innerHTML=`<div class="cal-wrap"><section class="card"><div class="cal-head"><button type="button" class="btn plain icon sm" id="calPrev" aria-label="เดือนก่อนหน้า">${icon('chevl')}</button><h3>${TH_MON[m-1]} ${y}</h3><button type="button" class="btn plain icon sm" id="calNext" aria-label="เดือนถัดไป">${icon('chevr')}</button>
+      <button type="button" class="btn sm" id="calToday">วันนี้</button><span class="grow" style="flex-grow:1"></span>
+      <div class="legend"><span><i class="sw paid"></i>ชำระแล้ว</span><span><i class="sw dep"></i>มัดจำ / จองล่วงหน้า</span><span><i class="sw due"></i>ค้างชำระ</span></div></div>
+    <div class="cal">${['อา.','จ.','อ.','พ.','พฤ.','ศ.','ส.'].map(w=>`<div class="wd">${w}</div>`).join('')}
+      ${cells.map(c=>{if(!c)return'<div class="cal-day out" aria-hidden="true"></div>';const d=+c.date.slice(8),rooms=c.items.filter(x=>x.kind==='room'),future=c.date>r.today;
+        return`<button type="button" class="cal-day ${c.date===r.today?'today':''}" data-d="${c.date}" aria-pressed="${c.date===st.calSel}" aria-label="${d} ${TH_MON[m-1]} ${y} ${future?'จอง '+rooms.length+' ห้อง':'รายได้ '+fmtM(c.rev)}">
+          <span class="top"><span class="dn">${d}</span><span class="occ">${c.occ}/${r.rooms} ห้อง</span></span>
+          <span class="rev">${future?(rooms.length?'จอง '+rooms.length+' ห้อง':''):(c.rev?fmtM(c.rev).replace('.00',''):'')}</span>
+          ${rooms.slice(0,2).map(chipOf).join('')}${c.items.length>2?`<span class="more">+${c.items.length-2} รายการ</span>`:''}</button>`}).join('')}</div></section>
+    <aside class="card cal-side" id="calSide" aria-live="polite"></aside></div>`;
+  const side=()=>{const c=r.days.find(d=>d.date===st.calSel)||r.days[0],dt=new Date(c.date+'T12:00:00');
+    $('#calSide',body).innerHTML=`<div><span class="cap">รายละเอียดวันที่</span><h3>วัน${TH_DOW[dt.getDay()]}ที่ ${+c.date.slice(8)} ${TH_MON[m-1]} ${y}</h3></div>
+      <div class="tot"><div>รายได้รวม<b class="num">${fmtM(c.rev)}</b></div><div>ห้องที่มีผู้เข้าพัก<b>${c.occ} / ${r.rooms} ห้อง</b></div></div>
+      <div>${c.items.length?c.items.map((x,i)=>`<div class="day-item"><button type="button" data-it="${i}"><b style="font-weight:500;display:block">${esc(x.name)}</b><span class="cap mono">${esc(x.docNo)}${x.roomNo?' · '+esc(x.roomNo):''}</span></button><span style="text-align:right"><span class="num" style="display:block">${fmtM(x.amount)}</span>${x.kind==='room'?payBadge_(x.payStatus):'<span class="badge primary nodot">รายได้อื่น</span>'}</span></div>`).join('')
+        :`<p class="cap" style="margin:0">ไม่มีรายการเช็คอินหรือรายได้อื่นในวันนี้</p>`}</div>
+      ${can('roomIncome.edit')?`<button type="button" class="btn primary block" id="calAdd">${icon('plus')}เพิ่มรายการวันที่ ${fmtD(c.date)}</button>`:''}`;
+    $$('[data-it]',body).forEach(b=>b.onclick=()=>{const x=c.items[+b.dataset.it];x.kind==='room'?bookingOpen_(x.docNo,()=>riCalendar_(body,st,el)):go('other',{docNo:x.docNo})});
+    if($('#calAdd',body))$('#calAdd',body).onclick=()=>bookingModal_({date:c.date},()=>riCalendar_(body,st,el))};
+  $$('.cal-day[data-d]',body).forEach(b=>b.onclick=()=>{st.calSel=b.dataset.d;$$('.cal-day[data-d]',body).forEach(x=>x.setAttribute('aria-pressed',x===b));side()});
+  $('#calPrev',body).onclick=()=>shift(-1);$('#calNext',body).onclick=()=>shift(1);
+  $('#calToday',body).onclick=()=>{st.calMonth=TODAY.slice(0,7);st.calSel=TODAY;riCalendar_(body,st,el)};
+  side()}
+
+/* ---------- daily booking grid ---------- */
+async function riGrid_(body,st,el){
+  if(!st.from){const t=new Date(TODAY+'T12:00:00');t.setDate(t.getDate()-3);st.from=t.toISOString().slice(0,10)}
+  let g;try{g=await api('booking.grid',{from:st.from,days:st.days,typeCode:st.type},{loading:'กำลังโหลดตารางจอง'})}catch(e){body.innerHTML=UI.empty('โหลดตารางจองไม่สำเร็จ',e.message);return}
+  el._grid=g;api('roomIncome.list',{month:TODAY.slice(0,7),pageSize:1},{loading:false}).then(x=>counts_(el,x)).catch(()=>{});
+  const N=g.days,cols=`120px 90px repeat(${N},minmax(44px,1fr))`,wd=['อา.','จ.','อ.','พ.','พฤ.','ศ.','ส.'];
+  const dinfo=g.dates.map(d=>{const x=new Date(d+'T12:00:00');return{d,dow:x.getDay(),day:x.getDate(),mon:TH_MONTH_SHORT_[x.getMonth()]}});
+  const q=st.gq.toLowerCase(),qd=q.replace(/\D/g,''),hit=b=>q&&(b.guestName.toLowerCase().includes(q)||(qd.length>=3&&String(b.phone).replace(/\D/g,'').includes(qd)));
+  let html=`<div class="h lbl" style="grid-column:1">ประเภทห้อง</div><div class="h lbl" style="grid-column:2">เลขที่ห้อง</div>`+
+    dinfo.map((x,i)=>`<div class="h ${x.d===g.today?'today':x.dow===0||x.dow===6?'we':''}" style="grid-column:${i+3}"><span>${wd[x.dow]}</span><b>${x.day}</b><span>${x.mon}</span></div>`).join('');
+  g.rooms.forEach((rm,ri)=>{const row=ri+2,first=ri===0||g.rooms[ri-1].typeCode!==rm.typeCode;
+    html+=`<div class="t ${first&&ri?'sep':''}" style="grid-row:${row};grid-column:1">${first?`<b>${esc(rm.typeName)}</b><span class="cap">${fmtM(rm.price)}/คืน</span>`:''}</div><div class="rn ${first&&ri?'sep':''}" style="grid-row:${row};grid-column:2">${esc(rm.roomNo)}</div>`;
+    dinfo.forEach((x,i)=>{html+=`<button type="button" class="bk-cell ${x.d===g.today?'today':x.dow===0||x.dow===6?'we':''}" style="grid-row:${row};grid-column:${i+3}" data-room="${esc(rm.roomNo)}" data-date="${x.d}" ${can('roomIncome.edit')?'':'disabled'} aria-label="จองห้อง ${esc(rm.roomNo)} วันที่ ${fmtD(x.d)}"></button>`});
+    g.offs.filter(o=>o.roomNo===rm.roomNo).forEach(o=>{html+=`<div class="bk-bar off" style="grid-row:${row};grid-column:${o.start+3} / span ${o.span}" title="ปิดปรับปรุง${o.offUntil?' ถึง '+fmtD(o.offUntil):''} · ${esc(o.note||'')}"><b>ปิดปรับปรุง</b><span>${esc(o.note||'')}</span></div>`});
+    g.bars.filter(b=>b.roomNo===rm.roomNo).forEach(b=>{html+=`<button type="button" class="bk-bar ${b.payStatus} ${b.clipL?'cl':''} ${b.clipR?'cr':''} ${hit(b)?'hit':''}" style="grid-row:${row};grid-column:${b.start+3} / span ${b.span}" data-doc="${esc(b.docNo)}" title="${esc(b.docNo)} · ${esc(b.guestName)} · ${esc(b.phone)} · ${b.nights} คืน · ${PAY_LABEL[b.payStatus]}"><b>${esc(b.guestName)}</b><span>${esc(b.phone||'')}</span></button>`})});
+  const sr=g.rooms.length+2;
+  html+=`<div class="t" style="grid-row:${sr};grid-column:1 / span 2;background:var(--surface-sunken)"><b>ห้องว่าง / อัตราเข้าพัก</b></div>`+g.summary.map((s,i)=>`<div class="sum" style="grid-row:${sr};grid-column:${i+3}"><b style="color:${s.free<=2?'var(--danger)':'var(--success)'}">${s.free} ห้อง</b><span>${s.occupancy}%</span></div>`).join('');
+  const last=g.dates[N-1],types=g.typeOptions;
+  body.innerHTML=`<section class="card bk-print"><div class="bk-tools"><button type="button" class="btn plain icon sm" id="gPrev" aria-label="ช่วงก่อนหน้า">${icon('chevl')}</button><span class="range">${fmtD(g.from)} – ${fmtD(last)}</span><button type="button" class="btn plain icon sm" id="gNext" aria-label="ช่วงถัดไป">${icon('chevr')}</button>
+      <button type="button" class="btn sm" id="gToday">วันนี้</button><select class="select sm" id="gDays" aria-label="จำนวนวัน" style="width:auto">${[7,14,30].map(n=>`<option value="${n}" ${n===N?'selected':''}>แสดง ${n} วัน</option>`).join('')}</select>
+      <select class="select sm" id="gType" aria-label="ประเภทห้อง" style="width:auto"><option value="">ประเภทห้อง: ทั้งหมด (${types.length})</option>${types.map(t=>`<option value="${esc(t.value)}" ${t.value===st.type?'selected':''}>${esc(t.label)} (${t.count})</option>`).join('')}</select>
+      <div class="iw" style="width:240px;max-width:100%"><span class="lead">${icon('search','s16')}</span><input class="input sm" id="gQ" type="search" placeholder="ค้นหาชื่อหรือเบอร์โทรผู้จอง" aria-label="ค้นหาชื่อหรือเบอร์โทรผู้จอง" value="${esc(st.gq)}"></div></div>
+    <div class="bk-scroll"><div class="bk-grid" style="grid-template-columns:${cols}">${html}</div></div>
+    <div class="note" style="flex-wrap:wrap"><div class="legend"><span><i class="sw paid"></i>ชำระแล้ว</span><span><i class="sw dep"></i>มัดจำ / จองล่วงหน้า</span><span><i class="sw due"></i>ค้างชำระ</span><span><i class="sw off"></i>ปิดปรับปรุง</span><span><i class="sw today"></i>วันนี้</span></div>
+      <span class="grow" style="flex-grow:1"></span><span>เบอร์โทรแสดงเป็นข้อความ รักษาเลข 0 นำหน้า · แถบที่ตัดขอบหมายถึงการเข้าพักต่อเนื่องนอกช่วงที่แสดง</span></div></section>`;
+  const move=n=>{const t=new Date(st.from+'T12:00:00');t.setDate(t.getDate()+n);st.from=t.toISOString().slice(0,10);riGrid_(body,st,el)};
+  $('#gPrev',body).onclick=()=>move(-N);$('#gNext',body).onclick=()=>move(N);
+  $('#gToday',body).onclick=()=>{st.from='';riGrid_(body,st,el)};
+  $('#gDays',body).onchange=e=>{st.days=+e.target.value;riGrid_(body,st,el)};
+  $('#gType',body).onchange=e=>{st.type=e.target.value;riGrid_(body,st,el)};
+  $('#gQ',body).oninput=UI.debounce(e=>{st.gq=e.target.value.trim();const qq=st.gq.toLowerCase(),dd=qq.replace(/\D/g,'');
+    $$('.bk-bar[data-doc]',body).forEach(b=>{const x=g.bars.find(y=>y.docNo===b.dataset.doc);b.classList.toggle('hit',!!qq&&(x.guestName.toLowerCase().includes(qq)||(dd.length>=3&&String(x.phone).replace(/\D/g,'').includes(dd))))});
+    const first=$('.bk-bar.hit',body);first&&first.scrollIntoView({block:'nearest',inline:'center'})},300);
+  $$('.bk-bar[data-doc]',body).forEach(b=>b.onclick=()=>bookingOpen_(b.dataset.doc,()=>riGrid_(body,st,el)));
+  $$('.bk-cell[data-room]',body).forEach(c=>c.onclick=()=>{const rm=g.rooms.find(x=>x.roomNo===c.dataset.room);bookingModal_({date:c.dataset.date,roomNo:rm.roomNo,typeCode:rm.typeCode},()=>riGrid_(body,st,el))})}
+const TH_MONTH_SHORT_=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+
+function gridPrint_(el){const g=el._grid;if(!g)return;api('audit.client',{action:'PRINT',entity:'Booking',detail:'ตารางจอง '+fmtD(g.from)+' – '+fmtD(g.dates[g.days-1])},{loading:false}).catch(()=>{});window.print()}
+async function gridExport_(g){if(!g)return;
+  try{UI.showLoading('กำลังเตรียมไฟล์ Excel');const XLSX=await UI.xlsx();
+    const head=['ประเภทห้อง','เลขที่ห้อง'].concat(g.dates.map(fmtD));
+    const rows=g.rooms.map(rm=>[rm.typeName,rm.roomNo].concat(g.dates.map((d,i)=>{const b=g.bars.find(x=>x.roomNo===rm.roomNo&&x.start<=i&&i<x.start+x.span);
+      if(b)return`${b.guestName} ${b.phone} (${PAY_LABEL[b.payStatus]})`;const o=g.offs.find(x=>x.roomNo===rm.roomNo&&x.start<=i&&i<x.start+x.span);return o?'ปิดปรับปรุง':''})));
+    rows.push(['ห้องว่าง',''].concat(g.summary.map(s=>s.free)));
+    const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,xlsxSheet_(XLSX,head,rows,[1]),'ตารางจอง');
+    const name=`booking-${g.from.replace(/-/g,'')}.xlsx`;XLSX.writeFile(wb,name);
+    api('audit.client',{action:'EXPORT',entity:'Booking',detail:name},{loading:false}).catch(()=>{});UI.toast('ส่งออกไฟล์แล้ว','success',name)}
+  catch(e){UI.swalError('ส่งออกไม่สำเร็จ',e.message)}finally{UI.hideLoading()}}
+
+/* ---------- booking form (design/Income-Modal) ---------- */
+async function bookingOpen_(docNo,done){
+  try{const b=await api('roomIncome.get',{docNo},{loading:'กำลังโหลดการจอง'});bookingModal_({booking:b},done)}catch(e){UI.swalError('เปิดการจองไม่สำเร็จ',e.message)}}
+
+/* nights between two yyyy-MM-dd dates, and the suggested rate: Fri/Sat nights at the weekend price */
+const nightsOf_=(a,b)=>a&&b?Math.round((Date.parse(b+'T00:00:00Z')-Date.parse(a+'T00:00:00Z'))/864e5):0;
+function suggestRate_(t,a,n){if(!t||n<=0)return t?t.price:0;let sum=0,we=0;
+  for(let i=0;i<n;i++){const d=new Date(Date.parse(a+'T00:00:00Z')+i*864e5).getUTCDay();if(d===5||d===6){we++;sum+=t.weekendPrice||t.price}else sum+=t.price}
+  return{rate:Math.round(sum/n*100)/100,we}}
+
+async function bookingModal_(o,done){
+  const b=o.booking||null,isNew=!b,ro=!can('roomIncome.edit')||(b&&b.payStatus==='cxl');
+  if(!CUST_CACHE){try{CUST_CACHE=await api('customer.lookup',{},{loading:'กำลังเตรียมแบบฟอร์ม'})}catch(e){UI.swalError('เปิดแบบฟอร์มไม่สำเร็จ',e.message);return}}
+  const company=Master.company(),vr=Number(company.vatRate)||0,vatEx=company.vatMode==='excluded';
+  const types=Master.roomTypes(false).concat(b&&!Master.roomTypes(false).some(t=>t.code===b.typeCode)?Master.roomTypes(true).filter(t=>t.code===b.typeCode):[]);
+  if(!types.length){UI.swalInfo('ยังไม่มีประเภทห้องที่เปิดขาย','เพิ่มประเภทห้องและห้องที่เมนู ประเภทห้องพัก ก่อนบันทึกการจอง');return}
+  const today=TODAY,ci=b?b.checkIn:(o.date||today),co=b?b.checkOut:new Date(Date.parse(ci+'T00:00:00Z')+864e5).toISOString().slice(0,10);
+  const type0=b?b.typeCode:(o.typeCode||types[0].code),cust0=b?CUST_CACHE.find(c=>c[0]===b.customerId):null;
+  const st={customerId:b?b.customerId:'',typeCode:type0,roomNo:b?b.roomNo:(o.roomNo||''),pay:b?b.payStatus:'paid',rateTouched:!!b,avail:null};
+  const opt=(g,cur)=>Master.options(g).concat(cur&&!Master.options(g).some(x=>x.code===cur)?[{code:cur,label:Master.label(g,cur)}]:[]).map(x=>[x.code,x.label]);
+  const body=`<form id="bkForm" novalidate style="display:flex;flex-direction:column;gap:16px">
+    <p class="form-sec-title">ผู้เข้าพัก</p>
+    <div class="grid2"><div class="field span2" data-f="customerId"><label for="f-cust">ลูกค้า <span class="req" aria-hidden="true">*</span></label>
+      <div style="display:flex;gap:8px"><div class="iw" style="flex:1"><span class="lead">${icon('search','s16')}</span><input class="input" id="f-cust" placeholder="พิมพ์ชื่อ เบอร์โทร หรือรหัสลูกค้า" value="${esc(cust0?cust0[1]:(b?b.guestName:''))}" aria-describedby="e-customerId" ${ro?'readonly':''}></div>
+      ${ro?'':`<button type="button" class="btn" id="bkNewCust">${icon('plus','s16')}ลูกค้าใหม่</button>`}</div>
+      <div class="err" id="e-customerId" role="alert">${icon('alert','s16')}<span></span></div><div class="help" id="custHelp">${cust0?esc(cust0[0])+' · '+esc(Master.label('custtype',cust0[3])):'เลือกจากรายชื่อลูกค้า หรือกด ลูกค้าใหม่'}</div></div>
+      ${V.field('guestName','ชื่อผู้เข้าพัก',{value:b?b.guestName:(cust0?cust0[1]:''),req:true,help:'ใช้ชื่อลูกค้าอัตโนมัติ แก้ไขได้ถ้าผู้เข้าพักเป็นคนอื่น'})}
+      ${V.field('phone','โทรศัพท์',{value:b?b.phone:'',type:'phone',mono:true,help:'เติมอัตโนมัติจากข้อมูลลูกค้า'})}</div>
+    <p class="form-sec-title">การเข้าพัก</p>
+    <div class="grid3">${V.select('typeCode','ประเภทห้อง',types.map(t=>[t.code,`${t.name} · ${fmtM(t.price)}/คืน`]),type0,{req:true})}
+      ${V.select('roomNo','ห้อง',[],'',{req:true})}${V.field('guests','จำนวนผู้เข้าพัก',{value:b?b.guests:2,type:'int',req:true})}
+      ${V.field('checkIn','วันที่เช็คอิน',{value:ci,type:'date',req:true})}${V.field('checkOut','วันที่เช็คเอาท์',{value:co,type:'date',req:true})}
+      ${V.field('nights','จำนวนคืน',{value:'',ro:true,help:'คำนวณอัตโนมัติ'})}</div>
+    <p class="form-sec-title">ราคาและการชำระเงิน</p>
+    <div class="grid2">${V.field('rate','ราคาต่อคืน (บาท)',{value:b?b.rate.toFixed(2):'',type:'money',req:true,mono:true,help:'ดึงจากประเภทห้อง แก้ไขได้'})}${V.field('discount','ส่วนลด (บาท)',{value:(b?b.discount:0).toFixed(2),type:'money',mono:true})}
+      ${V.select('channel','ช่องทางการจอง',opt('channel',b&&b.channel),b?b.channel:'WALKIN',{req:true})}${V.select('payMethod','วิธีชำระเงิน',[['','— ยังไม่ชำระ —']].concat(opt('pay',b&&b.payMethod)),b?b.payMethod:'CASH')}
+      <div class="field" data-f="payStatus"><span class="lbl" id="l-pay">สถานะการชำระ</span><div class="radio-pills" role="radiogroup" aria-labelledby="l-pay">${['paid','dep','due'].map(s=>`<button type="button" role="radio" data-pay="${s}" aria-checked="${st.pay===s}" ${ro?'disabled':''}>${PAY_LABEL[s]}</button>`).join('')}</div><div class="err" role="alert">${icon('alert','s16')}<span></span></div></div>
+      ${V.field('deposit','ยอดมัดจำ (บาท)',{value:b&&b.deposit?b.deposit.toFixed(2):'',type:'money',req:true,mono:true})}
+      ${V.textarea('note','หมายเหตุ',{value:b?b.note:'',span:true,ph:'เช่น ขอหมอนเพิ่ม เดินทางถึงดึก'})}</div>
+    <div class="summary" id="bkSum" aria-live="polite"></div><button type="submit" hidden></button></form>`;
+  const m=UI.openModal({title:isNew?'เพิ่มรายได้ห้องพัก':(ro?'รายละเอียดการจอง':'แก้ไขการจอง')+' · '+b.docNo,iconName:'bed',size:'lg',body,
+    foot:`<span class="cap grow">${isNew?'เลขที่เอกสารสร้างอัตโนมัติเมื่อบันทึก · ':''}* จำเป็นต้องกรอก · ตรวจสอบข้อมูล 3 ชั้น: หน้าจอ → Server → ฐานข้อมูล</span><button type="button" class="btn" data-close>${ro?'ปิด':'ยกเลิก'}</button>${ro?'':`<button type="button" class="btn primary" id="bkSave">${icon('check')}บันทึก</button>`}`});
+  const f=$('#bkForm',m.el);V.live(f);
+  if(b&&b.payStatus==='cxl')f.insertAdjacentHTML('afterbegin',`<div class="banner warning">${icon('ban')}<span class="grow"><strong>การจองนี้ถูกยกเลิกแล้ว</strong> — แก้ไขไม่ได้ ถ้าต้องการจองอีกครั้งให้สร้างรายการใหม่</span></div>`);
+  if(ro)$$('input,select,textarea',f).forEach(x=>x.disabled=true);
+  const typeOf=()=>types.find(t=>t.code===V.val(f,'typeCode'));
+  const nights=()=>{const n=nightsOf_(V.val(f,'checkIn'),V.val(f,'checkOut'));return n>0?n:0};
+  const money=()=>{const n=nights(),rate=Number(String(V.val(f,'rate')).replace(/,/g,''))||0,disc=Number(String(V.val(f,'discount')).replace(/,/g,''))||0,net=Math.round((rate*n-disc)*100)/100;
+    const vat=vatEx?Math.round(net*vr)/100:Math.round(net*vr/(100+vr)*100)/100;return{n,rate,disc,net,vat,total:vatEx?Math.round((net+vat)*100)/100:net}};
+  const drawSum=()=>{const x=money();$('#f-nights',f).value=x.n?x.n+' คืน':'-';
+    $('#bkSum',f).innerHTML=`<div class="ln"><span>ค่าห้อง ${x.n} คืน × ${fmtM(x.rate)}</span><span class="num">${fmtM(x.rate*x.n)}</span></div>${x.disc?`<div class="ln"><span>ส่วนลด</span><span class="num">−${fmtM(x.disc)}</span></div>`:''}
+      <div class="ln"><span>${vr?(vatEx?`ภาษีมูลค่าเพิ่ม ${vr}% (แยกนอกราคา)`:`รวมภาษีมูลค่าเพิ่ม ${vr}% จำนวน`):'ไม่คิดภาษีมูลค่าเพิ่ม'}</span><span class="num">${vr?fmtM(x.vat):''}</span></div>
+      ${st.pay==='dep'?`<div class="ln"><span>ยอดคงค้างหลังหักมัดจำ</span><span class="num">${fmtM(Math.max(0,x.total-(Number(String(V.val(f,'deposit')).replace(/,/g,''))||0)))}</span></div>`:''}
+      <div class="ln total"><span>ยอดสุทธิ</span><b class="num">${fmtM(x.total)}</b></div>`};
+  const suggest=()=>{if(st.rateTouched)return;const s=suggestRate_(typeOf(),V.val(f,'checkIn'),nights());$('#f-rate',f).value=s.rate!==undefined?s.rate.toFixed(2):(typeOf()||{}).price||'';
+    const h=$('[data-f="rate"] .help',f);h.textContent=s.we?`เฉลี่ยจากราคาปกติ + ราคาศุกร์–เสาร์ ${s.we} คืน · แก้ไขได้`:'ดึงจากประเภทห้อง แก้ไขได้'};
+  const drawRooms=()=>{const t=V.val(f,'typeCode'),rooms=Master.rooms().filter(r=>r.typeCode===t),sel=$('#f-roomNo',f);
+    if(!rooms.some(r=>r.roomNo===st.roomNo))st.roomNo='';
+    sel.innerHTML=rooms.map(r=>{const a=st.avail&&st.avail[r.roomNo],mine=b&&b.roomNo===r.roomNo&&b.typeCode===t,busy=a&&!a.free&&!mine;
+      const lbl=`${t} ${r.roomNo} · ${!a?'':busy?(a.off?'ปิดปรับปรุง':'ไม่ว่าง ('+a.guestName+')'):'ว่าง'}`;return`<option value="${esc(r.roomNo)}" ${busy?'disabled':''}>${esc(lbl.replace(/ · $/,''))}</option>`}).join('')||'<option value="">ไม่มีห้องในประเภทนี้</option>';
+    const firstFree=rooms.find(r=>{const a=st.avail&&st.avail[r.roomNo];return!a||a.free||(b&&b.roomNo===r.roomNo)});
+    sel.value=st.roomNo||(firstFree?firstFree.roomNo:'');st.roomNo=sel.value};
+  const checkAvail=UI.debounce(async()=>{const a=V.val(f,'checkIn'),c=V.val(f,'checkOut');if(ro||!a||!c||c<=a){st.avail=null;drawRooms();return}
+    try{st.avail=await api('roomIncome.availability',{checkIn:a,checkOut:c,exceptDocNo:b?b.docNo:''},{loading:'กำลังตรวจสอบห้องว่าง'})}catch(e){st.avail=null}
+    drawRooms()},250);
+  const drawPay=()=>{$$('[data-pay]',f).forEach(x=>x.setAttribute('aria-checked',x.dataset.pay===st.pay));$('[data-f="deposit"]',f).style.display=st.pay==='dep'?'':'none';
+    if(st.pay==='due'&&!b)$('#f-payMethod',f).value='';drawSum()};
+  UI.combobox($('#f-cust',f),{source:q=>{const d=q.replace(/\D/g,'');return CUST_CACHE.filter(c=>c[1].toLowerCase().includes(q)||c[0].toLowerCase().includes(q)||(d.length>=3&&String(c[2]).replace(/\D/g,'').includes(d)))},
+    render:c=>`<span class="grow"><b>${esc(c[1])}</b><span class="cap mono">${esc(c[0])} · ${esc(c[2]||'-')}</span></span>${custTypeBadge_(c[3])}`,
+    onPick:c=>{st.customerId=c[0];$('#f-cust',f).value=c[1];$('#f-guestName',f).value=c[1];$('#f-phone',f).value=c[2]||'';$('#custHelp',f).textContent=c[0]+' · '+Master.label('custtype',c[3]);
+      $('[data-f="customerId"]',f).classList.remove('invalid')}});
+  $('#f-cust',f).addEventListener('input',()=>{st.customerId='';$('#custHelp',f).textContent='เลือกจากรายชื่อลูกค้า หรือกด ลูกค้าใหม่'});
+  if($('#bkNewCust',f))$('#bkNewCust',f).onclick=()=>custModal_(null,c=>{CUST_CACHE.unshift([c.customerId,c.name,c.phone,c.type]);st.customerId=c.customerId;
+    $('#f-cust',f).value=c.name;$('#f-guestName',f).value=c.name;$('#f-phone',f).value=c.phone||'';$('#custHelp',f).textContent=c.customerId+' · '+Master.label('custtype',c.type)});
+  $('#f-typeCode',f).onchange=()=>{st.rateTouched=false;st.roomNo='';drawRooms();suggest();drawSum()};
+  $('#f-roomNo',f).onchange=e=>{st.roomNo=e.target.value};
+  ['checkIn','checkOut'].forEach(k=>$('#f-'+k,f).addEventListener('change',()=>{if(k==='checkIn'&&V.val(f,'checkOut')<=V.val(f,'checkIn')){$('#f-checkOut',f).value=new Date(Date.parse(V.val(f,'checkIn')+'T00:00:00Z')+864e5).toISOString().slice(0,10)}
+    suggest();drawSum();checkAvail()}));
+  $('#f-rate',f).addEventListener('input',()=>{st.rateTouched=true;drawSum()});
+  ['discount','deposit'].forEach(k=>$('#f-'+k,f).addEventListener('input',drawSum));
+  $$('[data-pay]',f).forEach(x=>x.onclick=()=>{st.pay=x.dataset.pay;drawPay()});
+  drawRooms();suggest();drawPay();checkAvail();
+  if(ro)return;
+  const save=async()=>{
+    if(!st.customerId)return V.setErr(f,'customerId','กรุณาเลือกลูกค้าจากรายการ หรือกด ลูกค้าใหม่ เพื่อเพิ่มก่อน');
+    const v=V.form(f,{guestName:{label:'ชื่อผู้เข้าพัก',req:true,max:150},phone:{label:'โทรศัพท์',type:'phone'},guests:{label:'จำนวนผู้เข้าพัก',type:'int',req:true,min:1,max:20},
+      checkIn:{label:'วันที่เช็คอิน',type:'date',req:true},checkOut:{label:'วันที่เช็คเอาท์',type:'date',req:true},rate:{label:'ราคาต่อคืน',type:'money',req:true,min:0},discount:{label:'ส่วนลด',type:'money',min:0},note:{label:'หมายเหตุ',max:500}});
+    if(!v)return;
+    if(v.checkOut<=v.checkIn)return V.setErr(f,'checkOut','วันเช็คเอาท์ต้องอยู่หลังวันเช็คอิน กรุณาเลือกวันใหม่');
+    const t=typeOf();if(t&&v.guests>t.maxGuests)return V.setErr(f,'guests',`${t.name} รับได้สูงสุด ${t.maxGuests} คน`);
+    const x=money();if(v.discount>x.rate*x.n)return V.setErr(f,'discount','ส่วนลดมากกว่ายอดค่าห้อง กรุณาลดส่วนลด');
+    if(!V.val(f,'roomNo'))return V.setErr(f,'roomNo','กรุณาเลือกห้องที่ว่าง');
+    let deposit=0;if(st.pay==='dep'){const r=V.check(V.val(f,'deposit'),{label:'ยอดมัดจำ',type:'money',req:true,min:0.01});if(r.err)return V.setErr(f,'deposit',r.err);
+      if(r.val>x.total)return V.setErr(f,'deposit','ยอดมัดจำต้องไม่เกินยอดสุทธิ '+fmtM(x.total));deposit=r.val}
+    if(st.pay!=='due'&&!V.val(f,'payMethod'))return V.setErr(f,'payMethod','กรุณาเลือกวิธีชำระเงิน');
+    const data=Object.assign(v,{docNo:b?b.docNo:'',customerId:st.customerId,typeCode:V.val(f,'typeCode'),roomNo:V.val(f,'roomNo'),channel:V.val(f,'channel'),
+      payMethod:V.val(f,'payMethod'),payStatus:st.pay,deposit});
+    try{const r=await api('roomIncome.save',{data},{loading:'กำลังบันทึกการจอง'});m.close();
+      UI.swalSuccess(isNew?'บันทึกการจองแล้ว':'บันทึกการแก้ไขแล้ว',`เลขที่ ${r.docNo} · ห้อง ${r.roomNo} · ${fmtD(r.checkIn)} – ${fmtD(r.checkOut)} · ${fmtM(r.total)}`);done&&done(r)}
+    catch(e){if(e.field)V.setErr(f,e.field==='customerId'?'customerId':e.field,e.message);else UI.swalError('บันทึกไม่สำเร็จ',e.message)}};
+  $('#bkSave',m.el).onclick=save;f.onsubmit=e=>{e.preventDefault();save()}}
+</script>

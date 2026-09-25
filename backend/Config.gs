@@ -21,7 +21,7 @@ var SCHEMA = {
   Dropdowns:    ['key','group','code','label','sort','active'],
   Customers:    ['customerId','name','type','nationality','phone','email','taxId','address','note','createdAt','updatedAt'],
   RoomTypes:    ['code','name','price','weekendPrice','maxGuests','bedType','amenities','active'],
-  Rooms:        ['roomNo','typeCode','floor','status','note'],
+  Rooms:        ['roomNo','typeCode','floor','status','note','offUntil'],
   RoomIncome:   ['docNo','customerId','guestName','phone','typeCode','roomNo','checkIn','checkOut','nights','guests',
                  'rate','discount','total','vatAmount','channel','payMethod','payStatus','deposit','note',
                  'createdBy','createdAt','updatedAt'],

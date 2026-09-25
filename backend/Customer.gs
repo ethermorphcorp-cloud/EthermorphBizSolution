@@ -29,6 +29,12 @@ function withStats_(customers) {
   });
 }
 
+/** Every customer in a light shape for the booking form's search box (≈40 bytes each). */
+function customerLookup_() {
+  return readTable('Customers').map(function (c) { return [c.customerId, c.name, c.phone, c.type]; })
+    .sort(function (a, b) { return a[0] < b[0] ? 1 : -1; });
+}
+
 var CustomerService = {
   /** a = {q, filters: {type, nationality, lastStay: '30'|'90'|'365'|'never'}, sort: {key, dir}, page, pageSize} */
   list: function (a) {

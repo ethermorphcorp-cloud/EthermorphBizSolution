@@ -76,7 +76,8 @@ var RULES = {
     typeCode: {label: 'ประเภทห้อง', req: true, type: 'ref', table: 'RoomTypes'},
     floor:    {label: 'ชั้น', type: 'int', min: -5, max: 200},
     status:   {label: 'สถานะห้อง', req: true, type: 'enum', oneOf: ROOM_STATUS},
-    note:     {label: 'หมายเหตุ', max: 300}
+    note:     {label: 'หมายเหตุ', max: 300},
+    offUntil: {label: 'ปิดปรับปรุงถึงวันที่', type: 'date'}
   },
   RoomIncome: {
     customerId: {label: 'ลูกค้า', type: 'ref', table: 'Customers'},

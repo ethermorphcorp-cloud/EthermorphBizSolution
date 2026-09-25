@@ -89,7 +89,10 @@ Web app บริหารรายได้-รายจ่ายโรงแ�
 │  ├─ User.gs            ✓  list / save / resetPassword — ไม่ลบ (ระงับแทน), ห้ามแก้บทบาทตัวเอง, ต้องเหลือ Owner ≥ 1
 │  ├─ Customer.gs        ✓  list (ค้นหา ตัวกรอง เรียง แบ่งหน้า) / get (ประวัติ) / save / delete / export / import
 │  ├─ Room.gs            ✓  overview (อัตราเข้าพักเดือนนี้, ผู้เข้าพักคืนนี้) / typeSave / typeDelete / roomSave / roomDelete / roomStatus
-│  └─ <Service>.gs          ขั้นที่ 4+: RoomIncome, Booking, OtherIncome, Expense, Receipt, Report, Dashboard, Upload
+│  ├─ RoomIncome.gs      ✓  list (KPI เดือน, เดือนที่มีข้อมูล, ตัวกรอง, แถวรวม) / get / availability / save (ห้ามจองซ้อน,
+│  │                        VAT ตาม vatMode) / cancel (cxl) / delete / calendar(month) / export
+│  ├─ Booking.gs         ✓  grid(from, days, typeCode) → rooms × days + bars (clip ซ้าย/ขวา) + ปิดปรับปรุง + สรุปห้องว่าง · audit.client
+│  └─ <Service>.gs          ขั้นที่ 5+: OtherIncome, Expense, Receipt, Report, Dashboard, Upload
 │                           — เพิ่ม route ใน ROUTES ของ Api.gs
 └─ frontend/                 *.html — index.html include ส่วนอื่นตามลำดับ (ทุกไฟล์ต้องถูก include — smoke-test ตรวจ)
    ├─ index.html         ✓  BOOT จาก doGet + SweetAlert2 + include ทั้งหมด แล้วเรียก Shell.boot()
@@ -104,7 +107,9 @@ Web app บริหารรายได้-รายจ่ายโรงแ�
    ├─ page-settings.html ✓  แท็บ Dropdown (ลาก/ลูกศรเรียงลำดับ) · ข้อมูลบริษัท + โลโก้ · ผู้ใช้งาน
    ├─ page-customers.html ✓ ตาราง server-side + ตัวกรองจากข้อมูล + เมนูแถว (portal) + นำเข้า/ส่งออก Excel (SheetJS)
    ├─ page-roomtypes.html ✓ การ์ดประเภทห้อง + ตารางห้อง + เปลี่ยนสถานะห้อง (FrontDesk ทำได้)
-   └─ page-*.html           ขั้นที่ 4+: Pages.<key> = {render(el, params)} ต่อเมนู + js-upload.html (ขั้นที่ 5)
+   ├─ page-rooms.html    ✓  บันทึกการจองห้องพัก: view table / calendar / grid (params.view) + bookingModal_ (ค้นหาลูกค้า,
+   │                        ห้องว่างตามวัน, ราคาศุกร์–เสาร์, มัดจำ, สรุป VAT) — go('rooms',{add:true | docNo})
+   └─ page-*.html           ขั้นที่ 5+: Pages.<key> = {render(el, params)} ต่อเมนู + js-upload.html (ขั้นที่ 5)
 ```
 
 - **Master sync:** `api()` ส่ง `_mv` (master version ของเบราว์เซอร์) ทุกครั้ง ถ้า master เปลี่ยน (จากคำขอนี้หรือผู้ใช้อื่น)
@@ -152,7 +157,7 @@ clasp push --force           # ครั้งแรก: ใส่ scriptId ข�
 | Dropdowns | group(channel/pay/expcat/othercat/custtype/unit), code, label, sort, active |
 | Customers | customerId(CU-####), name, type, nationality, phone*, email, taxId*, address, note, createdAt, updatedAt |
 | RoomTypes | code(SUP/DLX/FAM/STE), name, price, weekendPrice, maxGuests, bedType, amenities(csv), active |
-| Rooms | roomNo*, typeCode, floor, status(free/occ/clean/off), note |
+| Rooms | roomNo*, typeCode, floor, status(free/occ/clean/off), note, offUntil (ปิดปรับปรุงถึงวันที่ — พ้นแล้วห้องกลับเป็นว่างเอง) |
 | RoomIncome | docNo(BK-), customerId, guestName, phone*, typeCode, roomNo*, checkIn, checkOut, nights, guests, rate, discount, total, vatAmount, channel, payMethod, payStatus(paid/dep/due/cxl), deposit, note, createdBy, createdAt, updatedAt |
 | OtherIncome | docNo(OI-), date, category, description, roomNo*, bookingNo, qty, unitPrice, amount, payMethod, createdBy, createdAt |
 | Expenses | docNo(EX-), date, category, description, vendor, payMethod, amount, createdBy, createdAt |

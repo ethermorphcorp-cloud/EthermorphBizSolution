@@ -6,7 +6,8 @@ var ROOM_MANUAL_STATUS = ['free', 'clean', 'off'];
 /** The room's status as the screens show it, plus tonight's booking. */
 function roomNow_(room, liveByRoom, today) {
   var b = (liveByRoom[room.roomNo] || []).filter(function (x) { return x.checkIn <= today && today < x.checkOut; })[0];
-  var status = room.status === 'off' ? 'off' : b ? 'occ' : room.status === 'occ' ? 'free' : room.status;
+  var off = room.status === 'off' && !(room.offUntil && room.offUntil < today);   // a repair that has ended frees the room
+  var status = off ? 'off' : b ? 'occ' : room.status === 'occ' || room.status === 'off' ? 'free' : room.status;
   return {status: status, guest: b ? b.guestName : '', bookingNo: b ? b.docNo : '', checkOut: b ? b.checkOut : ''};
 }
 
@@ -85,6 +86,7 @@ var RoomService = {
     d = d || {};
     if (d.roomNo) d.roomNo = String(d.roomNo).trim();
     var clean = validate_('Room', d);
+    if (clean.status !== 'off') clean.offUntil = '';
     if (ROOM_MANUAL_STATUS.indexOf(clean.status) < 0) {
       throw fieldError_('status', 'สถานะ "มีผู้เข้าพัก" มาจากการจองโดยอัตโนมัติ — เลือกได้เฉพาะ ว่าง ทำความสะอาด หรือปิดปรับปรุง');
     }
@@ -125,6 +127,7 @@ var RoomService = {
       var cur = findById('Rooms', roomNo);
       if (!cur) throw appError_('NOT_FOUND', 'ไม่พบห้อง ' + roomNo + ' กรุณารีเฟรชหน้า');
       var patch = {status: status};
+      if (status !== 'off') patch.offUntil = '';
       if (note !== undefined) patch.note = String(note).slice(0, 300);
       updateRow('Rooms', roomNo, patch);
       audit('STATUS', 'Rooms', roomNo, {from: cur.status, to: status});
