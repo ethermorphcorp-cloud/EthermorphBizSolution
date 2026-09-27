@@ -76,6 +76,7 @@ const Shell={
     $('#root').innerHTML=`<div class="app ${mini?'mini':''}">
       <aside class="sidebar" aria-label="เมนูหลัก"><div class="brand"><span class="brand-logo" aria-hidden="true">${brandLogo_()}</span><div class="brand-text"><b>${esc(name)}</b><span>Hotel · ${esc(App.info&&App.info.package||'Standard')}</span></div></div>
         <nav class="nav">${nav}</nav>
+        <div class="side-user drawer-only"><span class="avatar" aria-hidden="true">${esc(initials(u.fullName))}</span><div class="who"><b>${esc(u.fullName)}</b><span class="cap" style="color:var(--sidebar-ink)">${esc(ROLE_LABEL[u.role]||u.role)}</span></div><button type="button" class="btn plain icon" id="drawerLogout" aria-label="ออกจากระบบ" title="ออกจากระบบ">${icon('logout')}</button></div>
         <div class="side-credit"><span class="full">System by <b>Ethermorph Solution</b> ©2026</span><span class="short" aria-hidden="true">©2026</span></div></aside>
       <div class="main"><header class="topbar">
         <button type="button" class="btn plain icon" id="tbToggle" aria-label="ย่อ/ขยายเมนู" aria-expanded="${!mini}">${icon('menu')}</button>
@@ -95,6 +96,7 @@ const Shell={
     $('#moreNav').onclick=e=>{e.preventDefault();app.classList.add('drawer')};
     app.addEventListener('click',e=>{if(app.classList.contains('drawer')&&!e.target.closest('.sidebar,#tbToggle,#moreNav'))app.classList.remove('drawer')});
     if($('#leaveDemo'))$('#leaveDemo').onclick=e=>{e.preventDefault();confirmLogout_()};
+    $('#drawerLogout').onclick=confirmLogout_;
     $('#themeBtn').onclick=()=>{setTheme(isDark()?'light':'dark');$('#themeBtn').innerHTML=icon(isDark()?'sun':'moon')};
     $('#bellBtn').onclick=e=>UI.openMenu(e.currentTarget,[{icon:'check',label:'ไม่มีการแจ้งเตือนใหม่'}]);
     $('#userBtn').onclick=e=>UI.openMenu(e.currentTarget,[

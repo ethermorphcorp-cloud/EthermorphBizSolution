@@ -48,6 +48,7 @@ var ROUTES = {
   'auth.me':             {fn: function (a, u, token) { return sessionInfo_(u, session_(token).ttl); }},
   'auth.changePassword': {fn: function (a, u) { return changePassword(u, a.oldPassword, a.newPassword); }},
   'master.get':          {fn: function (a) { return MasterCache.bundle(a.version); }},
+  'diag.lockTest':       {perm: 'settings.edit', noDemo: true, fn: function () { return DiagService.lockTest(); }},
   'master.clearCache':   {perm: 'settings.edit', fn: function () { return MasterCache.clear(); }},
   'filter.options':      {fn: function (a, u) { return filterOptions(u, a.entity, a.field, a.scope); }},
 

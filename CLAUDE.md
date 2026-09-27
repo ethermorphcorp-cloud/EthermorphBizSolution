@@ -106,6 +106,8 @@ Web app บริหารรายได้-รายจ่ายโรงแ�
 │  ├─ Receipt.gs         ✓  list (KPI, รอออกใบเสร็จ) / candidates / prepare / create (สำเนาข้อมูลลูกค้า + VAT ลงใบเสร็จ, การจองกลายเป็นชำระแล้ว) /
 │  │                        get (+ bahtText_ จำนวนเงินตัวอักษร) / cancel (ต้องมีเหตุผล, ไม่ลบ, คืนสถานะการจอง) / print (นับครั้ง + audit) / export ·
 │  │                        createFromBooking(bookingNo, otherIncomeNos) · รายการที่อยู่ในใบเสร็จที่ใช้งาน = receiptedRefs_()
+│  ├─ Diag.gs            ✓  diag.lockTest: ล็อก + เลขทดสอบ TS-yyyyMM-#### + ถือล็อก 250 ms — ปุ่ม “ทดสอบการบันทึกพร้อมกัน”
+│  │                        (ตั้งค่า ▸ ข้อมูลบริษัท, Owner/Admin, ไม่ใช่ demo) ยิง 10 คำขอพร้อมกัน ต้องได้เลขไม่ซ้ำและเรียงต่อกัน
 │  ├─ Report.gs          ✓  get(from, to, month) → pl / roomType / expense (+ report.pl / roomType / expense แยก) — กติกาเดียวกับ Dashboard:
 │  │                        ห้องนับเดือนเช็คอิน ไม่รวม cxl · ช่วงเฉพาะเดือนที่มีข้อมูล (สูงสุด 24 เดือน) · รายวันตั้งชื่อหมวดที่ ≥ 5% ของเดือน
 │  └─ <Service>.gs          บริการใหม่: เพิ่ม route ใน ROUTES และตารางที่อ่านใน ROUTE_READS ของ Api.gs
@@ -152,6 +154,9 @@ Web app บริหารรายได้-รายจ่ายโรงแ�
 - **สถานะห้อง "มีผู้เข้าพัก"** คำนวณจากการจองที่ครอบคืนนี้ (checkIn ≤ วันนี้ < checkOut, ไม่ใช่ cxl); `Rooms.status` เก็บเฉพาะ
   free / clean / off ที่คนตั้งเอง (`Room.gs` roomNow_) — Master rooms ยังเป็นค่าที่เก็บไว้ ใช้ `room.overview` เมื่อต้องการสถานะจริง
 - **ตารางกว้าง:** เซลล์คอลัมน์จัดการใส่ class `act` (ติดขอบขวาเมื่อเลื่อนแนวนอน) · ตารางบนมือถือใช้ `tbl stack` + `data-label`
+  · รายการหลักใช้ `tbl stack cards` + `data-card` (head / status / act / title / amount / meta / hide) = การ์ดย่อแบบ Mobile-Income
+- **มือถือ:** Dashboard เรียง KPI → กราฟหลัก → การเข้าพักวันนี้ (`order`, `.dash-main{display:contents}`) · drawer มีผู้ใช้ + ออกจากระบบ
+  (`.drawer-only`, desktop แสดงแค่เครดิต) · ธีมมืด/สว่างผ่านการตรวจ contrast (WCAG 4.5:1) ทุกหน้าและฟอร์มหลัก
 - **Excel:** `UI.xlsx()` โหลด SheetJS จาก CDN ตอนใช้ครั้งแรก · เขียนเบอร์โทร/เลขภาษีเป็น text cell (`xlsxSheet_`) ·
   ตอนนำเข้า เบอร์ที่ Excel ตัด 0 หน้า (8–9 หลักขึ้นต้น 6/8/9) จะเติม 0 ให้
 
@@ -247,7 +252,7 @@ clasp push --force           # ครั้งแรก: ใส่ scriptId ข�
 5. รายได้อื่นๆ, รายจ่าย, chunk upload
 6. ใบเสร็จ (สร้างจาก booking + พิมพ์ A4)
 7. รายงาน 3 แบบ + Dashboard
-8. Mobile layout, dark theme, ทดสอบ LockService ด้วยการบันทึกพร้อมกัน
+8. Mobile layout, dark theme, ทดสอบ LockService ด้วยการบันทึกพร้อมกัน ✓ (LockService ต้องกดทดสอบบน Apps Script จริง — Diag.gs)
 
 ## 9. ข้อมูลตัวอย่าง (Demo)
 

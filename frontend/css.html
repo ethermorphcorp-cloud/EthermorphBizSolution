@@ -138,6 +138,8 @@ textarea.input{height:auto;padding:8px 12px;resize:vertical;line-height:24px}
 .side-credit{padding:16px 12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-top:1px solid var(--sidebar-line);font-size:12px;line-height:18px;color:var(--sidebar-ink)}
 .side-credit b{font-weight:500;color:var(--sidebar-ink-strong)}
 .side-credit .short{display:none}
+.side-user.drawer-only{display:none}
+@media (max-width:991px){.side-user.drawer-only{display:flex}}
 .side-user{display:flex;align-items:center;gap:12px;padding:14px 16px 14px 20px;border-top:1px solid var(--sidebar-line)}
 .side-user .who{min-width:0}
 .side-user b{display:block;color:var(--sidebar-ink-strong);font-size:14px;font-weight:500;line-height:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -525,6 +527,34 @@ tr.drop-below td{box-shadow:inset 0 -2px 0 var(--primary)}
   .tbl.stack td::before{content:attr(data-label);color:var(--ink-muted);font-size:12px;text-align:left}
   .tbl.stack td.nolabel::before{display:none}
   .tbl.stack .act{position:static;box-shadow:none;background:none}
+  /* compact cards (design/Mobile-Income): number + status, then name + amount, then small details on one wrap line */
+  .tbl.cards tbody tr{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;padding:12px 16px}
+  .tbl.cards tbody td{display:block;width:auto;padding:0;text-align:left;border:none}
+  .tbl.cards tbody td::before{display:none}
+  .tbl.cards tbody td[data-card="head"]{order:1;flex:1 1 calc(100% - 160px);min-width:0;font-size:12px;color:var(--ink-muted)}
+  .tbl.cards tbody td[data-card="head"] .mono{font-size:12px}
+  .tbl.cards tbody td[data-card="status"]{order:2;flex:none}
+  .tbl.cards tbody td[data-card="act"]{order:3;flex:none;margin:-8px -10px -8px -4px}
+  .tbl.cards tbody td[data-card="title"]{order:4;flex:1 1 calc(100% - 140px);min-width:0;font-size:15px;line-height:22px}
+  .tbl.cards tbody td[data-card="title"] b{font-weight:600}
+  .tbl.cards tbody td[data-card="amount"]{order:5;flex:0 0 128px;margin-left:auto;text-align:right;font-weight:600;font-size:15px}
+  .tbl.cards tbody td[data-card="amount"] .cap{font-weight:400}
+  .tbl.cards tbody td[data-card="meta"]{order:6;flex:none;display:inline-flex;align-items:center;gap:4px;font-size:12px;line-height:18px;color:var(--ink-muted)}
+  .tbl.cards tbody td[data-card="meta"] .mono,.tbl.cards tbody td[data-card="meta"] .cap{font-size:12px;color:var(--ink-muted)}
+  .tbl.cards tbody td[data-card="meta"] .cap[style*="block"]{display:inline!important;margin-left:4px}
+  .tbl.cards tbody td[data-card="meta"]~td[data-card="meta"]::before{display:inline;content:"·";margin-right:6px}
+  .tbl.cards tbody td[data-card="hide"]{display:none}
+  .m-only{display:inline}
+}
+.m-only{display:none}
+@media (max-width:767px){.m-only{display:inline}}
+/* Dashboard on a phone (design/Mobile-Dashboard): short header, today's stays right after the main chart */
+@media (max-width:767px){
+  .dash-main{display:contents}.dash-today-row{order:1}.dash-type{order:2}.dash-row.even{order:3}
+  .pagehead:has(#dashRefresh){flex-wrap:nowrap;align-items:center}
+  #dashRefresh span{display:none}#dashRefresh{width:40px;padding:0;justify-content:center}
+  .dash-filter{padding:10px 12px}.dash-filter .cap{display:none}
+  .kpi{gap:6px}.kpi .chip{width:30px;height:30px}.kpi .chip .i{width:16px;height:16px}
 }
 @media (max-width:575px){
   .grid2,.grid3{grid-template-columns:1fr}.span2{grid-column:auto}

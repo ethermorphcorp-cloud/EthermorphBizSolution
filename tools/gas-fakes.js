@@ -125,6 +125,7 @@ function createGas(root, opts = {}) {
     Utilities: {
       formatDate: fmtDate,
       getUuid: () => crypto.randomUUID(),
+      sleep: () => {},
       DigestAlgorithm: {SHA_256: 'sha256'}, Charset: {UTF_8: 'utf8'},
       base64Decode: b64 => Array.from(Buffer.from(b64, 'base64')).map(b => (b > 127 ? b - 256 : b)),
       newBlob: (bytes, mime, name) => ({bytes, mime, name, getName: () => name}),

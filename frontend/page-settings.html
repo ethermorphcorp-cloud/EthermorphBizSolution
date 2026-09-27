@@ -105,6 +105,10 @@ async function setCompany_(host){
     ${edit?`<div class="modal-foot"><span class="grow"></span><button type="button" class="btn" id="coReset">ยกเลิก</button><button type="submit" class="btn primary">${icon('check')}บันทึกข้อมูลบริษัท</button></div>`:''}
     <datalist id="branchList"><option value="สำนักงานใหญ่"></datalist></form>`;
   const f=$('#coForm',host);V.live(f);
+  if(edit&&!App.demo){host.insertAdjacentHTML('beforeend',`<section class="card pad" style="margin-top:16px"><h3>เครื่องมือผู้ดูแลระบบ</h3>
+      <p class="cap" style="margin:4px 0 12px">ทดสอบว่าเมื่อหลายคนบันทึกพร้อมกัน ระบบเข้าคิวการบันทึก (LockService) ถูกต้อง — ส่ง ${LOCK_TEST_N} คำขอพร้อมกัน แต่ละคำขอออกเลขทดสอบ TS-… ซึ่งต้องไม่ซ้ำและเรียงต่อกัน ไม่แตะข้อมูลจริง</p>
+      <button type="button" class="btn" id="lockTest">${icon('lock')}ทดสอบการบันทึกพร้อมกัน</button></section>`);
+    $('#lockTest',host).onclick=lockTest_}
   if(!edit){$$('input,textarea,select',f).forEach(x=>x.disabled=true);return}
   $('#coReset',f).onclick=()=>setCompany_(host);
   f.onsubmit=async e=>{e.preventDefault();
@@ -127,6 +131,17 @@ async function setCompany_(host){
     try{UI.showLoading('กำลังอัปโหลดโลโก้');const img=await UI.imageToBase64(file,256);const r=await api('settings.company.logo',{file:img},{loading:false});
       $('#logoBox',f).innerHTML=`<img src="data:${img.mime};base64,${img.data}" alt="โลโก้ใหม่">`;UI.toast('อัปโหลดโลโก้แล้ว','success',r.logoFileId?'แสดงที่เมนูและใบเสร็จ':'')}
     catch(e){UI.swalError('อัปโหลดไม่สำเร็จ',e.message)}finally{UI.hideLoading();input.value=''}}}
+
+/* LockService check (Diag.gs): N calls at once; the numbers they draw must be unique and consecutive */
+const LOCK_TEST_N=10;
+async function lockTest_(){const N=LOCK_TEST_N,t0=performance.now();UI.showLoading(`กำลังส่ง ${N} คำขอพร้อมกัน`);let rs;
+  try{rs=await Promise.allSettled(Array.from({length:N},()=>api('diag.lockTest',{},{loading:false,retry:0})))}finally{UI.hideLoading()}
+  const ok=rs.filter(r=>r.status==='fulfilled').map(r=>r.value),fail=rs.filter(r=>r.status==='rejected');
+  const nums=ok.map(x=>+String(x.no).split('-').pop()).sort((a,b)=>a-b),dup=nums.filter((n,i)=>i&&n===nums[i-1]),seq=nums.every((n,i)=>!i||n===nums[i-1]+1);
+  const wait=Math.max(0,...ok.map(x=>x.waitedMs))/1000,secs=((performance.now()-t0)/1000).toFixed(1),range=ok.length?ok.map(x=>x.no).sort()[0]+' – '+ok.map(x=>x.no).sort().pop():'';
+  api('audit.client',{action:'TEST',entity:'LockTest',detail:`${ok.length}/${N} ${range} dup ${dup.length} seq ${seq}`},{loading:false}).catch(()=>{});
+  if(!fail.length&&!dup.length&&seq)return UI.swalSuccess('ระบบเข้าคิวการบันทึกทำงานถูกต้อง',`${N} คำขอพร้อมกันได้เลข ${range} ไม่ซ้ำและเรียงต่อกัน · คำขอที่รอคิวนานสุด ${wait.toFixed(1)} วินาที · ใช้เวลาทั้งหมด ${secs} วินาที`);
+  UI.swalError('พบปัญหาการบันทึกพร้อมกัน',[dup.length?'เลขซ้ำ '+dup.join(', '):'',!seq&&ok.length?'เลขไม่ต่อเนื่อง':'',fail.length?`ล้มเหลว ${fail.length} คำขอ — ${fail[0].reason.message}`:''].filter(Boolean).join(' · ')+' — แจ้งผู้ดูแลระบบพร้อมภาพหน้าจอนี้')}
 
 /* ---------- ผู้ใช้งาน ---------- */
 async function setUsers_(host){

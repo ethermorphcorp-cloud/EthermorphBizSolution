@@ -25,13 +25,13 @@ Pages.dashboard={render(el,params){
         ${kpiTile_('กำไรสุทธิ',k.profit,'chart','success',k.margin===null?'':`<span class="muted">อัตรากำไร ${k.margin.toFixed(1)}%</span>`,'')}
         <div class="kpi"><div class="top"><span class="lab">อัตราเข้าพัก</span><span class="chip info">${icon('bed')}</span></div><span class="val">${k.occupancy.toFixed(1)}%</span>
           <span class="cap">${fmtN(k.nights)} คืนที่ขายได้${d.month===d.today.slice(0,7)?` · คืนนี้ ${k.tonight}/${k.rooms} ห้อง`:''}</span></div></div>
-      <div class="dash-row">
+      <div class="dash-row dash-main">
         ${chartCard_('cCombo','รายได้ vs ค่าใช้จ่าย','ย้อนหลัง 6 เดือนถึง '+d.label+' · เส้นคืออัตรากำไร (แกนขวา)','dash-wide')}
-        ${chartCard_('cType','รายได้รายประเภทห้อง',d.label,'')}</div>
+        ${chartCard_('cType','รายได้รายประเภทห้อง',d.label,'dash-type')}</div>
       <div class="dash-row even">
         ${chartCard_('cInc','รายได้รายหมวด',d.label+' · ห้องพักและรายได้อื่น','')}
         ${chartCard_('cExp','ค่าใช้จ่ายรายหมวด',d.label+' · เรียงจากมากไปน้อย','')}</div>
-      <div class="dash-row">${dashToday_(d.todayStays)}${dashRooms_(d.roomStatus)}</div>`;
+      <div class="dash-row dash-today-row">${dashToday_(d.todayStays)}${dashRooms_(d.roomStatus)}</div>`;
     $$('[data-stay]',el).forEach(tr=>tr.onclick=()=>can('roomIncome.view')&&bookingOpen_(tr.dataset.stay,()=>load(true)));
     $$('[data-link]',el).forEach(a=>a.onclick=e=>{e.preventDefault();go(a.dataset.link)});
     $('#dashMonth',el).onchange=e=>{st.month=e.target.value;load()};
@@ -54,11 +54,11 @@ Pages.dashboard={render(el,params){
 function dashToday_(t){const rows=t.rows;
   return`<section class="card"><div class="card-head"><div><h3>การเข้าพักวันนี้</h3><div class="cap">${fmtD(t.date)} · เช็คอิน ${t.checkIns} · เช็คเอาท์ ${t.checkOuts}</div></div>
       ${can('roomIncome.view')?`<a href="#rooms" data-link="rooms">ดูทั้งหมด${icon('chevr','s16')}</a>`:''}</div>
-    ${rows.length?`<div class="tbl-wrap"><table class="tbl stack compact"><thead><tr><th scope="col">เลขที่</th><th scope="col">ผู้เข้าพัก</th><th scope="col">ห้อง</th><th scope="col">กิจกรรม</th><th scope="col" class="r">ยอดสุทธิ</th><th scope="col">การชำระ</th></tr></thead>
-      <tbody>${rows.map(r=>`<tr class="clickable" data-stay="${esc(r.docNo)}"><td data-label="เลขที่"><span class="mono">${esc(r.docNo)}</span></td>
-        <td data-label="ผู้เข้าพัก"><span><b style="font-weight:500">${esc(r.guestName)}</b><span class="cap mono" style="display:block">${esc(r.phone||'')}</span></span></td>
-        <td data-label="ห้อง"><span class="mono">${esc(r.typeCode)} ${esc(r.roomNo)}</span></td><td data-label="กิจกรรม">${r.act==='in'?'<span class="badge info">เช็คอิน</span>':'<span class="badge primary">เช็คเอาท์</span>'}</td>
-        <td data-label="ยอดสุทธิ" class="r">${fmtM(r.amount)}</td><td data-label="การชำระ">${UI.badge('pay',r.payStatus)}</td></tr>`).join('')}</tbody></table></div>`
+    ${rows.length?`<div class="tbl-wrap"><table class="tbl stack cards compact"><thead><tr><th scope="col">เลขที่</th><th scope="col">ผู้เข้าพัก</th><th scope="col">ห้อง</th><th scope="col">กิจกรรม</th><th scope="col" class="r">ยอดสุทธิ</th><th scope="col">การชำระ</th></tr></thead>
+      <tbody>${rows.map(r=>`<tr class="clickable" data-stay="${esc(r.docNo)}"><td data-card="head" data-label="เลขที่"><span class="mono">${esc(r.docNo)}</span></td>
+        <td data-card="title" data-label="ผู้เข้าพัก"><span><b style="font-weight:500">${esc(r.guestName)}</b><span class="cap mono" style="display:block">${esc(r.phone||'')}</span></span></td>
+        <td data-card="meta" data-label="ห้อง"><span class="mono">${esc(r.typeCode)} ${esc(r.roomNo)}</span></td><td data-card="status" data-label="กิจกรรม">${r.act==='in'?'<span class="badge info">เช็คอิน</span>':'<span class="badge primary">เช็คเอาท์</span>'}</td>
+        <td data-card="amount" data-label="ยอดสุทธิ" class="r">${fmtM(r.amount)}</td><td data-card="meta" data-label="การชำระ">${UI.badge('pay',r.payStatus)}</td></tr>`).join('')}</tbody></table></div>`
       :`<div style="padding:0 20px 20px">${UI.empty('วันนี้ไม่มีการเช็คอินหรือเช็คเอาท์','รายการจะแสดงเมื่อมีการจองที่เข้าพักหรือออกวันนี้')}</div>`}</section>`}
 /* every room right now: occupied comes from tonight's bookings, the rest from what staff set (Room.gs roomNow_) */
 function dashRooms_(s){const parts=[['occ','มีผู้เข้าพัก'],['free','ว่าง'],['clean','ทำความสะอาด'],['off','ปิดปรับปรุง']];

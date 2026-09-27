@@ -910,5 +910,21 @@ check('request state cleared', G('SHOP === null && SANDBOX === null && CURRENT_U
   check('dashboard: room status adds up to every room', S.total === 12 && S.occ + S.free + S.clean + S.off === 12 && S.off >= 0, S);
 }
 
+/* ---------- step 8: the LockService probe (the real concurrency test runs from Settings on Apps Script) ---------- */
+{
+  const T = api('HT001', 'auth.login', null, {username: 'owner', password: 'n3w-pass'}).data.token;
+  gas.lock.reset();
+  const a = api('HT001', 'diag.lockTest', T, {}), b = api('HT001', 'diag.lockTest', T, {});
+  const n = x => Number(String(x.data.no).split('-').pop());
+  check('lock probe: numbers from a test sequence, one after the other', a.ok && b.ok && /^TS-\d{6}-\d{4}$/.test(a.data.no) && n(b) === n(a) + 1 && gas.lock.acquired === 2, [a, b]);
+  check('lock probe touches no business table', !dataRows('HT001', 'AuditLog').some(r => String(r.join(' ')).indexOf('TS-') >= 0 && r[2] === 'CREATE'));
+  const D = api('DEMO-HOTEL', 'auth.login', null, {username: 'maneerat', password: '1234'}).data.token;
+  const r = api('DEMO-HOTEL', 'diag.lockTest', D, {});
+  check('lock probe refused in demo (no lock there)', !r.ok && r.code === 'DEMO_READONLY', r);
+  const desk = api('DEMO-HOTEL', 'auth.login', null, {username: 'frontdesk1', password: '1234'}).data.token;
+  check('audit.client accepts TEST, refuses others', api('HT001', 'audit.client', T, {action: 'TEST', entity: 'LockTest', detail: 'x'}).ok &&
+    !api('HT001', 'audit.client', T, {action: 'DELETE'}).ok && !!desk);
+}
+
 console.log(`${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

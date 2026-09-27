@@ -47,7 +47,7 @@ var BookingService = {
 
 /** The browser prints or exports a page itself; it reports that here so the audit log has it. */
 function clientAudit_(user, a) {
-  if (a.action !== 'PRINT' && a.action !== 'EXPORT') throw appError_('VALIDATION', 'ไม่รองรับการบันทึกประเภทนี้');
+  if (['PRINT', 'EXPORT', 'TEST'].indexOf(a.action) < 0) throw appError_('VALIDATION', 'ไม่รองรับการบันทึกประเภทนี้');
   audit(a.action, String(a.entity || '').slice(0, 40), String(a.docNo || '').slice(0, 40), String(a.detail || '').slice(0, 300));
   return true;
 }
