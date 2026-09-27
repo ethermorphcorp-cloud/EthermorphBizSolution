@@ -96,7 +96,7 @@ Web app บริหารรายได้-รายจ่ายโรงแ�
 │  │                        VAT ตาม vatMode) / cancel (cxl) / delete / calendar(month) / export
 │  ├─ Booking.gs         ✓  grid(from, days, typeCode) → rooms × days + bars (clip ซ้าย/ขวา) + ปิดปรับปรุง + สรุปห้องว่าง · audit.client
 │  ├─ Dashboard.gs       ✓  summary(month): KPI (เทียบเดือนก่อน), 6 เดือน รายได้/ค่าใช้จ่าย/อัตรากำไร, รายได้รายหมวด,
-│  │                        รายได้รายประเภทห้อง, ค่าใช้จ่ายรายหมวด
+│  │                        รายได้รายประเภทห้อง, ค่าใช้จ่ายรายหมวด, todayStays (เช็คอิน/เช็คเอาท์วันนี้ ยอด = ห้อง + รวมในใบเสร็จ), roomStatus (roomNow_)
 │  ├─ OtherIncome.gs     ✓  list (การ์ดรายหมวด + สัดส่วน, ตัวกรอง, แถวรวม) / get / bookings (การจอง 60 วันย้อนหลัง–30 วันหน้า) /
 │  │                        save (ผูกการจอง → ห้องตามการเข้าพัก, amount = qty × unitPrice, payMethod ว่าง = รวมในใบเสร็จ) / delete / export
 │  ├─ Expense.gs         ✓  list (KPI: รวม, จำนวน, หมวดสูงสุด, ยังไม่แนบเอกสาร · chip หมวดนับตามตัวกรองอื่น · ตัวกรองเอกสาร) / get / save / delete / export
@@ -106,8 +106,9 @@ Web app บริหารรายได้-รายจ่ายโรงแ�
 │  ├─ Receipt.gs         ✓  list (KPI, รอออกใบเสร็จ) / candidates / prepare / create (สำเนาข้อมูลลูกค้า + VAT ลงใบเสร็จ, การจองกลายเป็นชำระแล้ว) /
 │  │                        get (+ bahtText_ จำนวนเงินตัวอักษร) / cancel (ต้องมีเหตุผล, ไม่ลบ, คืนสถานะการจอง) / print (นับครั้ง + audit) / export ·
 │  │                        createFromBooking(bookingNo, otherIncomeNos) · รายการที่อยู่ในใบเสร็จที่ใช้งาน = receiptedRefs_()
-│  └─ <Service>.gs          ขั้นที่ 7: Report
-│                           — เพิ่ม route ใน ROUTES ของ Api.gs
+│  ├─ Report.gs          ✓  get(from, to, month) → pl / roomType / expense (+ report.pl / roomType / expense แยก) — กติกาเดียวกับ Dashboard:
+│  │                        ห้องนับเดือนเช็คอิน ไม่รวม cxl · ช่วงเฉพาะเดือนที่มีข้อมูล (สูงสุด 24 เดือน) · รายวันตั้งชื่อหมวดที่ ≥ 5% ของเดือน
+│  └─ <Service>.gs          บริการใหม่: เพิ่ม route ใน ROUTES และตารางที่อ่านใน ROUTE_READS ของ Api.gs
 └─ frontend/                 *.html — index.html include ส่วนอื่นตามลำดับ (ทุกไฟล์ต้องถูก include — smoke-test ตรวจ)
    ├─ index.html         ✓  BOOT จาก doGet + SweetAlert2 + include ทั้งหมด แล้วเรียก Shell.boot()
    ├─ css.html           ✓  tokens → CSS variables (light / dark ตามเครื่อง หรือ html[data-theme]) + components
@@ -124,6 +125,7 @@ Web app บริหารรายได้-รายจ่ายโรงแ�
    ├─ page-stub.html     ✓  Pages._stub (เมนูที่ยังไม่ทำ)
    ├─ page-dashboard.html ✓ KPI + combo (รายได้ vs ค่าใช้จ่าย + % กำไรแกนขวา) + donut รายหมวด / ประเภทห้อง + แท่งแนวนอน
    │                        ค่าใช้จ่าย — SVG เอง, สี --viz-1..6 (ผ่าน validate_palette ทั้ง light/dark), tooltip + มุมมองตาราง
+   │                        + การเข้าพักวันนี้ (เช็คอิน/เช็คเอาท์) + สถานะห้องพักวันนี้ (แถบสีตาม badge ห้อง)
    ├─ page-settings.html ✓  แท็บ Dropdown (ลาก/ลูกศรเรียงลำดับ) · ข้อมูลบริษัท + โลโก้ · ผู้ใช้งาน
    ├─ page-customers.html ✓ ตาราง server-side + ตัวกรองจากข้อมูล + เมนูแถว (portal) + นำเข้า/ส่งออก Excel (SheetJS)
    ├─ page-roomtypes.html ✓ การ์ดประเภทห้อง + ตารางห้อง + เปลี่ยนสถานะห้อง (FrontDesk ทำได้)
@@ -136,7 +138,10 @@ Web app บริหารรายได้-รายจ่ายโรงแ�
    ├─ page-receipts.html ✓  รายการใบเสร็จ + receiptModal_ (จากการเข้าพัก / รายได้อื่นที่ไม่ผูกการจอง, เลือกรายการ, แก้ชื่อ-ที่อยู่-เลขภาษีเฉพาะใบนี้)
    │                        + receiptView_ (A4 ตาม design/Receipt ย่อให้พอดี) + พิมพ์ ต้นฉบับ/สำเนา (#rcPrint + body.rc-printing, @page A4)
    │                        — go('receipts',{add | bookingNo | customerId | otherIncomeNo | docNo})
-   └─ page-*.html           ขั้นที่ 7: Pages.reports
+   ├─ page-reports.html  ✓  รายงาน 3 แท็บจาก report.get ครั้งเดียว: รายได้ vs ค่าใช้จ่าย (แท่งซ้อน ห้อง+อื่น, % กำไรแกนขวา, กำไรเหนือแท่ง) /
+   │                        ประเภทห้อง (สัดส่วน, แท่งซ้อนรายเดือน, คืน/อัตราเข้าพัก/ADR) / ค่าใช้จ่าย (หมวด × เดือน ↔ รายวัน + รายการใหญ่) ·
+   │                        ช่วงเดือนเฉพาะที่มีข้อมูล · พิมพ์/PDF (print-area) + Excel 5 ชีต — audit ทั้งคู่
+   └─ page-*.html           ขั้นที่ 8: หน้ามือถือตามดีไซน์ Mobile-*
 ```
 
 - **Master sync:** `api()` ส่ง `_mv` (master version ของเบราว์เซอร์) ทุกครั้ง ถ้า master เปลี่ยน (จากคำขอนี้หรือผู้ใช้อื่น)

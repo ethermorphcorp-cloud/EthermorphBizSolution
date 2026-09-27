@@ -30,7 +30,10 @@ Pages.dashboard={render(el,params){
         ${chartCard_('cType','รายได้รายประเภทห้อง',d.label,'')}</div>
       <div class="dash-row even">
         ${chartCard_('cInc','รายได้รายหมวด',d.label+' · ห้องพักและรายได้อื่น','')}
-        ${chartCard_('cExp','ค่าใช้จ่ายรายหมวด',d.label+' · เรียงจากมากไปน้อย','')}</div>`;
+        ${chartCard_('cExp','ค่าใช้จ่ายรายหมวด',d.label+' · เรียงจากมากไปน้อย','')}</div>
+      <div class="dash-row">${dashToday_(d.todayStays)}${dashRooms_(d.roomStatus)}</div>`;
+    $$('[data-stay]',el).forEach(tr=>tr.onclick=()=>can('roomIncome.view')&&bookingOpen_(tr.dataset.stay,()=>load(true)));
+    $$('[data-link]',el).forEach(a=>a.onclick=e=>{e.preventDefault();go(a.dataset.link)});
     $('#dashMonth',el).onchange=e=>{st.month=e.target.value;load()};
     $('#dashRefresh',el).onclick=()=>load(true);
     const charts={cCombo:()=>vizCombo_($('#cCombo',el),d),cType:()=>vizDonut_($('#cType',el),dashSlices_(d.revenueByRoomType,4),'รายได้ห้องพัก'),
@@ -46,6 +49,23 @@ Pages.dashboard={render(el,params){
     el._ro=new ResizeObserver(UI.debounce(()=>$$('.dash-chart',el).forEach(c=>{const card=c.closest('.card');card&&card._show&&c.clientWidth!==c._w&&card._show()}),150));
     $$('.dash-chart',el).forEach(c=>el._ro.observe(c))};
   load()}};
+
+/* today, whatever month is chosen: check-ins then check-outs; amount = room + its รวมในใบเสร็จ lines */
+function dashToday_(t){const rows=t.rows;
+  return`<section class="card"><div class="card-head"><div><h3>การเข้าพักวันนี้</h3><div class="cap">${fmtD(t.date)} · เช็คอิน ${t.checkIns} · เช็คเอาท์ ${t.checkOuts}</div></div>
+      ${can('roomIncome.view')?`<a href="#rooms" data-link="rooms">ดูทั้งหมด${icon('chevr','s16')}</a>`:''}</div>
+    ${rows.length?`<div class="tbl-wrap"><table class="tbl stack compact"><thead><tr><th scope="col">เลขที่</th><th scope="col">ผู้เข้าพัก</th><th scope="col">ห้อง</th><th scope="col">กิจกรรม</th><th scope="col" class="r">ยอดสุทธิ</th><th scope="col">การชำระ</th></tr></thead>
+      <tbody>${rows.map(r=>`<tr class="clickable" data-stay="${esc(r.docNo)}"><td data-label="เลขที่"><span class="mono">${esc(r.docNo)}</span></td>
+        <td data-label="ผู้เข้าพัก"><span><b style="font-weight:500">${esc(r.guestName)}</b><span class="cap mono" style="display:block">${esc(r.phone||'')}</span></span></td>
+        <td data-label="ห้อง"><span class="mono">${esc(r.typeCode)} ${esc(r.roomNo)}</span></td><td data-label="กิจกรรม">${r.act==='in'?'<span class="badge info">เช็คอิน</span>':'<span class="badge primary">เช็คเอาท์</span>'}</td>
+        <td data-label="ยอดสุทธิ" class="r">${fmtM(r.amount)}</td><td data-label="การชำระ">${UI.badge('pay',r.payStatus)}</td></tr>`).join('')}</tbody></table></div>`
+      :`<div style="padding:0 20px 20px">${UI.empty('วันนี้ไม่มีการเช็คอินหรือเช็คเอาท์','รายการจะแสดงเมื่อมีการจองที่เข้าพักหรือออกวันนี้')}</div>`}</section>`}
+/* every room right now: occupied comes from tonight's bookings, the rest from what staff set (Room.gs roomNow_) */
+function dashRooms_(s){const parts=[['occ','มีผู้เข้าพัก'],['free','ว่าง'],['clean','ทำความสะอาด'],['off','ปิดปรับปรุง']];
+  return`<section class="card pad"><div class="card-head" style="padding:0"><div><h3>สถานะห้องพักวันนี้</h3><div class="cap">${fmtN(s.total)} ห้อง</div></div>
+      ${can('room.view')?`<a href="#roomtypes" data-link="roomtypes">ดูห้องพัก${icon('chevr','s16')}</a>`:''}</div>
+    ${s.total?`<div class="rs-bar" role="img" aria-label="${parts.map(p=>p[1]+' '+s[p[0]]).join(', ')}">${parts.filter(p=>s[p[0]]).map(p=>`<span class="${p[0]}" style="flex:${s[p[0]]}" title="${p[1]} ${s[p[0]]} ห้อง"></span>`).join('')}</div>
+      <div class="rs-legend">${parts.map(p=>`<span><i class="${p[0]}"></i>${p[1]}<b>${s[p[0]]}</b></span>`).join('')}</div>`:UI.empty('ยังไม่มีห้องพัก','เพิ่มห้องที่เมนู ประเภทห้องพัก')}</section>`}
 
 function kpiTile_(lab,v,ic,tone,foot,sub){return`<div class="kpi"><div class="top"><span class="lab">${lab}</span><span class="chip ${tone}">${icon(ic)}</span></div><span class="val">${fmtM(v)}</span>${foot?`<span class="cap">${foot}</span>`:''}${sub?`<span class="cap">${sub}</span>`:''}</div>`}
 /* signed change vs last month; for revenue up is good, for expenses up is bad — arrow and words, never colour alone */

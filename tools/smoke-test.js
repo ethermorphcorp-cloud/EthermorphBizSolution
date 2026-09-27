@@ -874,5 +874,41 @@ check('request state cleared', G('SHOP === null && SANDBOX === null && CURRENT_U
   check('export carries the extras and the total', row[h.indexOf('รายได้อื่นรวมในใบเสร็จ')] === 180 && row[h.indexOf('ยอดรวม')] === 5580, h);
 }
 
+/* ---------- step 7: reports + today on the Dashboard ---------- */
+{
+  const login = u => api('DEMO-HOTEL', 'auth.login', null, {username: u, password: '1234'}).data.token;
+  const D = login('maneerat'), acc = login('piyanuch'), desk = login('frontdesk1');
+  const dcall = (tok, action, payload) => api('DEMO-HOTEL', action, tok, payload || {});
+  let r = dcall(D, 'report.get', {from: '2026-04', to: '2026-09'});
+  const P = r.ok && r.data.pl;
+  const design = [['2026-04', 352000, 148200], ['2026-05', 318400, 151300], ['2026-06', 296200, 139600], ['2026-07', 402100, 160400], ['2026-08', 432600, 167600], ['2026-09', 486250, 172840]];
+  check('P&L = design/Reports (6 months)', P && P.months.length === 6 && design.every((m, i) => P.months[i].month === m[0] && P.months[i].revenue === m[1] && P.months[i].expense === m[2]) &&
+    P.months[5].room === 402650 && P.months[5].other === 83600 && P.months[5].margin === 64.5 && P.total.revenue === 2287550 && P.total.expense === 939940, P ? P.total : r);
+  const R = r.data.roomType;
+  check('room types: revenue adds up to the P&L room revenue', R.types.length === 4 && R.total.revenue === P.total.room && R.total.rooms === 12 && R.days === 183 &&
+    Math.abs(R.types.reduce((s, t) => s + t.share, 0) - 100) < 0.5 && R.months.every((m, i) => m.total === P.months[i].room), R.total);
+  const E = r.data.expense;
+  check('expenses: category × month adds up', E.grand === P.total.expense && E.monthTotals.every((v, i) => v === P.months[i].expense) && E.rows[0].label === 'เงินเดือนพนักงาน' &&
+    E.rows.every(x => x.total > 0), E.rows.map(x => x.label + ' ' + x.total));
+  const days = E.daily.days, big = days.filter(x => x.big);
+  check('daily expenses (Sep): big days as designed', E.daily.month === '2026-09' && days.length === 30 && E.daily.total === 172840 &&
+    big.length === 3 && big[0].date === '2026-09-01' && big[0].big.amount === 78000 && big[1].big.amount === 26380 && big[2].big.amount === 11240, big);
+  r = dcall(D, 'report.get', {from: '2026-09', to: '2026-04', month: '2026-06'});
+  check('range: reversed ends are swapped, daily month chosen', r.ok && r.data.range.from === '2026-04' && r.data.range.to === '2026-09' && r.data.expense.daily.month === '2026-06', r.ok ? r.data.range : r);
+  r = dcall(D, 'report.get', {});
+  check('range: default six months up to this month', r.ok && r.data.range.months.length >= 1 && r.data.range.months.length <= 6 && r.data.available.length >= 6, r.ok ? r.data.range : r);
+  r = dcall(D, 'report.expense', {from: '2026-09', to: '2026-09'});
+  check('report.expense on its own', r.ok && r.data.grand === 172840, r);
+  check('Accounting sees reports', dcall(acc, 'report.pl', {from: '2026-09', to: '2026-09'}).ok);
+  r = dcall(desk, 'report.get', {});
+  check('FrontDesk does not', !r.ok && r.code === 'FORBIDDEN', r);
+  // Dashboard: today
+  r = dcall(D, 'dashboard.summary', {month: '2026-09'});
+  const T = r.data.todayStays, S = r.data.roomStatus, today = G('today_()');
+  check('dashboard: today\'s check-ins and check-outs', r.ok && T.date === today && T.rows.length === T.checkIns + T.checkOuts &&
+    T.rows.every(x => (x.act === 'in' ? x.docNo && true : true)) && T.rows.slice(0, T.checkIns).every(x => x.act === 'in'), T);
+  check('dashboard: room status adds up to every room', S.total === 12 && S.occ + S.free + S.clean + S.off === 12 && S.off >= 0, S);
+}
+
 console.log(`${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

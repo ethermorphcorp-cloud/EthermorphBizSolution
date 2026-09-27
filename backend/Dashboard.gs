@@ -1,4 +1,5 @@
-/** Dashboard.gs — dashboard.summary(month): KPIs and the four charts of the Dashboard (design/Main.dc.html).
+/** Dashboard.gs — dashboard.summary(month): KPIs and the four charts of the Dashboard (design/Main.dc.html), plus today
+ *  (always today, whatever month is chosen): the stays checking in and out, and the rooms' status right now.
  *  Room revenue belongs to the month of check-in and excludes cancelled bookings; other income and expenses to the
  *  month of their date — the same rules as every other screen, so the numbers agree everywhere. */
 var DashboardService = {
@@ -54,6 +55,19 @@ var DashboardService = {
       return {code: o.value, label: o.label, value: sum(exp.filter(function (e) { return e.date.slice(0, 7) === month && e.category === o.value; }), function (e) { return e.amount; }), count: o.count};
     }).sort(function (a, b) { return b.value - a.value; });
 
+    // today: check-ins then check-outs (amount = room + its รวมในใบเสร็จ lines), and every room's status now
+    var extra = extrasByBooking_(), byRoom = {};
+    live.forEach(function (b) { (byRoom[b.roomNo] = byRoom[b.roomNo] || []).push(b); });
+    var stay = function (b, act) {
+      return {docNo: b.docNo, guestName: b.guestName, phone: b.phone, typeCode: b.typeCode, roomNo: b.roomNo, act: act,
+              amount: Math.round((b.total + ((extra[b.docNo] || {}).amount || 0)) * 100) / 100, payStatus: b.payStatus};
+    };
+    var byDoc = function (a, b) { return a.docNo < b.docNo ? -1 : 1; };
+    var ins = live.filter(function (b) { return b.checkIn === today; }).sort(byDoc).map(function (b) { return stay(b, 'in'); });
+    var outs = live.filter(function (b) { return b.checkOut === today; }).sort(byDoc).map(function (b) { return stay(b, 'out'); });
+    var status = {occ: 0, free: 0, clean: 0, off: 0};
+    roomList.forEach(function (r) { var s = roomNow_(r, byRoom, today).status; status[s] = (status[s] || 0) + 1; });
+
     var pct = function (a, b) { return b ? Math.round((a - b) / b * 1000) / 10 : null; };
     return {
       month: month, label: monthLabel_(month), today: today,
@@ -65,7 +79,9 @@ var DashboardService = {
       series: series,
       incomeByCategory: byIncome,
       revenueByRoomType: byType,
-      expenseByCategory: byExpense
+      expenseByCategory: byExpense,
+      todayStays: {date: today, checkIns: ins.length, checkOuts: outs.length, rows: ins.concat(outs)},
+      roomStatus: {total: roomList.length, occ: status.occ, free: status.free, clean: status.clean, off: status.off}
     };
   }
 };

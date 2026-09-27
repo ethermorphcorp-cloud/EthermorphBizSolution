@@ -1,0 +1,177 @@
+<script>
+/* page-reports.html — รายงาน (design/Reports.dc.html): one range of months (only months with data), three tabs.
+ *   pl   รายได้ VS ค่าใช้จ่ายรายเดือน  KPIs, stacked revenue (room + other) and expense columns, margin line on the right
+ *                                     axis, profit over each column; the monthly table below
+ *   rm   รายได้รายประเภทห้องพัก       share per room type, revenue per month stacked by type; nights / occupancy / ADR table
+ *   ex   ค่าใช้จ่ายรายหมวดหมู่         category × month table, or one month day by day (big days named) + its categories
+ * report.get answers all three at once, so the tabs switch without a server call. Charts reuse the Dashboard's helpers
+ * and --viz-* colours (page-dashboard.html); a room type keeps the colour it has on the Dashboard. Print / PDF prints
+ * the open tab; Excel writes every report of the range. Both are audited. */
+const RP_ST={from:'',to:'',tab:'pl',ex:'m',exMonth:''};
+const RP_TABS=[['pl','chart','รายได้ VS ค่าใช้จ่ายรายเดือน'],['rm','bed','รายได้รายประเภทห้องพัก'],['ex','wallet','ค่าใช้จ่ายรายหมวดหมู่']];
+
+Pages.reports={render(el){rpLoad_(el,false)}};
+
+async function rpLoad_(el,fresh){const st=RP_ST;let d;
+  try{d=await api('report.get',{from:st.from,to:st.to,month:st.exMonth},{loading:'กำลังโหลดรายงาน',cache:fresh?0:30})}
+  catch(e){el.innerHTML=pageHead('รายงาน','')+`<section class="card">${UI.empty('โหลดรายงานไม่สำเร็จ',e.message)}</section>`;return}
+  if(!el.isConnected)return;el._rp=d;rpDraw_(el,d)}
+
+function rpDraw_(el,d){const st=RP_ST,r=d.range,av=d.available.slice().reverse();   /* oldest first */
+  const sel=(id,cur,label)=>`<select class="select sm" id="${id}" aria-label="${label}" style="width:auto">${(av.length?av:[{value:cur,label:monthLabel_(cur)}]).map(m=>`<option value="${m.value}" ${m.value===cur?'selected':''}>${esc(m.label)}</option>`).join('')}</select>`;
+  el.innerHTML=`<div class="print-area rp">${pageHead('รายงาน',`ช่วงข้อมูล ${fmtD(r.firstDay)} – ${fmtD(r.lastDay)} · ตัวเลือกช่วงเวลาแสดงเฉพาะเดือนที่มีข้อมูล`,
+      `<div class="rp-range no-print">${sel('rpFrom',r.from,'ตั้งแต่เดือน')}<span class="cap">ถึง</span>${sel('rpTo',r.to,'ถึงเดือน')}</div>
+       <button type="button" class="btn no-print" id="rpPrint">${icon('printer')}<span>พิมพ์ / PDF</span></button>
+       <button type="button" class="btn no-print" id="rpExcel">${icon('download')}<span>ส่งออก Excel</span></button>`)}
+    <div class="tabs flush" role="tablist" aria-label="ประเภทรายงาน">${RP_TABS.map(t=>`<button type="button" role="tab" id="rpt-${t[0]}" aria-selected="${st.tab===t[0]}" aria-controls="rpBody" data-rp="${t[0]}">${icon(t[1],'s16')}${t[2]}</button>`).join('')}</div>
+    <div id="rpBody" role="tabpanel" aria-labelledby="rpt-${st.tab}" style="display:flex;flex-direction:column;gap:16px"></div></div>`;
+  $('#rpFrom',el).onchange=e=>{st.from=e.target.value;st.to=st.to||r.to;st.exMonth='';rpLoad_(el)};
+  $('#rpTo',el).onchange=e=>{st.to=e.target.value;st.from=st.from||r.from;st.exMonth='';rpLoad_(el)};
+  $$('[data-rp]',el).forEach(b=>b.onclick=()=>{st.tab=b.dataset.rp;$$('[data-rp]',el).forEach(x=>x.setAttribute('aria-selected',x===b));$('#rpBody',el).setAttribute('aria-labelledby','rpt-'+st.tab);rpTab_(el,d)});
+  $('#rpPrint',el).onclick=()=>{api('audit.client',{action:'PRINT',entity:'Report',detail:RP_TABS.find(t=>t[0]===st.tab)[2]+' '+r.label},{loading:false}).catch(()=>{});window.print()};
+  $('#rpExcel',el).onclick=()=>rpExcel_(d);
+  rpTab_(el,d);
+  if(el._ro)el._ro.disconnect();
+  el._ro=new ResizeObserver(UI.debounce(()=>$$('.dash-chart',el).forEach(c=>{if(c._draw&&c.clientWidth!==c._w){c.innerHTML='';c._draw()}}),150));
+  el._ro.observe($('#rpBody',el))}
+
+function rpTab_(el,d){const body=$('#rpBody',el);body.innerHTML='';({pl:rpPL_,rm:rpRM_,ex:rpEX_})[RP_TABS.some(t=>t[0]===RP_ST.tab)?RP_ST.tab:'pl'](body,d,el)}
+/* a chart host that redraws itself at its card's width */
+function rpChart_(host,draw){host._draw=()=>draw(host);host._draw()}
+const rpPct_=v=>v===null||v===undefined?'-':v.toFixed(1)+'%';
+
+/* ---------- 1. P&L ---------- */
+function rpPL_(body,d){const p=d.pl,t=p.total,n=p.months.length;
+  body.innerHTML=`<div class="kpi-strip"><div><span class="lab">รายได้รวม ${n} เดือน</span><b>${fmtM(t.revenue)}</b><span class="sub">ห้องพัก ${fmtM(t.room)} · อื่นๆ ${fmtM(t.other)}</span></div>
+      <div><span class="lab">ค่าใช้จ่ายรวม</span><b>${fmtM(t.expense)}</b></div><div><span class="lab">กำไรสุทธิ</span><b style="color:${t.profit<0?'var(--danger)':'var(--success)'}">${fmtM(t.profit)}</b></div>
+      <div><span class="lab">อัตรากำไรเฉลี่ย</span><b>${rpPct_(t.margin)}</b></div></div>
+    <section class="card pad"><div class="chart-head"><div><h3>รายได้ VS ค่าใช้จ่ายรายเดือน</h3><div class="cap">แกนซ้าย: จำนวนเงิน · แกนขวา: อัตรากำไร (%) · ตัวเลขเหนือแท่งคือกำไรสุทธิ</div></div></div><div class="dash-chart" id="rpPl"></div></section>
+    <section class="card"><div class="tbl-wrap"><table class="tbl stack"><thead><tr><th scope="col">เดือน</th><th scope="col" class="r">รายได้ห้องพัก</th><th scope="col" class="r">รายได้อื่น</th><th scope="col" class="r">รวมรายได้</th><th scope="col" class="r">ค่าใช้จ่าย</th><th scope="col" class="r">กำไรสุทธิ</th><th scope="col" class="r">อัตรากำไร</th></tr></thead>
+      <tbody>${p.months.map(m=>`<tr><td data-label="เดือน">${esc(m.full)}</td><td data-label="รายได้ห้องพัก" class="r">${fmtM(m.room)}</td><td data-label="รายได้อื่น" class="r">${fmtM(m.other)}</td><td data-label="รวมรายได้" class="r">${fmtM(m.revenue)}</td>
+        <td data-label="ค่าใช้จ่าย" class="r">${fmtM(m.expense)}</td><td data-label="กำไรสุทธิ" class="r" style="${m.profit<0?'color:var(--danger)':''}">${fmtM(m.profit)}</td><td data-label="อัตรากำไร" class="r">${rpPct_(m.margin)}</td></tr>`).join('')}</tbody>
+      <tfoot><tr><td class="nolabel">รวม ${n} เดือน</td><td class="r" data-label="รายได้ห้องพัก">${fmtM(t.room)}</td><td class="r" data-label="รายได้อื่น">${fmtM(t.other)}</td><td class="r" data-label="รวมรายได้">${fmtM(t.revenue)}</td>
+        <td class="r" data-label="ค่าใช้จ่าย">${fmtM(t.expense)}</td><td class="r" data-label="กำไรสุทธิ">${fmtM(t.profit)}</td><td class="r" data-label="อัตรากำไร">${rpPct_(t.margin)}</td></tr></tfoot></table></div></section>`;
+  rpChart_($('#rpPl',body),h=>vizPL_(h,p.months))}
+
+/* stacked revenue (room + other) and expense columns (฿, left axis), margin line (%, right axis), profit over each pair */
+function vizPL_(host,S){
+  const W=Math.max(300,host.clientWidth),H=300,pl=52,pr=46,pt=26,pb=30,iw=W-pl-pr,ih=H-pt-pb,band=iw/S.length;host._w=host.clientWidth;
+  host.appendChild(legend_([{kind:'rect',color:'var(--viz-1)',label:'รายได้ห้องพัก'},{kind:'rect',color:'var(--viz-4)',label:'รายได้อื่น'},{kind:'rect',color:'var(--viz-2)',label:'ค่าใช้จ่าย'},{kind:'line',color:'var(--viz-3)',label:'อัตรากำไร (%) · แกนขวา'}]));
+  const yMax=niceMax_(Math.max(1,...S.map(s=>Math.max(s.revenue,s.expense)))),ms=S.map(s=>s.margin).filter(m=>m!==null);
+  const mMin=Math.min(0,Math.floor(Math.min(0,...ms)/20)*20),mMax=100,y=v=>pt+ih*(1-v/yMax),ym=v=>pt+ih*(1-(v-mMin)/(mMax-mMin));
+  const svg=svgEl('svg',{viewBox:`0 0 ${W} ${H}`,width:W,height:H,role:'img','aria-label':'กราฟรายได้เทียบค่าใช้จ่ายและอัตรากำไรรายเดือน'});
+  for(let i=0;i<=5;i++){const gy=pt+ih*i/5;svg.appendChild(svgEl('line',{x1:pl,x2:W-pr,y1:gy,y2:gy,stroke:'var(--viz-grid)','stroke-width':1}));
+    svg.appendChild(svgText(pl-8,gy+4,kBaht(yMax*(1-i/5)),{'text-anchor':'end'}));svg.appendChild(svgText(W-pr+8,gy+4,Math.round(mMax-(mMax-mMin)*i/5)+'%'))}
+  const bw=Math.min(28,band*0.3),hi=svgEl('rect',{x:0,y:pt,width:band,height:ih,fill:'var(--surface-hover)',opacity:0});svg.appendChild(hi);
+  /* a segment from value a up to value b; rounded top only for the top segment; 2px surface gap under a stacked one */
+  const seg=(x,a,b,color,round,gap)=>{const yb=y(a)-(gap?2:0),yt=y(b),h=yb-yt;if(h<=0)return null;const r=round?Math.min(4,h,bw/2):0;
+    return svgEl('path',{d:`M${x},${yb}V${yt+r}Q${x},${yt} ${x+r},${yt}H${x+bw-r}Q${x+bw},${yt} ${x+bw},${yt+r}V${yb}Z`,fill:color})};
+  S.forEach((s,i)=>{const cx=pl+band*i+band/2,x1=cx-bw-1,x2=cx+1;
+    const room=seg(x1,0,s.room,'var(--viz-1)',!s.other,false),oth=s.other?seg(x1,s.room,s.revenue,'var(--viz-4)',true,!!s.room):null,ex=seg(x2,0,s.expense,'var(--viz-2)',true,false);
+    [room,oth,ex].forEach(e=>e&&svg.appendChild(e));
+    svg.appendChild(svgText(cx,y(Math.max(s.revenue,s.expense))-8,(s.profit<0?'−':'+')+kBaht(Math.abs(s.profit)),{'text-anchor':'middle','font-size':11,fill:'var(--ink)'}));
+    svg.appendChild(svgText(cx,H-9,band<72?s.label.split(' ')[0]:s.label,{'text-anchor':'middle'}))});
+  const pts=S.map((s,i)=>s.margin===null?null:[pl+band*i+band/2,ym(s.margin)]);let path='';
+  pts.forEach((p,i)=>{if(p)path+=(path&&pts[i-1]?'L':'M')+p[0]+','+p[1]});
+  svg.appendChild(svgEl('path',{d:path,fill:'none',stroke:'var(--viz-3)','stroke-width':2,'stroke-linejoin':'round','stroke-linecap':'round'}));
+  pts.forEach(p=>{if(p)svg.appendChild(svgEl('circle',{cx:p[0],cy:p[1],r:4,fill:'var(--viz-3)',stroke:'var(--surface)','stroke-width':2}))});
+  const wrap=document.createElement('div');wrap.className='viz-wrap';wrap.appendChild(svg);host.appendChild(wrap);const tip=vizTip_(wrap);
+  S.forEach((s,i)=>{const hit=svgEl('rect',{x:pl+band*i,y:pt,width:band,height:ih+pb,fill:'transparent',tabindex:0,'aria-label':`${s.full} รายได้ ${fmtM(s.revenue)} ค่าใช้จ่าย ${fmtM(s.expense)} กำไร ${fmtM(s.profit)} อัตรากำไร ${rpPct_(s.margin)}`});
+    const on=()=>{hi.setAttribute('x',pl+band*i);hi.setAttribute('opacity',1);const sc=wrap.clientWidth/W;
+      tip.show(s.full,[['var(--viz-1)','rect','รายได้ห้องพัก',fmtM(s.room)],['var(--viz-4)','rect','รายได้อื่น',fmtM(s.other)],['var(--viz-2)','rect','ค่าใช้จ่าย',fmtM(s.expense)],
+        [null,null,'กำไรสุทธิ',fmtM(s.profit)],['var(--viz-3)','line','อัตรากำไร',rpPct_(s.margin)]],(pl+band*i+band/2)*sc,pt*sc)};
+    const off=()=>{hi.setAttribute('opacity',0);tip.hide()};
+    hit.addEventListener('pointerenter',on);hit.addEventListener('focus',on);hit.addEventListener('pointerleave',off);hit.addEventListener('blur',off);svg.appendChild(hit)})}
+
+/* ---------- 2. room types ---------- */
+function rpRM_(body,d){const R=d.roomType,T=R.total,color=i=>`var(${VIZ[i%VIZ.length]})`,max=Math.max(1,...R.types.map(t=>t.revenue));
+  body.innerHTML=`<div class="rp-row">
+      <section class="card pad"><div class="chart-head"><div><h3>สัดส่วนรายได้ตามประเภทห้อง</h3><div class="cap">รวม ${esc(d.range.label)} · ${fmtM(T.revenue)}</div></div></div>
+        <div class="rp-share">${R.types.map((t,i)=>`<div class="row"><i class="key rect" style="background:${color(i)}"></i><span class="n">${esc(t.name)}</span><span class="p">${t.share.toFixed(1)}%</span><span class="v">${fmtM(t.revenue)}</span>
+          <span class="track"><span class="bar" style="width:${Math.max(.5,t.revenue/max*100)}%;background:${color(i)}"></span></span></div>`).join('')||UI.empty('ยังไม่มีประเภทห้อง','เพิ่มประเภทห้องที่เมนู ประเภทห้องพัก')}</div></section>
+      <section class="card pad"><div class="chart-head"><div><h3>รายได้รายเดือนแยกประเภทห้อง</h3><div class="cap">กราฟแท่งซ้อน · ตัวเลขเหนือแท่งคือรายได้ห้องพักรวมของเดือน</div></div></div><div class="dash-chart" id="rpStack"></div></section></div>
+    <section class="card"><div class="tbl-wrap"><table class="tbl stack"><thead><tr><th scope="col">ประเภทห้อง</th><th scope="col" class="r">จำนวนห้อง</th><th scope="col" class="r">คืนที่ขายได้</th><th scope="col" class="r">อัตราเข้าพัก</th><th scope="col" class="r">ADR</th><th scope="col" class="r">รายได้</th><th scope="col" class="r">สัดส่วน</th></tr></thead>
+      <tbody>${R.types.map((t,i)=>`<tr><td data-label="ประเภทห้อง"><span style="display:inline-flex;align-items:center;gap:8px"><i class="key rect" style="background:${color(i)}"></i>${esc(t.name)}</span></td><td data-label="จำนวนห้อง" class="r">${fmtN(t.rooms)}</td>
+        <td data-label="คืนที่ขายได้" class="r">${fmtN(t.nights)}</td><td data-label="อัตราเข้าพัก" class="r">${t.occupancy.toFixed(1)}%</td><td data-label="ADR" class="r">${fmtM(t.adr)}</td><td data-label="รายได้" class="r">${fmtM(t.revenue)}</td><td data-label="สัดส่วน" class="r">${t.share.toFixed(1)}%</td></tr>`).join('')}</tbody>
+      <tfoot><tr><td class="nolabel">รวม</td><td class="r" data-label="จำนวนห้อง">${fmtN(T.rooms)}</td><td class="r" data-label="คืนที่ขายได้">${fmtN(T.nights)}</td><td class="r" data-label="อัตราเข้าพัก">${T.occupancy.toFixed(1)}%</td>
+        <td class="r" data-label="ADR">${fmtM(T.adr)}</td><td class="r" data-label="รายได้">${fmtM(T.revenue)}</td><td class="r" data-label="สัดส่วน">100%</td></tr></tfoot></table></div>
+      <div class="pager"><span>อัตราเข้าพัก = คืนที่ขายได้ ÷ (จำนวนห้อง × ${fmtN(R.days)} วันในช่วงที่เลือก) · คืนและรายได้นับตามเดือนที่เช็คอิน ไม่รวมการจองที่ยกเลิก</span></div></section>`;
+  rpChart_($('#rpStack',body),h=>vizStack_(h,R.months,R.types))}
+
+function vizStack_(host,M,types){
+  const W=Math.max(280,host.clientWidth),H=280,pl=48,pr=12,pt=22,pb=30,iw=W-pl-pr,ih=H-pt-pb,band=iw/M.length;host._w=host.clientWidth;
+  host.appendChild(legend_(types.map((t,i)=>({kind:'rect',color:`var(${VIZ[i%VIZ.length]})`,label:t.name}))));
+  const yMax=niceMax_(Math.max(1,...M.map(m=>m.total))),y=v=>pt+ih*(1-v/yMax),bw=Math.min(36,band*0.5);
+  const svg=svgEl('svg',{viewBox:`0 0 ${W} ${H}`,width:W,height:H,role:'img','aria-label':'รายได้ห้องพักรายเดือนแยกประเภทห้อง'});
+  for(let i=0;i<=5;i++){const gy=pt+ih*i/5;svg.appendChild(svgEl('line',{x1:pl,x2:W-pr,y1:gy,y2:gy,stroke:'var(--viz-grid)','stroke-width':1}));svg.appendChild(svgText(pl-8,gy+4,kBaht(yMax*(1-i/5)),{'text-anchor':'end'}))}
+  const hi=svgEl('rect',{x:0,y:pt,width:band,height:ih,fill:'var(--surface-hover)',opacity:0});svg.appendChild(hi);
+  M.forEach((m,i)=>{const x=pl+band*i+(band-bw)/2;let acc=0;const segs=types.map((t,j)=>({v:m.byType[t.code]||0,c:`var(${VIZ[j%VIZ.length]})`})).filter(s=>s.v>0);
+    segs.forEach((s,k)=>{const yb=y(acc)-(k?2:0),yt=y(acc+s.v),h=yb-yt;acc+=s.v;if(h<=0)return;const top=k===segs.length-1,r=top?Math.min(4,h,bw/2):0;
+      svg.appendChild(svgEl('path',{d:`M${x},${yb}V${yt+r}Q${x},${yt} ${x+r},${yt}H${x+bw-r}Q${x+bw},${yt} ${x+bw},${yt+r}V${yb}Z`,fill:s.c}))});
+    if(m.total)svg.appendChild(svgText(x+bw/2,y(m.total)-7,kBaht(m.total),{'text-anchor':'middle','font-size':11,fill:'var(--ink)'}));
+    svg.appendChild(svgText(x+bw/2,H-9,band<64?m.label.split(' ')[0]:m.label,{'text-anchor':'middle'}))});
+  const wrap=document.createElement('div');wrap.className='viz-wrap';wrap.appendChild(svg);host.appendChild(wrap);const tip=vizTip_(wrap);
+  M.forEach((m,i)=>{const hit=svgEl('rect',{x:pl+band*i,y:pt,width:band,height:ih+pb,fill:'transparent',tabindex:0,'aria-label':`${m.label} รายได้ห้องพัก ${fmtM(m.total)}`});
+    const on=()=>{hi.setAttribute('x',pl+band*i);hi.setAttribute('opacity',1);const sc=wrap.clientWidth/W;
+      tip.show(m.label+' · '+fmtM(m.total),types.map((t,j)=>[`var(${VIZ[j%VIZ.length]})`,'rect',t.name,fmtM(m.byType[t.code]||0)]),(pl+band*i+band/2)*sc,pt*sc)};
+    const off=()=>{hi.setAttribute('opacity',0);tip.hide()};
+    hit.addEventListener('pointerenter',on);hit.addEventListener('focus',on);hit.addEventListener('pointerleave',off);hit.addEventListener('blur',off);svg.appendChild(hit)})}
+
+/* ---------- 3. expenses ---------- */
+function rpEX_(body,d,el){const E=d.expense,D=E.daily,st=RP_ST,months=d.range.months,monthly=st.ex!=='d';
+  const inRange=d.available.filter(m=>months.includes(m.value));
+  body.innerHTML=`<div class="rp-extools"><div class="seg" role="group" aria-label="มุมมองค่าใช้จ่าย"><button type="button" data-ex="m" aria-pressed="${monthly}">${icon('grid','s16')}รายเดือน</button><button type="button" data-ex="d" aria-pressed="${!monthly}">${icon('calendar','s16')}รายวัน</button></div>
+      ${monthly?'':`<select class="select sm" id="rpExMonth" aria-label="เดือนของมุมมองรายวัน" style="width:auto">${(inRange.length?inRange:[{value:D.month,label:D.label}]).map(m=>`<option value="${m.value}" ${m.value===D.month?'selected':''}>${esc(m.label)}</option>`).join('')}</select>`}
+      <span class="grow"></span><span>ค่าใช้จ่ายรวม <b>${fmtM(monthly?E.grand:D.total)}</b> <span class="cap">(${monthly?esc(d.range.label):esc(D.label)})</span></span></div>
+    <div id="rpExBody" style="display:flex;flex-direction:column;gap:16px"></div>`;
+  $$('[data-ex]',body).forEach(b=>b.onclick=()=>{st.ex=b.dataset.ex;rpEX_(body,d,el)});
+  if($('#rpExMonth',body))$('#rpExMonth',body).onchange=e=>{st.exMonth=e.target.value;rpLoad_(el)};
+  const host=$('#rpExBody',body);
+  if(monthly){const max=Math.max(1,...E.rows.map(x=>x.total));
+    host.innerHTML=`<section class="card"><div class="card-head"><div><h3>ค่าใช้จ่ายรายหมวดหมู่ × รายเดือน</h3><div class="cap">แถบแสดงสัดส่วนเทียบกับหมวดทั้งหมด · แสดงเฉพาะหมวดที่มีรายการ</div></div></div>
+      ${E.rows.length?`<div class="tbl-wrap"><table class="tbl stack"><thead><tr><th scope="col">หมวดหมู่</th>${months.map(m=>`<th scope="col" class="r">${esc(monthLabel_(m))}</th>`).join('')}<th scope="col" class="r">รวม</th><th scope="col">สัดส่วน</th></tr></thead>
+        <tbody>${E.rows.map(x=>`<tr><td data-label="หมวดหมู่">${esc(x.label)}</td>${x.values.map((v,i)=>`<td data-label="${esc(monthLabel_(months[i]))}" class="r">${v?fmtN(v):'-'}</td>`).join('')}<td data-label="รวม" class="r"><b style="font-weight:600">${fmtN(x.total)}</b></td>
+          <td data-label="สัดส่วน"><span class="rp-sbar"><span class="track"><span class="bar" style="width:${Math.max(.5,x.total/max*100)}%"></span></span><span>${x.share.toFixed(1)}%</span></span></td></tr>`).join('')}</tbody>
+        <tfoot><tr><td class="nolabel">รวม</td>${E.monthTotals.map((v,i)=>`<td class="r" data-label="${esc(monthLabel_(months[i]))}">${fmtN(v)}</td>`).join('')}<td class="r" data-label="รวม">${fmtN(E.grand)}</td><td class="nolabel"></td></tr></tfoot></table></div>`
+        :UI.empty('ยังไม่มีค่าใช้จ่ายในช่วงนี้','ลองเลือกช่วงเวลาอื่น')}</section>`;return}
+  host.innerHTML=`<div class="rp-row chart-first"><section class="card pad"><div class="chart-head"><div><h3>ค่าใช้จ่ายรายวัน</h3><div class="cap">${esc(D.label)} · วันที่มีรายการใหญ่ (ตั้งแต่ 5% ของเดือน) แสดงชื่อรายการ</div></div></div><div class="dash-chart" id="rpDaily"></div></section>
+    <section class="card pad"><div class="chart-head"><div><h3>หมวดหมู่เดือนนี้</h3><div class="cap">${esc(D.label)} · เรียงจากมากไปน้อย</div></div></div><div class="dash-chart" id="rpDayCats"></div></section></div>`;
+  rpChart_($('#rpDaily',host),h=>vizDaily_(h,D.days));rpChart_($('#rpDayCats',host),h=>vizBars_(h,D.categories))}
+
+function vizDaily_(host,days){
+  const W=Math.max(300,host.clientWidth),H=290,pl=48,pr=10,pt=30,pb=28,iw=W-pl-pr,ih=H-pt-pb,band=iw/days.length;host._w=host.clientWidth;
+  if(!days.some(x=>x.value)){host.innerHTML=UI.empty('ยังไม่มีค่าใช้จ่ายในเดือนนี้','ข้อมูลจะแสดงเมื่อมีการบันทึกรายจ่าย');return}
+  host.appendChild(legend_([{kind:'rect',color:'var(--viz-2)',label:'ค่าใช้จ่ายประจำวัน'},{kind:'rect',color:'var(--rp-big)',label:'วันที่มีรายการใหญ่ (ชื่อรายการเหนือแท่ง)'}]));
+  const yMax=niceMax_(Math.max(...days.map(x=>x.value))),y=v=>pt+ih*(1-v/yMax),bw=Math.max(3,Math.min(18,band-2));
+  const svg=svgEl('svg',{viewBox:`0 0 ${W} ${H}`,width:W,height:H,role:'img','aria-label':'ค่าใช้จ่ายรายวัน'});
+  for(let i=0;i<=5;i++){const gy=pt+ih*i/5;svg.appendChild(svgEl('line',{x1:pl,x2:W-pr,y1:gy,y2:gy,stroke:'var(--viz-grid)','stroke-width':1}));svg.appendChild(svgText(pl-8,gy+4,kBaht(yMax*(1-i/5)),{'text-anchor':'end'}))}
+  const hi=svgEl('rect',{x:0,y:pt,width:band,height:ih,fill:'var(--surface-hover)',opacity:0});svg.appendChild(hi);
+  const every=band<16?5:band<24?2:1;
+  days.forEach((x,i)=>{const bx=pl+band*i+(band-bw)/2,d=+x.date.slice(8);
+    if(x.value){const yt=y(x.value),h=pt+ih-yt,r=Math.min(3,h,bw/2);
+      svg.appendChild(svgEl('path',{d:`M${bx},${pt+ih}V${yt+r}Q${bx},${yt} ${bx+r},${yt}H${bx+bw-r}Q${bx+bw},${yt} ${bx+bw},${yt+r}V${pt+ih}Z`,fill:x.big?'var(--rp-big)':'var(--viz-2)'}));
+      if(x.big)svg.appendChild(svgText(bx+bw/2,yt-6,kBaht(x.value),{'text-anchor':'middle','font-size':11,fill:'var(--ink)','font-weight':600}))}
+    if(d===1||d%every===0||i===days.length-1)svg.appendChild(svgText(bx+bw/2,H-9,String(d),{'text-anchor':'middle','font-size':11}))});
+  const wrap=document.createElement('div');wrap.className='viz-wrap';wrap.appendChild(svg);host.appendChild(wrap);const tip=vizTip_(wrap);
+  days.forEach((x,i)=>{const hit=svgEl('rect',{x:pl+band*i,y:pt,width:band,height:ih+pb,fill:'transparent',tabindex:x.value?0:-1,'aria-label':`${fmtD(x.date)} ${fmtM(x.value)}${x.big?' · '+x.big.description:''}`});
+    const on=()=>{hi.setAttribute('x',pl+band*i);hi.setAttribute('opacity',1);const sc=wrap.clientWidth/W;
+      tip.show(fmtD(x.date),[[x.big?'var(--rp-big)':'var(--viz-2)','rect',`${fmtN(x.count)} รายการ`,fmtM(x.value)]].concat(x.big?[[null,null,x.big.description,fmtM(x.big.amount)]]:[]),(pl+band*i+band/2)*sc,pt*sc)};
+    const off=()=>{hi.setAttribute('opacity',0);tip.hide()};
+    hit.addEventListener('pointerenter',on);hit.addEventListener('focus',on);hit.addEventListener('pointerleave',off);hit.addEventListener('blur',off);svg.appendChild(hit)})}
+
+/* ---------- Excel: every report of the range ---------- */
+async function rpExcel_(d){
+  try{UI.showLoading('กำลังเตรียมไฟล์ Excel');const XLSX=await UI.xlsx(),wb=XLSX.utils.book_new(),months=d.range.months,add=(name,head,rows)=>XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([head].concat(rows)),name);
+    const p=d.pl,t=p.total;
+    add('รายได้vsค่าใช้จ่าย',['เดือน','รายได้ห้องพัก','รายได้อื่น','รวมรายได้','ค่าใช้จ่าย','กำไรสุทธิ','อัตรากำไร (%)'],p.months.map(m=>[m.full,m.room,m.other,m.revenue,m.expense,m.profit,m.margin]).concat([['รวม',t.room,t.other,t.revenue,t.expense,t.profit,t.margin]]));
+    const R=d.roomType;
+    add('รายประเภทห้อง',['ประเภทห้อง','จำนวนห้อง','คืนที่ขายได้','อัตราเข้าพัก (%)','ADR','รายได้','สัดส่วน (%)'],R.types.map(x=>[x.name,x.rooms,x.nights,x.occupancy,x.adr,x.revenue,x.share]).concat([['รวม',R.total.rooms,R.total.nights,R.total.occupancy,R.total.adr,R.total.revenue,100]]));
+    add('ประเภทห้องรายเดือน',['เดือน'].concat(R.types.map(x=>x.name),['รวม']),R.months.map(m=>[m.label].concat(R.types.map(x=>m.byType[x.code]||0),[m.total])));
+    const E=d.expense;
+    add('ค่าใช้จ่ายรายหมวด',['หมวดหมู่'].concat(months.map(monthLabel_),['รวม','สัดส่วน (%)']),E.rows.map(x=>[x.label].concat(x.values,[x.total,x.share])).concat([['รวม'].concat(E.monthTotals,[E.grand,''])]));
+    add('ค่าใช้จ่ายรายวัน',['วันที่','ยอดเงิน','จำนวนรายการ','รายการใหญ่'],E.daily.days.map(x=>[fmtD(x.date),x.value,x.count,x.big?x.big.description:'']));
+    const name=`report-${d.range.from.replace('-','')}-${d.range.to.replace('-','')}.xlsx`;XLSX.writeFile(wb,name);
+    api('audit.client',{action:'EXPORT',entity:'Report',detail:name},{loading:false}).catch(()=>{});UI.toast('ส่งออกไฟล์แล้ว','success',name)}
+  catch(e){UI.swalError('ส่งออกไม่สำเร็จ',e.message)}finally{UI.hideLoading()}}
+const monthLabel_=ym=>{const[y,m]=String(ym).split('-');return TH_MONTH_SHORT_[+m-1]+' '+y};
+</script>

@@ -124,8 +124,11 @@ var ROUTES = {
   }},
   'receipt.cancel':      {perm: 'receipt.cancel', feature: 'receipt', fn: function (a, u) { return ReceiptService.cancel(u, a.docNo, a.reason); }},
   'receipt.print':       {perm: 'receipt.view', feature: 'receipt', fn: function (a, u) { return ReceiptService.print(u, a.docNo, a.copies); }},
-  'receipt.export':      {perm: 'receipt.view', feature: 'receipt', fn: function (a, u) { return ReceiptService.export(u, a); }}
-  // step 7: report.*
+  'receipt.export':      {perm: 'receipt.view', feature: 'receipt', fn: function (a, u) { return ReceiptService.export(u, a); }},
+  'report.get':          {perm: 'report.view', feature: 'report', fn: function (a) { return ReportService.get(a); }},
+  'report.pl':           {perm: 'report.view', feature: 'report', fn: function (a) { return ReportService.pl(a); }},
+  'report.roomType':     {perm: 'report.view', feature: 'report', fn: function (a) { return ReportService.roomType(a); }},
+  'report.expense':      {perm: 'report.view', feature: 'report', fn: function (a) { return ReportService.expense(a); }}
 };
 
 /** Tables a route reads, fetched from the cache in one round trip before it runs (MasterCache.gs TableCache.prefetch).
@@ -135,6 +138,10 @@ var ROUTE_READS = (function () {
   var rc = ['Receipts', 'ReceiptItems', 'RoomIncome', 'OtherIncome', 'RoomTypes', 'Users', 'Dropdowns', 'Company', 'Customers'];
   var map = {
     'dashboard.summary': ['RoomIncome', 'OtherIncome', 'Expenses', 'Rooms', 'RoomTypes', 'Dropdowns'],
+    'report.get': ['RoomIncome', 'OtherIncome', 'Expenses', 'Rooms', 'RoomTypes', 'Dropdowns'],
+    'report.pl': ['RoomIncome', 'OtherIncome', 'Expenses', 'Rooms', 'RoomTypes', 'Dropdowns'],
+    'report.roomType': ['RoomIncome', 'OtherIncome', 'Expenses', 'Rooms', 'RoomTypes', 'Dropdowns'],
+    'report.expense': ['RoomIncome', 'OtherIncome', 'Expenses', 'Rooms', 'RoomTypes', 'Dropdowns'],
     'roomIncome.list': stay, 'roomIncome.export': stay, 'roomIncome.calendar': stay, 'roomIncome.availability': stay,
     'roomIncome.get': stay.concat(['Receipts', 'Attachments']),
     'booking.grid': ['RoomIncome', 'Rooms', 'RoomTypes'], 'room.overview': ['RoomIncome', 'Rooms', 'RoomTypes'],
