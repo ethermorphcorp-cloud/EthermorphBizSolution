@@ -91,7 +91,8 @@ Web app บริหารรายได้-รายจ่ายโรงแ�
 │  ├─ User.gs            ✓  list / save / resetPassword — ไม่ลบ (ระงับแทน), ห้ามแก้บทบาทตัวเอง, ต้องเหลือ Owner ≥ 1
 │  ├─ Customer.gs        ✓  list (ค้นหา ตัวกรอง เรียง แบ่งหน้า) / get (ประวัติ) / save / delete / export / import
 │  ├─ Room.gs            ✓  overview (อัตราเข้าพักเดือนนี้, ผู้เข้าพักคืนนี้) / typeSave / typeDelete / roomSave / roomDelete / roomStatus
-│  ├─ RoomIncome.gs      ✓  list (KPI เดือน, เดือนที่มีข้อมูล, ตัวกรอง, แถวรวม) / get / availability / save (ห้ามจองซ้อน,
+│  ├─ RoomIncome.gs      ✓  list (KPI เดือน, เดือนที่มีข้อมูล, ตัวกรอง, แถวรวม · grand = ค่าห้อง + รายได้อื่นที่ผูกการจองและไม่มีวิธีชำระของตัวเอง
+│  │                        = "รวมในใบเสร็จ" — extrasByBooking_) / get / availability / save (ห้ามจองซ้อน,
 │  │                        VAT ตาม vatMode) / cancel (cxl) / delete / calendar(month) / export
 │  ├─ Booking.gs         ✓  grid(from, days, typeCode) → rooms × days + bars (clip ซ้าย/ขวา) + ปิดปรับปรุง + สรุปห้องว่าง · audit.client
 │  ├─ Dashboard.gs       ✓  summary(month): KPI (เทียบเดือนก่อน), 6 เดือน รายได้/ค่าใช้จ่าย/อัตรากำไร, รายได้รายหมวด,
@@ -127,7 +128,8 @@ Web app บริหารรายได้-รายจ่ายโรงแ�
    ├─ page-customers.html ✓ ตาราง server-side + ตัวกรองจากข้อมูล + เมนูแถว (portal) + นำเข้า/ส่งออก Excel (SheetJS)
    ├─ page-roomtypes.html ✓ การ์ดประเภทห้อง + ตารางห้อง + เปลี่ยนสถานะห้อง (FrontDesk ทำได้)
    ├─ page-rooms.html    ✓  บันทึกการจองห้องพัก: view table / calendar / grid (params.view) + bookingModal_ (ค้นหาลูกค้า,
-   │                        ห้องว่างตามวัน, ราคาศุกร์–เสาร์, มัดจำ, สรุป VAT, เอกสารแนบ) — go('rooms',{add:true | docNo})
+   │                        ห้องว่างตามวัน, ราคาศุกร์–เสาร์, มัดจำ, สรุป VAT + รายได้อื่นรวมในใบเสร็จ, เอกสารแนบ, ปุ่มออกใบเสร็จ) · ไม่มีแท็บรายได้อื่น (อยู่ในเมนู)
+   │                        · ออกใบเสร็จจากเมนูแถว / ฟอร์ม = receiptQuick_ (ห้อง + รายการรวมในใบเสร็จ ใบเดียว, แก้ไขรายละเอียด → receiptModal_) — go('rooms',{add:true | docNo})
    ├─ page-other.html    ✓  รายได้อื่นๆ ในแท็บรายได้: การ์ดรายหมวด (คลิก = กรอง), chip หมวด, otherModal_ (ค้นหาการจอง, ห้อง, qty × ราคา,
    │                        เอกสารแนบ) — go('other',{add, bookingNo, docNo})
    ├─ page-expenses.html ✓  KPI strip (คลิก ยังไม่แนบเอกสาร = กรอง), ตัวกรอง เดือน/วิธีชำระ/เอกสาร, chip หมวด, expenseModal_ + เอกสารแนบ

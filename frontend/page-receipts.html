@@ -127,12 +127,8 @@ async function receiptModal_(p,done){
       <div class="summary" id="rcSum" aria-live="polite"></div>`;
     $$('[data-ref]',f).forEach(x=>x.onchange=()=>{st.sel[x.dataset.ref]=x.checked;$('[data-f="refs"]',$('#rcDraft',f)).classList.remove('invalid');drawSum()});
     drawSum()};
-  const drawSum=()=>{const d=st.draft,vr=d.vatRate,ex=d.vatMode==='excluded',lines=d.lines.filter(l=>st.sel[l.refDocNo]);
-    const room=d.booking&&st.sel[d.booking.docNo],sub=Math.round(lines.reduce((s,l)=>s+l.amount,0)*100)/100,disc=room?d.discount:0,after=Math.round((sub-disc)*100)/100;
-    let net,vat,total;if(ex){net=after;vat=Math.round(net*vr)/100;total=Math.round((net+vat)*100)/100}else{total=after;vat=Math.round(total*vr/(100+vr)*100)/100;net=Math.round((total-vat)*100)/100}
-    $('#rcSum',f).innerHTML=`<div class="ln"><span>รวมเป็นเงิน (${lines.length} รายการ)</span><span class="num">${fmtM(sub)}</span></div>${disc?`<div class="ln"><span>ส่วนลด</span><span class="num">−${fmtM(disc)}</span></div>`:''}
-      ${vr?`<div class="ln"><span>มูลค่าก่อนภาษี</span><span class="num">${fmtM(net)}</span></div><div class="ln"><span>ภาษีมูลค่าเพิ่ม ${vr}%${ex?' (แยกนอกราคา)':' (รวมในราคา)'}</span><span class="num">${fmtM(vat)}</span></div>`:'<div class="ln"><span>ไม่มีภาษีมูลค่าเพิ่ม</span><span></span></div>'}
-      <div class="ln total"><span>จำนวนเงินรวมทั้งสิ้น</span><b class="num">${fmtM(total)}</b></div>`;
+  const drawSum=()=>{const d=st.draft,lines=d.lines.filter(l=>st.sel[l.refDocNo]),room=d.booking&&st.sel[d.booking.docNo];
+    $('#rcSum',f).innerHTML=rcSumHtml_(d,lines,room);
     $('#rcPayNote',f).innerHTML=room&&d.booking.payStatus!=='paid'?`<div class="banner info">${icon('info')}<span class="grow">การจองนี้ ${PAY[d.booking.payStatus]||''} อยู่ — เมื่อออกใบเสร็จจะเปลี่ยนเป็น <strong>ชำระแล้ว</strong> (ยกเลิกใบเสร็จแล้วสถานะจะกลับเป็นเดิม)</span></div>`:'';
     $('#rcSave',m.el).disabled=!lines.length};
   $$('[data-mode]',f).forEach(b=>b.onclick=()=>{if(st.mode===b.dataset.mode)return;st.mode=b.dataset.mode;drawMode()});
@@ -149,6 +145,46 @@ async function receiptModal_(p,done){
       await UI.swalSuccess('ออกใบเสร็จแล้ว',`เลขที่ ${r.docNo} · ${r.customerName} · ${fmtM(r.total)}`);receiptView_(r,done)}
     catch(e){if(e.field)V.setErr(f,e.field,e.message);else UI.swalError('ออกใบเสร็จไม่สำเร็จ',e.message)}};
   $('#rcSave',m.el).onclick=save;f.onsubmit=e=>{e.preventDefault();save()}}
+
+/* the totals of a draft (receipt.prepare) for the chosen lines: the same arithmetic as Receipt.gs receiptMoney_ */
+function rcMoney_(d,lines,room){const vr=d.vatRate,ex=d.vatMode==='excluded',sub=Math.round(lines.reduce((s,l)=>s+l.amount,0)*100)/100,disc=room?d.discount:0,after=Math.round((sub-disc)*100)/100;
+  let net,vat,total;if(ex){net=after;vat=Math.round(net*vr)/100;total=Math.round((net+vat)*100)/100}else{total=after;vat=Math.round(total*vr/(100+vr)*100)/100;net=Math.round((total-vat)*100)/100}
+  return{vr,ex,sub,disc,net,vat,total}}
+function rcSumHtml_(d,lines,room){const x=rcMoney_(d,lines,room);
+  return`<div class="ln"><span>รวมเป็นเงิน (${lines.length} รายการ)</span><span class="num">${fmtM(x.sub)}</span></div>${x.disc?`<div class="ln"><span>ส่วนลด</span><span class="num">−${fmtM(x.disc)}</span></div>`:''}
+    ${x.vr?`<div class="ln"><span>มูลค่าก่อนภาษี</span><span class="num">${fmtM(x.net)}</span></div><div class="ln"><span>ภาษีมูลค่าเพิ่ม ${x.vr}%${x.ex?' (แยกนอกราคา)':' (รวมในราคา)'}</span><span class="num">${fmtM(x.vat)}</span></div>`:'<div class="ln"><span>ไม่มีภาษีมูลค่าเพิ่ม</span><span></span></div>'}
+    <div class="ln total"><span>จำนวนเงินรวมทั้งสิ้น</span><b class="num">${fmtM(x.total)}</b></div>`}
+
+/* one step from a booking (its menu, or its form): the room and every line left to "รวมในใบเสร็จ" on one receipt,
+ * today, in the stay customer's name. "แก้ไขรายละเอียด" opens the full form (receiptModal_) for anything else. */
+async function receiptQuick_(bookingNo,done){
+  let d;try{d=await api('receipt.prepare',{bookingNo},{loading:'กำลังเตรียมใบเสร็จ'})}catch(e){UI.swalError('ออกใบเสร็จไม่ได้',e.message);return}
+  const lines=d.lines.filter(l=>!l.receipted&&!(l.kind==='other'&&l.ownPay)),b=d.booking,room=lines.some(l=>l.refDocNo===b.docNo);
+  if(!lines.length){const on=[...new Set(d.lines.map(l=>l.receipted).filter(Boolean))];
+    UI.swalInfo('ออกใบเสร็จครบแล้ว',`ทุกรายการของการจอง ${bookingNo} อยู่ในใบเสร็จแล้ว${on.length?' ('+on.join(', ')+')':''}`);return}
+  const pays=Master.options('pay').map(x=>[x.code,x.label]),pay0=d.payMethod&&pays.some(p=>p[0]===d.payMethod)?d.payMethod:'CASH';
+  const skipped=d.lines.filter(l=>!l.receipted&&l.kind==='other'&&l.ownPay);
+  const m=UI.openModal({title:'ออกใบเสร็จ · '+bookingNo,iconName:'receipt',
+    body:`<form id="rqForm" novalidate style="display:flex;flex-direction:column;gap:14px">
+      <div class="rc-stay"><span><b>${esc(d.customer.name)}</b><span class="cap mono">${esc(b.docNo)} · ห้อง ${esc(b.typeCode)} ${esc(b.roomNo)} · ${fmtD(b.checkIn)} – ${fmtD(b.checkOut)}</span></span>${UI.badge('pay',b.payStatus)}</div>
+      <div class="rc-pick">${lines.map(l=>`<div class="rc-line" style="cursor:default"><span class="grow"><b>${esc(l.description)}</b><span class="cap">${esc(l.detail)}</span></span><span class="num">${fmtM(l.amount)}</span></div>`).join('')}</div>
+      ${skipped.length?`<p class="cap" style="margin:0">ไม่รวม ${skipped.length} รายการที่ชำระแยกไปแล้ว (${skipped.map(l=>esc(l.refDocNo)).join(', ')})</p>`:''}
+      <div class="summary">${rcSumHtml_(d,lines,room)}</div>
+      ${room&&b.payStatus!=='paid'?`<div class="banner info">${icon('info')}<span class="grow">การจองนี้จะเปลี่ยนเป็น <strong>ชำระแล้ว</strong> เมื่อออกใบเสร็จ</span></div>`:''}
+      <div class="grid2">${V.select('payMethod','วิธีชำระเงิน',pays,pay0,{req:true})}${V.field('payNote','รายละเอียดการชำระ',{ph:'เช่น ธนาคาร · วันที่โอน'})}</div>
+      <button type="submit" hidden></button></form>`,
+    foot:`<span class="cap grow">วันที่ ${fmtD(TODAY)} · ในนามลูกค้าของการจอง</span><button type="button" class="btn" data-close>ยกเลิก</button>
+      <button type="button" class="btn" id="rqEdit">${icon('edit')}แก้ไขรายละเอียด</button><button type="button" class="btn primary" id="rqOk">${icon('check')}ออกใบเสร็จ</button>`});
+  const f=$('#rqForm',m.el);V.live(f);
+  $('#rqEdit',m.el).onclick=()=>{m.close();receiptModal_({bookingNo},done)};
+  const go_=async()=>{const v=V.form(f,{payNote:{label:'รายละเอียดการชำระ',max:200}});if(!v)return;const c=d.customer;
+    const data={bookingNo:b.docNo,refs:lines.map(l=>l.refDocNo),date:TODAY,payMethod:V.val(f,'payMethod'),payNote:v.payNote,note:'',
+      customerId:c.customerId||'',customerName:c.name,customerAddress:c.address||'',customerTaxId:c.taxId||'',customerPhone:c.phone||''};
+    try{const r=await api('receipt.create',{data},{loading:'กำลังออกใบเสร็จ'});m.close();done&&done(r);
+      await UI.swalSuccess('ออกใบเสร็จแล้ว',`เลขที่ ${r.docNo} · ${r.customerName} · ${fmtM(r.total)}`);receiptView_(r,done)}
+    catch(e){if(e.field&&e.field!=='refs'&&!/^customer/.test(e.field))V.setErr(f,e.field,e.message);
+      else{m.close();UI.toast('ตรวจรายละเอียดก่อนออกใบเสร็จ','warning',e.message);receiptModal_({bookingNo},done)}}};
+  $('#rqOk',m.el).onclick=go_;f.onsubmit=e=>{e.preventDefault();go_()}}
 
 /* ---------- view, cancel, print ---------- */
 async function receiptOpen_(docNo,done){

@@ -18,6 +18,13 @@ var RoomIncomeService = {
       .sort(function (x, y) { return x.value < y.value ? 1 : -1; });
     var month = a.month || (months.some(function (m) { return m.value === today_().slice(0, 7); }) ? today_().slice(0, 7) : (months[0] || {}).value || today_().slice(0, 7));
     var inMonth = all.filter(function (b) { return b.checkIn.slice(0, 7) === month; });
+    // other income tied to a stay and left to "รวมในใบเสร็จ" (no pay method of its own) is part of what the guest pays
+    var extra = extrasByBooking_();
+    inMonth.forEach(function (b) {
+      var x = extra[b.docNo] || {amount: 0, count: 0};
+      b.extras = x.amount; b.extrasCount = x.count;
+      b.grand = isLive_(b) ? Math.round((b.total + x.amount) * 100) / 100 : b.total;
+    });
     var live = inMonth.filter(isLive_);
     var revenue = live.reduce(function (s, b) { return s + b.total; }, 0), nights = live.reduce(function (s, b) { return s + b.nights; }, 0);
     var due = inMonth.filter(function (b) { return b.payStatus === 'due'; });
@@ -28,15 +35,16 @@ var RoomIncomeService = {
       return (!f.typeCode || b.typeCode === f.typeCode) && (!f.channel || b.channel === f.channel) && (!f.payStatus || b.payStatus === f.payStatus);
     });
     var s = a.sort || {}, key = {docNo: 1, guestName: 1, checkIn: 1, nights: 1, total: 1}[s.key] ? s.key : 'docNo', dir = s.key && s.dir === 'asc' ? 1 : -1;
+    if (key === 'total') key = 'grand';   // the column shows the room with its other income
     rows.sort(function (x, y) { return (x[key] > y[key] ? 1 : x[key] < y[key] ? -1 : 0) * dir || (x.docNo < y.docNo ? 1 : -1); });
     var out = pageOf_(rows, a.page, a.pageSize);
     var pageLive = out.rows.filter(isLive_);
     out.pageSum = {count: out.rows.length, nights: pageLive.reduce(function (t, b) { return t + b.nights; }, 0),
-                   total: Math.round(pageLive.reduce(function (t, b) { return t + b.total; }, 0) * 100) / 100};
+                   total: Math.round(pageLive.reduce(function (t, b) { return t + b.grand; }, 0) * 100) / 100};
     out.month = month;
     out.months = months;
     out.kpi = {revenue: Math.round(revenue * 100) / 100, nights: nights, adr: nights ? Math.round(revenue / nights * 100) / 100 : 0,
-               due: Math.round(due.reduce(function (t, b) { return t + b.total - b.deposit; }, 0) * 100) / 100, dueCount: due.length};
+               due: Math.round(due.reduce(function (t, b) { return t + b.grand - b.deposit; }, 0) * 100) / 100, dueCount: due.length};
     var types = {};
     readTable('RoomTypes').forEach(function (t) { types[t.code] = t.name; });
     out.options = {
@@ -185,10 +193,10 @@ var RoomIncomeService = {
     return {
       month: r.month,
       headers: ['เลขที่', 'ผู้เข้าพัก', 'โทรศัพท์', 'ประเภทห้อง', 'ห้อง', 'เช็คอิน', 'เช็คเอาท์', 'คืน', 'ผู้เข้าพัก (คน)', 'ราคาต่อคืน', 'ส่วนลด',
-                'ยอดสุทธิ', 'VAT', 'ช่องทาง', 'วิธีชำระ', 'สถานะ', 'มัดจำ', 'หมายเหตุ'],
+                'ค่าห้องสุทธิ', 'VAT', 'รายได้อื่นรวมในใบเสร็จ', 'ยอดรวม', 'ช่องทาง', 'วิธีชำระ', 'สถานะ', 'มัดจำ', 'หมายเหตุ'],
       rows: r.rows.map(function (b) {
         return [b.docNo, b.guestName, b.phone, b.typeCode, b.roomNo, b.checkIn, b.checkOut, b.nights, b.guests, b.rate, b.discount,
-                b.total, b.vatAmount, ch(b.channel), b.payMethod ? pay(b.payMethod) : '', st[b.payStatus] || b.payStatus, b.deposit, b.note];
+                b.total, b.vatAmount, b.extras, b.grand, ch(b.channel), b.payMethod ? pay(b.payMethod) : '', st[b.payStatus] || b.payStatus, b.deposit, b.note];
       })
     };
   }
@@ -209,6 +217,18 @@ function roomOffDuring_(room, from, to) {
   if (room.status !== 'off') return false;
   if (!room.offUntil) return today_() < to;
   return room.offUntil >= from && today_() < to;
+}
+
+/** {bookingNo: {amount, count}} of other income tied to a stay with no pay method of its own (รวมในใบเสร็จ). */
+function extrasByBooking_() {
+  var m = {};
+  readTable('OtherIncome').forEach(function (o) {
+    if (!o.bookingNo || o.payMethod) return;
+    var x = m[o.bookingNo] || (m[o.bookingNo] = {amount: 0, count: 0});
+    x.amount = Math.round((x.amount + o.amount) * 100) / 100;
+    x.count++;
+  });
+  return m;
 }
 
 function fmtDateTh_(iso) { return iso ? iso.slice(8, 10) + '/' + iso.slice(5, 7) + '/' + iso.slice(0, 4) : ''; }

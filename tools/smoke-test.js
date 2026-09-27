@@ -858,5 +858,21 @@ check('request state cleared', G('SHOP === null && SANDBOX === null && CURRENT_U
   check('audit log and sequences are never cached', !Object.keys(cacheStore).some(k => /:tc_(AuditLog|Sequences)_/.test(k)));
 }
 
+/* ---------- a stay's total includes its "รวมในใบเสร็จ" other income ---------- */
+{
+  const D = api('DEMO-HOTEL', 'auth.login', null, {username: 'maneerat', password: '1234'}).data.token;
+  const dcall = (action, payload) => api('DEMO-HOTEL', action, D, payload || {});
+  let r = dcall('roomIncome.list', {month: '2026-09', q: 'BK-202609-0057'});
+  const b = r.ok && r.data.rows[0];
+  check('booking list: room + รวมในใบเสร็จ lines (design receipt ฿5,580)', b && b.total === 5400 && b.extras === 180 && b.extrasCount === 1 && b.grand === 5580 &&
+    r.data.pageSum.total === 5580, b);
+  dcall('otherIncome.save', {data: {date: '2026-09-24', category: 'LAUNDRY', bookingNo: 'BK-202609-0057', qty: 1, unitPrice: 100, payMethod: 'CASH'}});
+  r = dcall('roomIncome.list', {month: '2026-09', q: 'BK-202609-0057'});
+  check('a line paid on its own is not added', r.ok && r.data.rows[0].grand === 5580, r.ok ? r.data.rows[0] : r);
+  r = dcall('roomIncome.export', {month: '2026-09'});
+  const h = r.data.headers, row = r.data.rows.find(x => x[0] === 'BK-202609-0057');
+  check('export carries the extras and the total', row[h.indexOf('รายได้อื่นรวมในใบเสร็จ')] === 180 && row[h.indexOf('ยอดรวม')] === 5580, h);
+}
+
 console.log(`${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

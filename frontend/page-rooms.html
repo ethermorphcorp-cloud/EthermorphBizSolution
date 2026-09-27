@@ -13,7 +13,7 @@ Pages.rooms={render(el,params){
   const st=el._st||(el._st={month:'',q:'',filters:{},sort:{},page:1,calMonth:'',calSel:'',from:'',days:14,type:'',gq:''});
   CUST_CACHE=null;
   const head=view==='grid'?'ตารางจองรายวันแยกตามห้อง · แสดงชื่อและเบอร์โทรของผู้จอง · คลิกช่องว่างเพื่อจองห้อง'
-    :view==='calendar'?'มุมมองปฏิทิน · คลิกวันที่เพื่อดูรายการและเพิ่มรายได้ของวันนั้น':'รายได้จากการเข้าพัก และรายได้อื่นๆ เช่น Minibar ห้องอาหาร ซักรีด';
+    :view==='calendar'?'มุมมองปฏิทิน · คลิกวันที่เพื่อดูรายการและเพิ่มรายได้ของวันนั้น':'รายได้จากการเข้าพัก · ยอดสุทธิรวมรายได้อื่นของการเข้าพักที่ตั้งเป็น รวมในใบเสร็จ และออกใบเสร็จได้ในครั้งเดียว';
   const addLabel=view==='grid'?'จองห้องพัก':'บันทึกรายได้ห้องพัก';
   el.innerHTML=pageHead('บันทึกการจองห้องพัก',head,
       (view==='grid'?`<button type="button" class="btn" id="rgPrint">${icon('printer')}<span>พิมพ์ตาราง</span></button>`:'')+
@@ -21,12 +21,10 @@ Pages.rooms={render(el,params){
       (can('roomIncome.edit')?`<button type="button" class="btn primary" id="riAdd">${icon('plus')}<span>${addLabel}</span></button>`:''))+
     `<div class="inc-bar"><div class="tabs" role="tablist" aria-label="ประเภทรายได้">
       <button type="button" role="tab" aria-selected="${view!=='grid'}" data-v="table">${icon('bed','s16')}รายได้จากห้องพัก<span class="cnt" id="cntRooms">·</span></button>
-      ${can('otherIncome.view')?`<button type="button" role="tab" aria-selected="false" data-go-other>${icon('cup','s16')}รายได้อื่นๆ<span class="cnt" id="cntOther">·</span></button>`:''}
       ${can('booking.view')?`<button type="button" role="tab" aria-selected="${view==='grid'}" data-v="grid">${icon('calendar','s16')}ตารางจองห้องพักรายวัน</button>`:''}</div>
       ${view!=='grid'?`<div class="seg" role="group" aria-label="มุมมอง"><button type="button" data-v="table" aria-pressed="${view==='table'}">${icon('grid','s16')}ตาราง</button><button type="button" data-v="calendar" aria-pressed="${view==='calendar'}">${icon('calendar','s16')}ปฏิทิน</button></div>`:''}</div>
     <div id="riBody" style="display:flex;flex-direction:column;gap:16px"></div>`;
   $$('[data-v]',el).forEach(b=>b.onclick=()=>go('rooms',{view:b.dataset.v},true));
-  if($('[data-go-other]',el))$('[data-go-other]',el).onclick=()=>go('other');
   const body=$('#riBody',el);
   const reload=()=>({table:riTable_,calendar:riCalendar_,grid:riGrid_})[view](body,st,el);
   el._reload=reload;
@@ -75,7 +73,7 @@ async function riTable_(body,st,el){
       <td data-label="ผู้เข้าพัก"><span><b style="font-weight:500">${esc(b.guestName)}</b><span class="cap mono" style="display:block">${esc(b.phone||'')}</span></span></td>
       <td data-label="ห้อง"><span class="mono">${esc(b.typeCode)} ${esc(b.roomNo)}</span></td><td data-label="วันที่เข้าพัก">${stay_(b)}</td>
       <td data-label="คืน" class="r">${b.nights}</td><td data-label="ช่องทาง">${esc(Master.label('channel',b.channel))}</td>
-      <td data-label="ยอดสุทธิ" class="r" style="${b.payStatus==='cxl'?'text-decoration:line-through;color:var(--ink-muted)':''}">${fmtM(b.total)}</td><td data-label="สถานะ">${payBadge_(b.payStatus)}</td>
+      <td data-label="ยอดสุทธิ" class="r" style="${b.payStatus==='cxl'?'text-decoration:line-through;color:var(--ink-muted)':''}"><span>${fmtM(b.grand)}${b.extras&&b.payStatus!=='cxl'?`<span class="cap" style="display:block" title="รายได้อื่นที่รวมในใบเสร็จของการเข้าพักนี้">ห้อง ${fmtM(b.total)} + อื่นๆ ${fmtM(b.extras)}</span>`:''}</span></td><td data-label="สถานะ">${payBadge_(b.payStatus)}</td>
       <td class="r nolabel act"><button type="button" class="btn plain icon sm" data-act="${i}" aria-haspopup="menu" aria-label="จัดการ ${esc(b.docNo)}">${icon('more')}</button></td></tr>`).join('')}</tbody>
     <tfoot><tr><td colspan="4" class="nolabel">รวมหน้านี้ (${r.pageSum.count} รายการ)</td><td class="r" data-label="คืน">${fmtN(r.pageSum.nights)}</td><td class="nolabel"></td><td class="r" data-label="ยอดสุทธิ">${fmtM(r.pageSum.total)}</td><td colspan="2" class="nolabel"></td></tr></tfoot></table>`;
   UI.pager($('#riPager',body),{page:r.page,pageSize:r.pageSize,total:r.total,onPage:p=>{st.page=p;riTable_(body,st,el)}});
@@ -87,7 +85,7 @@ async function riTable_(body,st,el){
 function bookingMenu_(anchor,b,done){
   UI.openMenu(anchor,[
     {icon:can('roomIncome.edit')?'edit':'eye',label:can('roomIncome.edit')?'แก้ไขการจอง':'ดูรายละเอียด',onClick:()=>bookingOpen_(b.docNo,done)},
-    ...(can('receipt.create')&&b.payStatus!=='cxl'?[{icon:'receipt',label:'ออกใบเสร็จ',onClick:()=>go('receipts',{bookingNo:b.docNo})}]:[]),
+    ...(can('receipt.create')&&b.payStatus!=='cxl'?[{icon:'receipt',label:'ออกใบเสร็จ',onClick:()=>receiptQuick_(b.docNo,done)}]:[]),
     ...(can('roomIncome.edit')&&b.payStatus!=='cxl'?['-',{icon:'ban',label:'ยกเลิกการจอง',danger:true,onClick:()=>bookingCancel_(b,done)}]:[]),
     ...(can('roomIncome.delete')?[{icon:'trash',label:'ลบรายการ',danger:true,onClick:()=>bookingDelete_(b,done)}]:[])],{header:`<b class="mono">${esc(b.docNo)}</b>${esc(b.guestName)}`})}
 
@@ -229,7 +227,7 @@ async function bookingModal_(o,done){
     <p class="form-sec-title">เอกสารแนบ</p><div id="bkAtt"></div><button type="submit" hidden></button></form>`;
   let att=null;
   const m=UI.openModal({title:isNew?'เพิ่มรายได้ห้องพัก':(ro?'รายละเอียดการจอง':'แก้ไขการจอง')+' · '+b.docNo,iconName:'bed',size:'lg',body,onClose:()=>att&&att.discard(),
-    foot:`<span class="cap grow">${isNew?'เลขที่เอกสารสร้างอัตโนมัติเมื่อบันทึก · ':''}* จำเป็นต้องกรอก · ตรวจสอบข้อมูล 3 ชั้น: หน้าจอ → Server → ฐานข้อมูล</span><button type="button" class="btn" data-close>${ro?'ปิด':'ยกเลิก'}</button>${ro?'':`<button type="button" class="btn primary" id="bkSave">${icon('check')}บันทึก</button>`}`});
+    foot:`<span class="cap grow">${isNew?'เลขที่เอกสารสร้างอัตโนมัติเมื่อบันทึก · ':''}* จำเป็นต้องกรอก · ตรวจสอบข้อมูล 3 ชั้น: หน้าจอ → Server → ฐานข้อมูล</span>${b&&b.payStatus!=='cxl'&&can('receipt.create')?`<button type="button" class="btn" id="bkReceipt">${icon('receipt')}ออกใบเสร็จ</button>`:''}<button type="button" class="btn" data-close>${ro?'ปิด':'ยกเลิก'}</button>${ro?'':`<button type="button" class="btn primary" id="bkSave">${icon('check')}บันทึก</button>`}`});
   const f=$('#bkForm',m.el);V.live(f);
   att=UI.attachments($('#bkAtt',f),{docNo:b?b.docNo:'',entity:'RoomIncome',files:b?b.attachments||[]:[],canEdit:!ro});
   if(b&&b.receipts&&b.receipts.length&&can('receipt.view'))f.insertAdjacentHTML('afterbegin',`<div class="banner info">${icon('receipt')}<span class="grow">ใบเสร็จของการจองนี้: ${b.receipts.map(x=>`<a href="#" data-rc="${esc(x.docNo)}">${esc(x.docNo)}</a>${x.status==='cancelled'?' (ยกเลิก)':' · '+fmtM(x.total)}`).join(', ')}</span></div>`);
@@ -240,11 +238,16 @@ async function bookingModal_(o,done){
   const nights=()=>{const n=nightsOf_(V.val(f,'checkIn'),V.val(f,'checkOut'));return n>0?n:0};
   const money=()=>{const n=nights(),rate=Number(String(V.val(f,'rate')).replace(/,/g,''))||0,disc=Number(String(V.val(f,'discount')).replace(/,/g,''))||0,net=Math.round((rate*n-disc)*100)/100;
     const vat=vatEx?Math.round(net*vr)/100:Math.round(net*vr/(100+vr)*100)/100;return{n,rate,disc,net,vat,total:vatEx?Math.round((net+vat)*100)/100:net}};
-  const drawSum=()=>{const x=money();$('#f-nights',f).value=x.n?x.n+' คืน':'-';
+  /* other income of this stay left to "รวมในใบเสร็จ": part of what the guest pays, and of the stay's receipt */
+  const extras=b&&b.payStatus!=='cxl'?(b.other||[]).filter(o=>!o.payMethod):[],exSum=Math.round(extras.reduce((s,o)=>s+o.amount,0)*100)/100;
+  const drawSum=()=>{const x=money(),grand=Math.round((x.total+exSum)*100)/100;$('#f-nights',f).value=x.n?x.n+' คืน':'-';
     $('#bkSum',f).innerHTML=`<div class="ln"><span>ค่าห้อง ${x.n} คืน × ${fmtM(x.rate)}</span><span class="num">${fmtM(x.rate*x.n)}</span></div>${x.disc?`<div class="ln"><span>ส่วนลด</span><span class="num">−${fmtM(x.disc)}</span></div>`:''}
       <div class="ln"><span>${vr?(vatEx?`ภาษีมูลค่าเพิ่ม ${vr}% (แยกนอกราคา)`:`รวมภาษีมูลค่าเพิ่ม ${vr}% จำนวน`):'ไม่คิดภาษีมูลค่าเพิ่ม'}</span><span class="num">${vr?fmtM(x.vat):''}</span></div>
-      ${st.pay==='dep'?`<div class="ln"><span>ยอดคงค้างหลังหักมัดจำ</span><span class="num">${fmtM(Math.max(0,x.total-(Number(String(V.val(f,'deposit')).replace(/,/g,''))||0)))}</span></div>`:''}
-      <div class="ln total"><span>ยอดสุทธิ</span><b class="num">${fmtM(x.total)}</b></div>`};
+      ${extras.length?`<div class="ln"><span>ค่าห้องสุทธิ</span><span class="num">${fmtM(x.total)}</span></div>
+        <div class="ln"><span>รายได้อื่นรวมในใบเสร็จ (${extras.length} รายการ)</span><span class="num">${fmtM(exSum)}</span></div>
+        ${extras.map(o=>`<div class="ln sub"><span>${esc(Master.label('othercat',o.category))}${o.description?' · '+esc(o.description):''} <span class="mono">${esc(o.docNo)}</span></span><span class="num">${fmtM(o.amount)}</span></div>`).join('')}`:''}
+      ${st.pay==='dep'?`<div class="ln"><span>ยอดคงค้างหลังหักมัดจำ</span><span class="num">${fmtM(Math.max(0,grand-(Number(String(V.val(f,'deposit')).replace(/,/g,''))||0)))}</span></div>`:''}
+      <div class="ln total"><span>${extras.length?'ยอดรวมทั้งสิ้น':'ยอดสุทธิ'}</span><b class="num">${fmtM(grand)}</b></div>`};
   const suggest=()=>{if(st.rateTouched)return;const s=suggestRate_(typeOf(),V.val(f,'checkIn'),nights());$('#f-rate',f).value=s.rate!==undefined?s.rate.toFixed(2):(typeOf()||{}).price||'';
     const h=$('[data-f="rate"] .help',f);h.textContent=s.we?`เฉลี่ยจากราคาปกติ + ราคาศุกร์–เสาร์ ${s.we} คืน · แก้ไขได้`:'ดึงจากประเภทห้อง แก้ไขได้'};
   const drawRooms=()=>{const t=V.val(f,'typeCode'),rooms=Master.rooms().filter(r=>r.typeCode===t),sel=$('#f-roomNo',f);
@@ -273,6 +276,12 @@ async function bookingModal_(o,done){
   ['discount','deposit'].forEach(k=>$('#f-'+k,f).addEventListener('input',drawSum));
   $$('[data-pay]',f).forEach(x=>x.onclick=()=>{st.pay=x.dataset.pay;drawPay()});
   drawRooms();suggest();drawPay();checkAvail();
+  /* one receipt for the stay and its "รวมในใบเสร็จ" lines, from what is saved: unsaved edits are saved first */
+  let dirty=false;const mark=e=>{if(!e.target.closest('#bkAtt'))dirty=true};
+  f.addEventListener('input',mark);f.addEventListener('change',mark);f.addEventListener('click',e=>{if(e.target.closest('[data-pay]'))dirty=true});
+  if($('#bkReceipt',m.el))$('#bkReceipt',m.el).onclick=()=>{
+    if(dirty&&!ro)return UI.swalInfo('บันทึกการแก้ไขก่อน','ใบเสร็จใช้ข้อมูลที่บันทึกไว้ กด บันทึก ก่อน แล้วจึงออกใบเสร็จ');
+    m.close();receiptQuick_(b.docNo,done)};
   if(ro)return;
   const save=async()=>{
     if(!st.customerId)return V.setErr(f,'customerId','กรุณาเลือกลูกค้าจากรายการ หรือกด ลูกค้าใหม่ เพื่อเพิ่มก่อน');
