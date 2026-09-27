@@ -81,12 +81,13 @@ const Shell={
       <div class="main"><header class="topbar">
         <button type="button" class="btn plain icon" id="tbToggle" aria-label="ย่อ/ขยายเมนู" aria-expanded="${!mini}">${icon('menu')}</button>
         <div class="tb-title"><span class="crumb" id="tbCrumb"></span><h2 id="tbHead"></h2></div>
-        ${App.demo?'<span class="badge info"><span class="lg-only">Demo Mode</span><span class="sm-only">DEMO</span></span>':''}
+        ${App.demo?`<span class="demo-tip"><button type="button" class="badge info demo-btn" aria-describedby="demoTipText" aria-label="โหมดทดลอง (Demo) — ชี้หรือแตะเพื่อดูรายละเอียด"><span class="lg-only">Demo Mode</span><span class="sm-only">DEMO</span></button>
+          <span class="demo-pop"><span class="box">${icon('info','s16')}<span class="grow"><strong>โหมดทดลอง (Demo)</strong><span id="demoTipText">แสดงข้อมูลตัวอย่าง การบันทึก แก้ไข และลบ จะไม่ถูกส่งไปยังฐานข้อมูลจริง</span><a href="#" id="leaveDemo">ออกจากโหมดทดลอง</a></span></span></span></span>`:''}
         <span class="tb-date num">${fmtD(TODAY)}</span>
         <button type="button" class="btn plain icon lg-only" id="themeBtn" aria-label="สลับธีมสว่าง/มืด">${icon(isDark()?'sun':'moon')}</button>
         <button type="button" class="btn plain icon" id="bellBtn" aria-label="การแจ้งเตือน">${icon('bell')}</button>
         <button type="button" class="avatar light" id="userBtn" aria-label="บัญชีผู้ใช้ ${esc(u.fullName)}">${esc(initials(u.fullName))}</button></header>
-        <main class="content">${App.demo?`<div class="banner info" role="status">${icon('info')}<span class="grow"><strong>โหมดทดลอง (Demo)</strong> — แสดงข้อมูลตัวอย่าง การบันทึก แก้ไข และลบ จะไม่ถูกส่งไปยังฐานข้อมูลจริง</span><a href="#" id="leaveDemo">ออกจากโหมดทดลอง</a></div>`:''}<div id="view" style="display:flex;flex-direction:column;gap:16px"></div></main></div>
+        <main class="content"><div id="view" style="display:flex;flex-direction:column;gap:16px"></div></main></div>
       <nav class="bottomnav" aria-label="เมนูด้านล่าง">${bn.map(b=>b?`<a href="#${b[0]}" data-go="${b[0]}"><span class="ic">${icon(b[2])}</span>${b[1]}</a>`:'<span class="gap" aria-hidden="true"></span>').join('')}<a href="#menu" id="moreNav"><span class="ic">${icon('menu')}</span>เมนู</a></nav>
       <button type="button" class="fab" id="fab" aria-label="เพิ่มรายการ">${icon('plus')}</button></div>`;
     const app=$('.app');

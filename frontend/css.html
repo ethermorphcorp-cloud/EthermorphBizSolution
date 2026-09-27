@@ -183,6 +183,16 @@ textarea.input{height:auto;padding:8px 12px;resize:vertical;line-height:24px}
 .banner .grow{flex-grow:1}
 .banner a{color:inherit;font-weight:500}
 .bottomnav,.fab{display:none}
+/* Demo Mode badge: the demo notice opens on hover, keyboard focus or a tap (focus), not as a banner */
+.demo-tip{position:relative;display:inline-flex}
+.demo-btn{border:none;font:inherit;font-size:12px;line-height:18px;font-weight:500;cursor:help}
+.demo-btn:focus-visible{outline:2px solid var(--info);outline-offset:2px}
+.demo-pop{display:none;position:absolute;right:0;top:100%;padding-top:8px;z-index:1070;width:320px;max-width:calc(100vw - 24px)}
+.demo-pop .box{display:flex;gap:10px;padding:12px 14px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-md);box-shadow:var(--shadow-md);font-size:13px;line-height:20px}
+.demo-pop .box>.i{color:var(--info);flex-shrink:0;margin-top:2px}
+.demo-pop .grow{display:flex;flex-direction:column;gap:4px}.demo-pop strong{font-weight:600}.demo-pop a{font-weight:500;align-self:flex-start}
+.demo-tip:hover .demo-pop,.demo-tip:focus-within .demo-pop{display:block}
+@media (max-width:575px){.demo-pop{position:fixed;left:12px;right:12px;width:auto;max-width:none;top:calc(56px + env(safe-area-inset-top,0px));padding-top:4px}}
 
 /* KPIs */
 .kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
