@@ -73,6 +73,7 @@ function createGas(root, opts = {}) {
     books[id] = b;
     return b;
   }
+  const triggers = [];
   const cacheStore = {};
   const cache = {
     get: k => (k in cacheStore ? cacheStore[k] : null),
@@ -132,7 +133,10 @@ function createGas(root, opts = {}) {
       base64Encode: bytes => Buffer.from(bytes.map(b => b & 255)).toString('base64'),
       computeDigest: (alg, s) => Array.from(crypto.createHash(alg).update(s, 'utf8').digest()).map(b => (b > 127 ? b - 256 : b))
     },
-    ScriptApp: {getService: () => ({getUrl: () => appUrl}), getOAuthToken: () => 'fake-token'},
+    ScriptApp: {getService: () => ({getUrl: () => appUrl}), getOAuthToken: () => 'fake-token',
+      // installable triggers: kept in `triggers` (returned from createGas) so tests can see what setup() installed
+      getProjectTriggers: () => triggers.map(t => ({getHandlerFunction: () => t.fn, getTriggerSourceId: () => t.source, getEventType: () => t.type})),
+      newTrigger: fn => { const t = {fn}; return {forSpreadsheet: ss => { t.source = ss.getId(); return {onEdit: () => ({create: () => { t.type = 'ON_EDIT'; triggers.push(t); return t; }})}; }}; }},
     // Drive resumable upload (the parts Upload.gs uses): init → session URI, PUT slices with Content-Range,
     // 308 + Range while incomplete, 200 + {id} when the last byte lands; "bytes */size" asks for the offset.
     // uploads.dropNext = true stores the next slice but loses the answer (a dropped connection).
@@ -194,7 +198,7 @@ function createGas(root, opts = {}) {
   const order = ['Config.gs', 'Database.gs'].concat(fs.readdirSync(path.join(root, 'backend')).filter(f => f.endsWith('.gs') && f !== 'Config.gs' && f !== 'Database.gs').sort());
   order.forEach(f => vm.runInContext(fs.readFileSync(path.join(root, 'backend', f), 'utf8'), ctx, {filename: f}));
   const G = code => vm.runInContext(code, ctx);
-  return {ctx, G, books, props, cacheStore, folders, files, uploads, Book, fmtDate,
+  return {ctx, G, books, props, cacheStore, folders, files, uploads, triggers, Book, fmtDate,
     lock: {get held() { return lockHeld; }, get acquired() { return lockAcquired; }, reset() { lockAcquired = 0; }}};
 }
 

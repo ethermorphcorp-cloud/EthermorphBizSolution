@@ -1,11 +1,13 @@
 /** Setup.gs — run from the Apps Script editor. Every function here is safe to run again; none deletes data
  *  except resetAllData().
  *
- *  setup()              start here. Command Center tabs (adds missing columns only), the demo hotel row DEMO-HOTEL,
+ *  setup()              start here. Command Center tabs (adds missing columns only) + this project's onEdit trigger
+ *                       on it, the demo hotel row DEMO-HOTEL,
  *                       then every PACKAGE_TYPE = HOTEL row: blank SHEET_ID → new Spreadsheet (written back), pepper
  *                       SALT_<CUS_ID>, every sheet in SCHEMA, Config / Company / Dropdown defaults, owner / 1234,
  *                       Drive folders and APP_URL. The demo hotel also gets the sample master data (Demo.gs).
- *                       Run it again after the first deploy to fill APP_URL.
+ *                       APP_URL = the web app's /exec link (Tenant.gs webAppUrl_), never the /dev test link.
+ *  refreshAppUrls()     after deploying to another project or deployment: every HOTEL row's APP_URL to this /exec link
  *  setupShop('CUS001')  the same for one hotel (call it from a small wrapper — the Run button passes no arguments)
  *  resetAllData()       wipes every data row of one hotel (headers stay). Set the Script Property ALLOW_RESET to the
  *                       hotel's CUS_ID, run, and it removes the property itself. Run setup() afterwards.
@@ -55,7 +57,35 @@ function setupCommandCenter() {
     log.push(name + ': added ' + missing.join(', '));
   });
   clearRegistryCache();
-  return 'Command Center ready: ' + ss.getUrl() + (log.length ? ' (' + log.join('; ') + ')' : '');
+  return 'Command Center ready: ' + ss.getUrl() + (log.length ? ' (' + log.join('; ') + ')' : '') + '\n' + ensureEditTrigger_(ss);
+}
+
+/** One installable onEdit trigger from this project on the Command Center, like Retail's (runs as whoever installs
+ *  it). The project is standalone, so a simple onEdit would never run; each project sharing the Command Center
+ *  (Retail, Hotel, HR) has its own trigger for its own rows — see onCommandCenterEdit in Tenant.gs. */
+function ensureEditTrigger_(ss) {
+  var have = ScriptApp.getProjectTriggers().some(function (t) {
+    return t.getHandlerFunction() === 'onCommandCenterEdit' && t.getTriggerSourceId() === ss.getId();
+  });
+  if (have) return 'onEdit trigger already installed';
+  ScriptApp.newTrigger('onCommandCenterEdit').forSpreadsheet(ss).onEdit().create();
+  return 'onEdit trigger installed';
+}
+
+/** Every HOTEL row's APP_URL = the /exec link + ?shop=. Run after deploying to a new project or deployment. */
+function refreshAppUrls() {
+  var url = webAppUrl_();
+  if (!url) throw new Error('ตั้ง Script Property APP_BASE_URL เป็น URL ของ web app ที่ลงท้าย /exec (Deploy ▸ Manage deployments)');
+  var reg = registry_(), done = [];
+  Object.keys(reg).forEach(function (id) {
+    if (String(reg[id].PACKAGE_TYPE).toUpperCase() !== APP_TYPE) return;
+    if (reg[id].APP_URL === url + '?shop=' + id) return;
+    setShopField_(id, 'APP_URL', url + '?shop=' + id);
+    done.push(id);
+  });
+  var out = done.length ? 'APP_URL updated: ' + done.join(', ') : 'APP_URL already up to date';
+  console.log(out);
+  return out;
 }
 
 /** The demo hotel row (one per app type, like Retail's DEMO-STARTER / DEMO-STANDARD), written into the first row

@@ -948,5 +948,40 @@ check('request state cleared', G('SHOP === null && SANDBOX === null && CURRENT_U
   check('boot / login use the /exec link too', !b.info || !b.info.demoUrl || b.info.demoUrl === exec + '?demo=1', b.info);
 }
 
+/* ---------- the Command Center link: this project's onEdit trigger (as Retail's) ---------- */
+{
+  const mine = gas.triggers.filter(t => t.fn === 'onCommandCenterEdit');
+  check('setup() installs one onEdit trigger on the Command Center, once', mine.length === 1 && mine[0].source === cc.getId() && mine[0].type === 'ON_EDIT', gas.triggers);
+  const col = n => ccHead.indexOf(n) + 1;
+  const edit = (id, field, oldValue, value) => {
+    const r = ccRowOf(id);
+    ccSh.rows[r - 1][col(field) - 1] = value;
+    G('onCommandCenterEdit')({range: {getSheet: () => Object.assign({}, ccSh, {getName: () => 'Customers'}), getRow: () => r, getColumn: () => col(field), getNumRows: () => 1, getNumColumns: () => 1},
+      oldValue, source: cc, user: {getEmail: () => 'owner@example.com'}});
+  };
+  const logRows = () => logSh.rows.filter(x => x && x[1]);
+  let before = logRows().length;
+  G("CacheService.getScriptCache().put('registry', '{}', 300)");
+  edit('HT001', 'STATUS', 'ACTIVE', 'SUSPENDED');
+  let last = logRows().slice(-1)[0];
+  check('a hand edit of a HOTEL row is logged', logRows().length === before + 1 && last[1] === 'HT001' && last[2] === 'STATUS' && last[3] === 'ACTIVE' &&
+    last[4] === 'SUSPENDED' && last[5] === 'owner@example.com', last);
+  check('…and the registry is re-read at once', !G("CacheService.getScriptCache().get('registry')") && G('registry_()').HT001.STATUS === 'SUSPENDED');
+  edit('HT001', 'STATUS', 'SUSPENDED', 'ACTIVE');
+  before = logRows().length;
+  edit('CUS001', 'STATUS', 'ACTIVE', 'SUSPENDED');
+  check('a RETAIL row is left to Retail\'s own trigger', logRows().length === before);
+  edit('CUS001', 'STATUS', 'SUSPENDED', 'ACTIVE');
+  edit('HT001', 'REMARK', '', 'โทรติดตาม');
+  check('columns outside the licence are not logged', logRows().length === before);
+  // refreshAppUrls(): every HOTEL row to the /exec link; APP_BASE_URL (Retail's property name) wins
+  props.APP_BASE_URL = 'https://script.google.com/macros/s/BASEURL/exec';
+  const out = G('refreshAppUrls()');
+  check('refreshAppUrls() with APP_BASE_URL', /APP_URL updated/.test(out) && ccSh.rows[ccRowOf('HT001') - 1][col('APP_URL') - 1] === props.APP_BASE_URL + '?shop=HT001' &&
+    ccSh.rows[ccRowOf('CUS001') - 1][col('APP_URL') - 1] !== props.APP_BASE_URL + '?shop=CUS001', out);
+  delete props.APP_BASE_URL;
+  check('refreshAppUrls() back to the built-in /exec link', /HT001/.test(G('refreshAppUrls()')) && G('refreshAppUrls()') === 'APP_URL already up to date');
+}
+
 console.log(`${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
