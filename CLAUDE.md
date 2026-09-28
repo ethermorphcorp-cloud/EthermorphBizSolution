@@ -84,6 +84,8 @@ Web app บริหารรายได้-รายจ่ายโรงแ�
 │  ├─ Audit.gs           ✓  audit(action, entity, docNo, detail)
 │  ├─ Drive.gs           ✓  โฟลเดอร์ของโรงแรม (Attachments/RoomIncome | OtherIncome | Expenses)
 │  ├─ Setup.gs           ✓  setup(), setupShop(id), createSchema(), resetAllData()
+│  ├─ Provision.gs       ✓  doPost จาก admin web app ใน project ของ Command Center: ping / setup (setupShop) / seed
+│  │                        (ข้อมูลตัวอย่างให้โรงแรมที่ไม่ใช่ demo ในชื่อโรงแรมนั้น) — token ต้องเป็นของบัญชีที่ deploy (tokeninfo)
 │  ├─ Demo.gs            ✓  DemoData: master + ทุกแถวที่ดีไซน์แสดงเลขเอกสาร + ยอดรวมที่หน้าจอแสดง
 │  ├─ DemoSeed.gs        ✓  seedDemoHotel(): ลูกค้า 214 ราย + ธุรกรรม เม.ย.–ก.ย. 2026 ให้ยอดตรงหน้าจอ (seed คงที่) + เอกสารแนบตัวอย่างของรายจ่าย + ใบเสร็จ (paid stay ณ วันเช็คเอาท์ + รายได้อื่นที่จ่ายทันที → BK-202609-0057 = RC-202609-0112 ตามดีไซน์) — setup() เติมให้ demo ที่ยังไม่มี
 │  ├─ Filter.gs          ✓  filterOptions_ (ค่าที่มีข้อมูล + จำนวน), filter.options, pageOf_ (server-side paging)
