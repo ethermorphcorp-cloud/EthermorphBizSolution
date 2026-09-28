@@ -92,6 +92,19 @@ function shopSalt_() {
   return s;
 }
 
+/** The web app's public link (…/exec): the deployment users open. `clasp deploy --deploymentId <id>` puts each new
+ *  version on the same deployment, so the link never changes. Script Property WEBAPP_URL overrides it (another
+ *  deployment, a custom domain). ScriptApp.getService().getUrl() is only the last resort: run from the editor it returns
+ *  the /dev test link, which only the script's editors can open. */
+var WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbydnWSudHs-34atLkR4bOb2NIe-IoqzoaJbcyrsGrFP7XRWDMswk0-eikiUt4rg29HxqQ/exec';
+function webAppUrl_() {
+  var prop = PropertiesService.getScriptProperties().getProperty('WEBAPP_URL');
+  if (prop) return String(prop).trim();
+  if (WEBAPP_URL) return WEBAPP_URL;
+  var u = ScriptApp.getService().getUrl() || '';
+  return /\/exec$/.test(u) ? u : '';
+}
+
 /** Writes one cell of the hotel's row (SHEET_ID, DRIVE_FOLDER_ID, APP_URL, LAST_SEEN …). */
 function setShopField_(id, field, value) {
   var sh = commandCenter_().getSheetByName('Customers');

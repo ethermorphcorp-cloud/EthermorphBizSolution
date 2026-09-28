@@ -17,7 +17,7 @@ var SETUP = {
 
 function setup() {
   var log = [setupCommandCenter(), ensureDemoRow_(), setupPendingShops()];
-  var url = ScriptApp.getService().getUrl();
+  var url = webAppUrl_();
   log.push(url ? 'web app: ' + url + '?shop=<CUS_ID>  ·  demo: ' + url + '?demo=1'
                : 'not deployed yet — Deploy ▸ New deployment ▸ Web app, then run setup() again to fill APP_URL');
   var out = log.join('\n');
@@ -120,8 +120,13 @@ function setupShop(cusId) {
   if (shop.demo && readTable('Expenses').length && !readTable('Attachments').length) log.push(seedDemoAttachments_());
   if (shop.demo && readTable('RoomIncome').length && !readTable('Receipts').length) log.push(seedDemoReceipts_());
   driveRoot_();
-  var url = ScriptApp.getService().getUrl();
-  if (url && !registry_()[shop.id].APP_URL) setShopField_(shop.id, 'APP_URL', url + '?shop=' + shop.id);
+  // APP_URL = the public /exec link. An empty one, or a script.google.com link that is not it (the /dev test link, an
+  // old deployment), is replaced; any other link (a custom domain) is left alone.
+  var url = webAppUrl_(), want = url ? url + '?shop=' + shop.id : '', have = String(registry_()[shop.id].APP_URL || '').trim();
+  if (want && have !== want && (!have || /^https:\/\/script\.google\.com\/macros\/s\//.test(have))) {
+    setShopField_(shop.id, 'APP_URL', want);
+    log.push('APP_URL ' + want);
+  }
   audit('SETUP', 'System', '', {shop: shop.id});
   return shop.id + ': ' + log.filter(String).join(' · ');
 }

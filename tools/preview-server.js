@@ -21,6 +21,7 @@ const head = G('CC_TABS.Customers');
 cc.getSheetByName('Customers').rows.push(head.slice(),
   head.map(h => ({CUS_ID: 'HT001', CUS_NAME: 'โรงแรมทดสอบ', PACKAGE_TYPE: 'HOTEL', PACKAGE_TIER: 'STANDARD', STATUS: 'ACTIVE'})[h] || ''));
 props.COMMAND_SHEET_ID = cc.getId();
+props.WEBAPP_URL = 'http://localhost:' + port + '/';   // links (APP_URL, reload) stay on this preview, never the live app
 console.log(ctx.setup());
 
 const SHIM = `<script>

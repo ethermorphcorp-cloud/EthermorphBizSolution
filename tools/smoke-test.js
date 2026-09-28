@@ -926,5 +926,27 @@ check('request state cleared', G('SHOP === null && SANDBOX === null && CURRENT_U
     !api('HT001', 'audit.client', T, {action: 'DELETE'}).ok && !!desk);
 }
 
+/* ---------- APP_URL: the public /exec link, never the /dev test link ---------- */
+{
+  const col = ccHead.indexOf('APP_URL'), row = () => ccSh.rows[ccRowOf('HT001') - 1];
+  const exec = G('WEBAPP_URL'), again = () => { G('clearRegistryCache()'); ctx.setup(); };
+  check('APP_URL is the public /exec link', /\/exec$/.test(exec) && row()[col] === exec + '?shop=HT001', row()[col]);
+  row()[col] = 'https://script.google.com/macros/s/AKfycbxWAjXG9dys6KXPqbWDeMKzeZMcbR4dD6hQ46PfywXe/dev?shop=HT001';
+  again();
+  check('setup() replaces a /dev link', row()[col] === exec + '?shop=HT001', row()[col]);
+  row()[col] = 'https://hotel.example.com/app';
+  again();
+  check('setup() keeps a custom link', row()[col] === 'https://hotel.example.com/app', row()[col]);
+  row()[col] = exec + '?shop=HT001';
+  props.WEBAPP_URL = 'https://script.google.com/macros/s/NEWDEPLOY/exec';
+  again();
+  check('Script Property WEBAPP_URL overrides the link', row()[col] === 'https://script.google.com/macros/s/NEWDEPLOY/exec?shop=HT001', row()[col]);
+  delete props.WEBAPP_URL;
+  again();
+  check('back to the built-in link', row()[col] === exec + '?shop=HT001', row()[col]);
+  const b = api('HT001', 'app.boot', null, {}).data || {};
+  check('boot / login use the /exec link too', !b.info || !b.info.demoUrl || b.info.demoUrl === exec + '?demo=1', b.info);
+}
+
 console.log(`${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

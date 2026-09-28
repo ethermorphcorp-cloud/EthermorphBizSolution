@@ -146,6 +146,9 @@ Web app บริหารรายได้-รายจ่ายโรงแ�
    └─ page-*.html           ขั้นที่ 8: หน้ามือถือตามดีไซน์ Mobile-*
 ```
 
+- **ลิงก์ web app:** `webAppUrl_()` (Tenant.gs) = Script Property `WEBAPP_URL` → ค่าคงที่ `WEBAPP_URL` (/exec ของ deployment หลัก)
+  — ไม่ใช้ `ScriptApp.getService().getUrl()` เพราะรันจาก editor ได้ /dev · `setup()` แทน APP_URL ที่ว่างหรือเป็นลิงก์
+  script.google.com อื่น (เช่น /dev) ด้วย `<exec>?shop=<CUS_ID>` และไม่แตะลิงก์ custom domain
 - **Master sync:** `api()` ส่ง `_mv` (master version ของเบราว์เซอร์) ทุกครั้ง ถ้า master เปลี่ยน (จากคำขอนี้หรือผู้ใช้อื่น)
 - **Cache:** อ่านทุกชีตผ่าน cache (ครั้งถัดไปไม่แตะ Sheets) · เขียนแล้ว bump version หลัง flush ก่อนปล่อย lock ·
   ใน write lock ชีตธุรกรรมอ่านจากชีตจริงเสมอ (ตรวจ key / ห้องซ้อน / เลขเอกสาร) · แก้ชีตด้วยมือแล้วเห็นในแอปภายใน ~20 วินาที
@@ -171,6 +174,9 @@ node tools/smoke-test.js     # ทดสอบ CORE บน fake Apps Script (ต
 node tools/preview-server.js # เปิดทั้งแอปในเครื่อง :8123 (?demo=1 / ?shop=HT001 owner/1234) — .claude/launch.json "hotel-preview"
 node tools/build.js          # syntax + ชื่อซ้ำข้ามไฟล์ + check-htmlservice แล้วสร้าง gas/
 clasp push --force           # ครั้งแรก: ใส่ scriptId ของโปรเจกต์ standalone ใน .clasp.json
+clasp deploy --deploymentId AKfycbydnWSudHs-34atLkR4bOb2NIe-IoqzoaJbcyrsGrFP7XRWDMswk0-eikiUt4rg29HxqQ -d "<ข้อความ>"
+                             # ทุกครั้งหลัง push: สร้าง version ใหม่บน deployment เดิม — ลิงก์ /exec ที่ผู้ใช้เปิดไม่เปลี่ยน
+                             # (push อย่างเดียวอัปเดตแค่ /dev ซึ่งเปิดได้เฉพาะผู้แก้ไข script)
 ```
 
 ติดตั้งครั้งแรก: push → ตั้ง Script Property `COMMAND_SHEET_ID` (ถ้าไม่ใช้ค่าใน Tenant.gs) → รัน `setup()` ใน editor

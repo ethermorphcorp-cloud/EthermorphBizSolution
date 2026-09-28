@@ -13,7 +13,7 @@ function doGet(e) {
     useShop_(p.demo === '1' ? DEMO_SHOP_ID : p.shop);
     var company = readKV('Company');
     var t = HtmlService.createTemplateFromFile('frontend/index');
-    t.boot = {shop: SHOP.id, demo: SHOP.demo, hotelName: company.hotelName || SHOP.name || '', url: ScriptApp.getService().getUrl() || ''};
+    t.boot = {shop: SHOP.id, demo: SHOP.demo, hotelName: company.hotelName || SHOP.name || '', url: webAppUrl_()};
     return t.evaluate()
       .setTitle((company.hotelName || SHOP.name || 'Hotel') + ' · ระบบบริหารรายได้-รายจ่ายโรงแรม')
       .addMetaTag('viewport', 'width=device-width, initial-scale=1, viewport-fit=cover')
@@ -199,7 +199,7 @@ function api(shop, action, token, payload) {
 
 /** What the login screen needs before anyone signs in: nothing private. */
 function publicInfo_() {
-  var c = readKV('Company'), url = ScriptApp.getService().getUrl(), tier = shopPackage_();
+  var c = readKV('Company'), url = webAppUrl_(), tier = shopPackage_();
   return {
     shop: SHOP.id,
     hotelName: c.hotelName || SHOP.name || '',
