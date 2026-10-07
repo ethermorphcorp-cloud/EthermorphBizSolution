@@ -4,8 +4,11 @@
     {
       "name": "hotel-preview",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["tools/preview-server.js", "8123"],
-      "port": 8123
+      "runtimeArgs": [
+        "tools/preview-server.js"
+      ],
+      "port": 8123,
+      "autoPort": true
     }
   ]
 }

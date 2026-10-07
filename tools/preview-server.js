@@ -1,4 +1,4 @@
-// preview-server.js — node tools/preview-server.js [port]   (default 8123)
+// preview-server.js — node tools/preview-server.js [port]   (PORT env var, else the argument, else 8123)
 // Runs the whole web app locally: backend/*.gs on the fakes of gas-fakes.js, doGet() renders frontend/index.html
 // with its includes, and a small shim stands in for google.script.run / history / url, sending each call to this
 // server, which runs api() and answers. setup() runs first, so there are two hotels:
@@ -8,7 +8,7 @@
 const http = require('http'), path = require('path');
 const {createGas} = require('./gas-fakes');
 
-const port = Number(process.argv[2]) || 8123;
+const port = Number(process.env.PORT) || Number(process.argv[2]) || 8123;   // PORT: the port the Claude app assigns (autoPort)
 const root = path.join(__dirname, '..');
 const gas = createGas(root, {url: 'http://localhost:' + port + '/'});
 const {ctx, G, Book, props} = gas;
