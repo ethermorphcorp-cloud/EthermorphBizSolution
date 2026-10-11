@@ -22,6 +22,10 @@ Web app บริหารรายได้-รายจ่ายโรงแ�
 > web app ตัวเดียวให้บริการทุกโรงแรมผ่าน Command Center (แถว `PACKAGE_TYPE = HOTEL`), `Database.gs` เป็นไฟล์เดียวที่แตะชีต,
 > demo เก็บการแก้ไขใน sandbox ของ session แทนการบล็อกการเขียน — `HANDOFF.md` คือฉบับเดิมก่อนปรับ
 
+> **เชื่อมกับ HRMS (แผน ยังไม่ทำ):** `../Template_HRMS/docs/app-link.md` — จับคู่ด้วย `GROUP_ID` ใน Command Center,
+> ส่งผ่าน `doPost` (`link.*`) + Outbox/Inbox ไม่เขียนชีตของแอปอื่นตรง · Hotel เป็นแอปแรกที่จะต่อ (`payroll.paid` → รายจ่าย)
+> เมื่อ HRMS ถึงขั้นเงินเดือน — ระหว่างนี้อย่าเปลี่ยนความหมายของ expcat `SALARY` และอย่าใช้ docNo / userId ซ้ำ
+
 ## 2. หน้าจอ (map กับไฟล์ออกแบบ)
 
 | # | หน้าจอ | ไฟล์ออกแบบ | จุดสำคัญ |
