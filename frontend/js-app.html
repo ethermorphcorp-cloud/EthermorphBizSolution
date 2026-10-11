@@ -33,10 +33,9 @@ const Shell={
     $('#reloadBtn').onclick=()=>{if(BOOT.url)window.open(BOOT.url+'?shop='+encodeURIComponent(App.shop),'_top');else location.reload()}},
 
   /* ---------- login (design/Login.dc.html) ---------- */
-  login(){const info=App.info||{},name=info.hotelName||BOOT.hotelName||'ระบบบริหารโรงแรม';
+  login(){const info=App.info||{};
     const canDemo=info.demo||info.demoUrl;
     $('#root').innerHTML=`<div class="login"><section class="login-side">
-      <div class="brand-row"><span class="brand-logo" aria-hidden="true">${esc(name.replace(/^โรงแรม\s*/,'').charAt(0)||'H')}</span><div><b>${esc(name)}</b><span class="cap" style="color:var(--sidebar-ink)">Hotel Management · Digital Business Solution</span></div></div>
       <div><h1>บันทึกรายได้ รายจ่าย<br>และดูภาพรวมโรงแรม<br>ได้ในที่เดียว</h1><p>ออกแบบให้เจ้าของและพนักงานต้อนรับใช้งานได้ทันที ทั้งบนคอมพิวเตอร์ แท็บเล็ต และมือถือ</p></div>
       <ul>${['บันทึกรายได้ห้องพักและรายได้อื่น ทั้งแบบตารางและปฏิทิน','ติดตามค่าใช้จ่ายทุกหมวด พร้อมแนบเอกสาร','รายงานกำไรขาดทุนและ Dashboard รายวัน รายเดือน'].map(t=>`<li><span class="chip">${icon('check','s16')}</span><span>${t}</span></li>`).join('')}</ul>
       <span class="foot">Ethermorph · Digital Business Solution · v1.0</span></section>
