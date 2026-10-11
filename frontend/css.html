@@ -293,7 +293,8 @@ table.tbl{width:100%;border-collapse:collapse}
 .login-side ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:14px}
 .login-side li{display:flex;align-items:flex-start;gap:12px;font-size:15px;line-height:24px}
 .login-side li .chip{width:28px;height:28px;border-radius:50%;background:var(--sidebar-active);color:var(--sidebar-accent)}
-.login-side .foot{margin-top:auto;font-size:12px}
+.login-side{justify-content:center}   /* headline + list centred in the full height */
+.login-side .foot{position:absolute;left:64px;right:64px;bottom:32px;font-size:12px}   /* outside the flow, so it does not pull the centre up */
 .login-main{flex-grow:1;display:flex;align-items:center;justify-content:center;padding:24px 16px}
 .login-card{width:420px;max-width:100%;padding:36px;display:flex;flex-direction:column;gap:18px}
 .login-card .row{display:flex;justify-content:space-between;align-items:center;gap:12px}
